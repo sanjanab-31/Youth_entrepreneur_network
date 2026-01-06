@@ -71,9 +71,14 @@ export const AuthService = {
                 }
 
                 const token = `mock-jwt-${role}-${Date.now()}`;
-                const newUser = { ...userData, role, id: `user-${Date.now()}` };
+                const newUser = {
+                    ...userData,
+                    role,
+                    id: `user-${Date.now()}`,
+                    createdAt: new Date().toISOString()
+                };
 
-                // Save to registry
+                // Save to registry (all user data including mentor-specific fields)
                 users.push(newUser);
                 saveUsers(users);
 
