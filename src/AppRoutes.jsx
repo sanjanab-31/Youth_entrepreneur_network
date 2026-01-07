@@ -7,6 +7,7 @@ import FounderSignup from './pages/FounderSignup';
 import InvestorSignup from './pages/InvestorSignup';
 import IncubatorSignup from './pages/IncubatorSignup';
 import Dashboard from './pages/Dashboard';
+import PortalSelection from './pages/PortalSelection';
 import { useAuth } from './context/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
@@ -26,6 +27,7 @@ const AppRoutes = () => {
     return (
         <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/portal-select/:action" element={<PortalSelection />} />
             <Route path="/signup/mentor" element={<MentorSignup />} />
             <Route path="/signup/student" element={<FounderSignup />} />
             <Route path="/signup/investor" element={<InvestorSignup />} />
