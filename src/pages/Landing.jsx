@@ -122,6 +122,13 @@ const Landing = () => {
         { left: "97.5%", top: "53%", img: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&h=600&fit=crop" },
     ];
 
+    // GRID CONFIGURATION - Change size and positions for background squares
+    const gridTileSize = "150px";
+    const gridTileSizee = "180px";
+    const testimonialGridItems = [
+        { left: "1.5%", top: "6%" }, { left: "12.5%", top: "-1%" }, { left: "23.5%", top: "6%" }, { left: "34.3%", top: "-4%" }, { left: "45.3%", top: "3%" }, { left: "56%", top: "-4%" }, { left: "67%", top: "6%" }, { left: "78%", top: "-1%" }, { left: "88.5%", top: "6%" },
+    ];
+
     return (
         <div className="min-h-screen">
             <Header />
@@ -381,10 +388,19 @@ const Landing = () => {
 
             {/* TESTIMONIALS SECTION */}
             <section className="py-32 bg-white overflow-hidden relative">
-                {/* Background Decoration */}
-                <div className="absolute top-10 left-0 right-0 h-32 opacity-[0.03] grid grid-cols-9 gap-4 px-6 pointer-events-none">
-                    {[...Array(20)].map((_, i) => (
-                        <div key={i} className="bg-black aspect-square rounded-xl"></div>
+                {/* Background Decoration - Manual Grid */}
+                <div className="absolute inset-0 opacity-[0.05] pointer-events-none">
+                    {testimonialGridItems.map((grid, i) => (
+                        <div
+                            key={i}
+                            className="bg-black rounded-xl absolute"
+                            style={{
+                                left: grid.left,
+                                top: grid.top,
+                                width: gridTileSize,
+                                height: gridTileSizee
+                            }}
+                        ></div>
                     ))}
                 </div>
 
