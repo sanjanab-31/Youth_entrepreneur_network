@@ -102,6 +102,26 @@ const Landing = () => {
         }
     ];
 
+    // TESTIMONIALS CONFIGURATION - EASY MANUAL SIZE ADJUSTMENT
+    const testimonialWidth = "150px";  // Change pixels here
+    const testimonialHeight = "190px"; // Change pixels here
+
+    const testimonialItems = [
+        { left: "-9.8%", top: "20%", img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&h=600&fit=crop" },
+        { left: "-9.8%", top: "53%", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=600&fit=crop" },
+        { left: "3.5%", top: "10%", img: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&h=600&fit=crop" },
+        { left: "3.5%", top: "42%", img: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=600&h=600&fit=crop" },
+        { left: "17%", top: "20%", img: "https://images.unsplash.com/photo-1552058544-f2b08422138a?w=600&h=600&fit=crop" },
+        { left: "30.5%", top: "5%", img: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=600&fit=crop" },
+        { left: "44%", top: "15%", img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=600&fit=crop" },
+        { left: "57.5%", top: "5%", img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=600&h=600&fit=crop" },
+        { left: "71%", top: "20%", img: "https://images.unsplash.com/photo-1552058544-f2b08422138a?w=600&h=600&fit=crop" },
+        { left: "84.5%", top: "10%", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&h=600&fit=crop" },
+        { left: "84.5%", top: "42%", img: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&h=600&fit=crop", zIndex: 20 },
+        { left: "97.5%", top: "20%", img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=600&h=600&fit=crop" },
+        { left: "97.5%", top: "53%", img: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&h=600&fit=crop" },
+    ];
+
     return (
         <div className="min-h-screen">
             <Header />
@@ -131,9 +151,9 @@ const Landing = () => {
 
                             <div className="flex flex-wrap gap-4">
                                 {heroFeatures.map((feature, index) => (
-                                    <div key={index} className="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100">
-                                        <feature.icon className="w-5 h-5 text-gray-700" />
-                                        <span className="text-sm font-medium text-gray-700">{feature.text}</span>
+                                    <div key={index} className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-lg shadow-sm border border-gray-100">
+                                        <feature.icon className="w-4 h-4 text-gray-700" />
+                                        <span className="text-[10px] font-medium text-gray-700">{feature.text}</span>
                                     </div>
                                 ))}
                             </div>
@@ -355,6 +375,68 @@ const Landing = () => {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* TESTIMONIALS SECTION */}
+            <section className="py-32 bg-white overflow-hidden relative">
+                {/* Background Decoration */}
+                <div className="absolute top-10 left-0 right-0 h-32 opacity-[0.03] grid grid-cols-9 gap-4 px-6 pointer-events-none">
+                    {[...Array(20)].map((_, i) => (
+                        <div key={i} className="bg-black aspect-square rounded-xl"></div>
+                    ))}
+                </div>
+
+                <div className="max-w-7xl mx-auto px-6 relative">
+                    {/* Vertical Lines */}
+                    <div className="absolute top-0 bottom-0 left-[15%] w-px bg-gray-100 pointer-events-none"></div>
+                    <div className="absolute top-0 bottom-0 left-[85%] w-px bg-gray-100 pointer-events-none"></div>
+
+                    {/* Staggered Leader Headshots Cloud */}
+                    <div className="relative h-[650px] -mb-80">
+                        {testimonialItems.map((item, index) => (
+                            <div
+                                key={index}
+                                className="absolute rounded-2xl overflow-hidden grayscale shadow-lg text-black"
+                                style={{
+                                    left: item.left,
+                                    top: item.top,
+                                    width: testimonialWidth,
+                                    height: testimonialHeight,
+                                    zIndex: item.zIndex || 1
+                                }}
+                            >
+                                <img
+                                    src={item.img}
+                                    alt="Leader"
+                                    style={{ width: '100%', height: '100%' }}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                    {/* Central Content */}
+                    <div className="text-center relative z-30 max-w-3xl mx-auto ">
+                        <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-800 text-sm font-medium mb-4">
+                            Testimonials
+                        </div>
+
+                        <h2 className="text-5xl md:text-6xl font-semibold text-gray-900 mb-2 tracking-tight leading-tight">
+                            Trusted by leaders <br />
+                            <span className="text-gray-300">from various industries</span>
+                        </h2>
+
+                        <p className="text-lg md:text-lg text-gray-600 mb-10 max-w-xl mx-auto leading-relaxed">
+                            Learn why professionals trust our solutions to
+                            complete their customer journeys.
+                        </p>
+
+                        <button
+                            className="bg-black text-white px-10 py-3 rounded-full font-bold flex items-center gap-2 mx-auto hover:bg-gray-900 transition-all group shadow-xl hover:shadow-2xl"
+                        >
+                            Read Success Stories
+                            <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                        </button>
                     </div>
                 </div>
             </section>
