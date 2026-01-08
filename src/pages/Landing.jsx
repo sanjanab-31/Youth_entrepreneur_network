@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, ArrowDownLeft, ArrowRight, Sparkles, Users, TrendingUp, Lightbulb, AlertCircle, UserX, DollarSign, Building, Rocket, Target, Settings, Globe } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import WhoCanUseYEN from '../components/WhoCanUseYEN';
 
 const Landing = () => {
     const navigate = useNavigate();
@@ -134,7 +135,7 @@ const Landing = () => {
             <Header />
 
             {/* HERO SECTION */}
-            <section className="min-h-screen bg-[#fcfdfd] relative pt-32 pb-20 overflow-hidden">
+            <section className="h-[100vh] bg-[#fcfdfd] relative overflow-hidden">
                 {/* Decorative background elements */}
                 <div className="absolute top-0 right-0 w-1/2 h-full bg-emerald-50/30 -skew-x-12 translate-x-1/4 pointer-events-none"></div>
 
@@ -182,35 +183,37 @@ const Landing = () => {
 
 
                         {/* Right Content - Animated Images */}
-                        <div className={`relative h-[650px] transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`}>
+                        <div className={`relative h-[750px] transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`}>
                             {/* Animated Image Columns */}
-                            <div className="flex gap-6 h-full overflow-hidden">
+                            <div className="flex justify-center gap-8 h-full overflow-hidden">
                                 {/* Column 1 - Moves Up */}
-                                <div className="flex-1 space-y-6 animate-scroll-up">
+                                <div className="w-[250px] space-y-8 animate-scroll-up">
                                     {[1, 2, 1, 2].map((num, i) => (
-                                        <div key={i} className="relative group rounded-[2rem] overflow-hidden shadow-2xl border border-white/20 aspect-[3/4] bg-emerald-100">
-                                            <img
-                                                src={`/src/assets/hero-${num}.jpg`}
-                                                alt="Entrepreneurship"
-                                                className="w-full h-full object-cover transition-transform duration-700"
-                                                onError={(e) => {
-                                                    e.target.src = num === 1
-                                                        ? 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=800&fit=crop'
-                                                        : 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600&h=800&fit=crop';
-                                                }}
-                                            />
+                                        <div key={i} className="relative group bg-white  shadow-2xl rounded-[2.5rem] border border-gray-100 aspect-[1/1.6]">
+                                            <div className="w-full h-full rounded-[2rem] overflow-hidden">
+                                                <img
+                                                    src={`/src/assets/hero-${num}.jpg`}
+                                                    alt="Entrepreneurship"
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.src = num === 1
+                                                            ? 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=800&fit=crop'
+                                                            : 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600&h=800&fit=crop';
+                                                    }}
+                                                />
+                                            </div>
                                             {/* Ask Me A Question Bar */}
                                             <div className="absolute bottom-4 left-4 right-4 flex items-center justify-center">
-                                                <div className="bg-black/80 backdrop-blur-md rounded-full pl-6 pr-1.5 py-1.5 flex items-center gap-3 w-full border border-white/10 group-hover:scale-[1.03] transition-transform duration-300">
-                                                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">Ask Me A Question</span>
-                                                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center ml-auto">
-                                                        <ArrowDownLeft className="w-4 h-4 text-black" />
+                                                <div className="bg-black/90 backdrop-blur-md rounded-full pl-5 pr-1 py-1 flex items-center gap-2 w-full border border-white/10 group-hover:scale-[1.05] transition-transform duration-300">
+                                                    <span className="text-[9px] font-bold text-white uppercase tracking-wider">Ask Me A Question</span>
+                                                    <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center ml-auto">
+                                                        <ArrowDownLeft className="w-3.5 h-3.5 text-black" />
                                                     </div>
                                                 </div>
                                             </div>
                                             {/* Floating Badge (Ref Image) */}
                                             {i === 1 && (
-                                                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-2 text-[10px] font-bold text-gray-900 shadow-lg border border-white/50">
+                                                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-2 text-[10px] font-bold text-gray-900 shadow-lg border border-white/50">
                                                     Try Out
                                                     <div className="w-4 h-4 bg-emerald-100 rounded-full flex items-center justify-center">
                                                         <ArrowUpRight className="w-2.5 h-2.5 text-emerald-600" />
@@ -222,25 +225,27 @@ const Landing = () => {
                                 </div>
 
                                 {/* Column 2 - Moves Down */}
-                                <div className="flex-1 space-y-6 animate-scroll-down">
+                                <div className="w-[250px] space-y-8 animate-scroll-down">
                                     {[3, 4, 3, 4].map((num, i) => (
-                                        <div key={i} className="relative group rounded-[2rem] overflow-hidden shadow-2xl border border-white/20 aspect-[3/4] bg-emerald-100">
-                                            <img
-                                                src={`/src/assets/hero-${num}.jpg`}
-                                                alt="Growth"
-                                                className="w-full h-full object-cover transition-transform duration-700"
-                                                onError={(e) => {
-                                                    e.target.src = num === 3
-                                                        ? 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=600&h=800&fit=crop'
-                                                        : 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&h=800&fit=crop';
-                                                }}
-                                            />
+                                        <div key={i} className="relative group bg-white shadow-2xl rounded-[2.5rem] border border-gray-100 aspect-[1/1.6]">
+                                            <div className="w-full h-full rounded-[2rem] overflow-hidden">
+                                                <img
+                                                    src={`/src/assets/hero-${num}.jpg`}
+                                                    alt="Growth"
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.src = num === 3
+                                                            ? 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=600&h=800&fit=crop'
+                                                            : 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&h=800&fit=crop';
+                                                    }}
+                                                />
+                                            </div>
                                             {/* Ask Me A Question Bar */}
                                             <div className="absolute bottom-4 left-4 right-4 flex items-center justify-center">
-                                                <div className="bg-black/80 backdrop-blur-md rounded-full pl-6 pr-1.5 py-1.5 flex items-center gap-3 w-full border border-white/10 group-hover:scale-[1.03] transition-transform duration-300">
-                                                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">Ask Me A Question</span>
-                                                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center ml-auto">
-                                                        <ArrowDownLeft className="w-4 h-4 text-black" />
+                                                <div className="bg-black/90 backdrop-blur-md rounded-full pl-5 pr-1 py-1 flex items-center gap-2 w-full border border-white/10 group-hover:scale-[1.05] transition-transform duration-300">
+                                                    <span className="text-[9px] font-bold text-white uppercase tracking-wider">Ask Me A Question</span>
+                                                    <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center ml-auto">
+                                                        <ArrowDownLeft className="w-3.5 h-3.5 text-black" />
                                                     </div>
                                                 </div>
                                             </div>
@@ -334,54 +339,8 @@ const Landing = () => {
             </section>
 
 
-            {/* BENEFITS SECTION */}
-            {/* <section className="py-20 bg-gray-50 z-10">
-                <div className="max-w-7xl mx-auto px-6"> */}
-            {/* Header */}
-            {/* <div className="text-center mb-16">
-                        <div className="inline-flex items-center space-x-2 bg-white border border-gray-200 px-4 py-2 rounded-full mb-6">
-                            <Target className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-500">Unlocking Value</span>
-                        </div>
-                        <h2 className="text-5xl font-bold text-gray-900 mb-4">
-                            Our Benefits
-                        </h2>
-                        <p className="text-lg text-gray-600">
-                            How YEN transforms students into real founders
-                        </p>
-                    </div> */}
-
-            {/* Benefit Rows */}
-            {/* <div className="space-y-8">
-                        {benefits.map((benefit) => (
-                            <div key={benefit.id} className="grid grid-cols-2 gap-8"> */}
-            {/* Left Card */}
-            {/* <div className="bg-white rounded-[2rem] p-10 flex flex-col justify-center shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="mb-6">
-                                        <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center mb-6">
-                                            <benefit.left.icon className="w-6 h-6 text-white" />
-                                        </div>
-                                        <h3 className="text-xl text-gray-500 font-medium mb-4">{benefit.left.title}</h3>
-                                        <p className="text-xl text-gray-900 leading-relaxed font-medium">
-                                            {benefit.left.description}
-                                        </p>
-                                    </div>
-                                </div> */}
-
-            {/* Right Card */}
-            {/* <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-[2rem] p-10 flex items-center justify-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                                    <h3 className="text-3xl font-bold text-gray-900 text-center max-w-lg relative z-10">
-                                        {benefit.right.text}
-                                    </h3> */}
-
-            {/* Subtle hover effect overlay */}
-            {/* <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section> */}
+            {/* WHO CAN USE YEN SECTION */}
+            <WhoCanUseYEN />
 
             {/* TESTIMONIALS SECTION */}
             <section className="py-32 bg-emerald-950 overflow-hidden relative" id="testimonials">
