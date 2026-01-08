@@ -149,8 +149,8 @@ const WhoCanUseYEN = () => {
     });
 
     return (
-        <section ref={container} className="relative bg-[#f8fafc] pb-20">
-            <div className="max-w-7xl mx-auto pt-24 md:pt-32 px-6 text-center mb-10">
+        <section ref={container} className="relative bg-[#f8fafc] ">
+            <div className="max-w-7xl mx-auto pt-10 px-6 text-center">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
