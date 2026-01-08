@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, ArrowRight, Sparkles, Users, TrendingUp, Lightbulb, AlertCircle, UserX, DollarSign, Building, Rocket, Target, Settings, Globe } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, ArrowRight, Sparkles, Users, TrendingUp, Lightbulb, AlertCircle, UserX, DollarSign, Building, Rocket, Target, Settings, Globe } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
@@ -148,7 +148,7 @@ const Landing = () => {
                             </div>
 
                             <h1 className="text-5xl lg:text-7xl font-semibold text-gray-900 leading-[1.1]">
-                                Disrupt Ideas 
+                                Disrupt Ideas
                                 <span className="block text-emerald-600 mt-2">
                                     Build Empires
                                 </span>
@@ -163,7 +163,7 @@ const Landing = () => {
                                     onClick={() => navigate('/portal-select/signup')}
                                     className="bg-emerald-600 text-white rounded-full pl-4 pr-0.5 py-0.5 text-sm font-bold hover:bg-emerald-50 transition-all flex items-center gap-3 whitespace-nowrap"
                                 >
-                                    Try out 
+                                    Try out
                                     <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
                                         <ArrowUpRight className="w-5 h-5 text-emerald-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                                     </div>
@@ -182,75 +182,70 @@ const Landing = () => {
 
 
                         {/* Right Content - Animated Images */}
-                        <div className={`relative h-[600px] transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`}>
+                        <div className={`relative h-[650px] transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`}>
                             {/* Animated Image Columns */}
-                            <div className="flex gap-4 h-full">
+                            <div className="flex gap-6 h-full overflow-hidden">
                                 {/* Column 1 - Moves Up */}
-                                <div className="flex-1 space-y-4 animate-scroll-up">
-                                    <div className="bg-white rounded-2xl overflow-hidden shadow-xl">
-                                        <img
-                                            src="/src/assets/hero-1.jpg"
-                                            alt="Entrepreneur working"
-                                            className="w-full h-64 object-cover"
-                                            onError={(e) => {
-                                                e.target.src = 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=300&fit=crop';
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="bg-white rounded-2xl overflow-hidden shadow-xl">
-                                        <img
-                                            src="/src/assets/hero-2.jpg"
-                                            alt="Team collaboration"
-                                            className="w-full h-64 object-cover"
-                                            onError={(e) => {
-                                                e.target.src = 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=400&h=300&fit=crop';
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="bg-white rounded-2xl overflow-hidden shadow-xl">
-                                        <img
-                                            src="/src/assets/hero-1.jpg"
-                                            alt="Entrepreneur working"
-                                            className="w-full h-64 object-cover"
-                                            onError={(e) => {
-                                                e.target.src = 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=300&fit=crop';
-                                            }}
-                                        />
-                                    </div>
+                                <div className="flex-1 space-y-6 animate-scroll-up">
+                                    {[1, 2, 1, 2].map((num, i) => (
+                                        <div key={i} className="relative group rounded-[2rem] overflow-hidden shadow-2xl border border-white/20 aspect-[3/4] bg-emerald-100">
+                                            <img
+                                                src={`/src/assets/hero-${num}.jpg`}
+                                                alt="Entrepreneurship"
+                                                className="w-full h-full object-cover transition-transform duration-700"
+                                                onError={(e) => {
+                                                    e.target.src = num === 1
+                                                        ? 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=800&fit=crop'
+                                                        : 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600&h=800&fit=crop';
+                                                }}
+                                            />
+                                            {/* Ask Me A Question Bar */}
+                                            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-center">
+                                                <div className="bg-black/80 backdrop-blur-md rounded-full pl-6 pr-1.5 py-1.5 flex items-center gap-3 w-full border border-white/10 group-hover:scale-[1.03] transition-transform duration-300">
+                                                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">Ask Me A Question</span>
+                                                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center ml-auto">
+                                                        <ArrowDownLeft className="w-4 h-4 text-black" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {/* Floating Badge (Ref Image) */}
+                                            {i === 1 && (
+                                                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-2 text-[10px] font-bold text-gray-900 shadow-lg border border-white/50">
+                                                    Try Out
+                                                    <div className="w-4 h-4 bg-emerald-100 rounded-full flex items-center justify-center">
+                                                        <ArrowUpRight className="w-2.5 h-2.5 text-emerald-600" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
 
                                 {/* Column 2 - Moves Down */}
-                                <div className="flex-1 space-y-4 animate-scroll-down">
-                                    <div className="bg-white rounded-2xl overflow-hidden shadow-xl">
-                                        <img
-                                            src="/src/assets/hero-3.jpg"
-                                            alt="Startup meeting"
-                                            className="w-full h-64 object-cover"
-                                            onError={(e) => {
-                                                e.target.src = 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=400&h=300&fit=crop';
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="bg-white rounded-2xl overflow-hidden shadow-xl">
-                                        <img
-                                            src="/src/assets/hero-4.jpg"
-                                            alt="Innovation and tech"
-                                            className="w-full h-64 object-cover"
-                                            onError={(e) => {
-                                                e.target.src = 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=300&fit=crop';
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="bg-white rounded-2xl overflow-hidden shadow-xl">
-                                        <img
-                                            src="/src/assets/hero-3.jpg"
-                                            alt="Startup meeting"
-                                            className="w-full h-64 object-cover"
-                                            onError={(e) => {
-                                                e.target.src = 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=400&h=300&fit=crop';
-                                            }}
-                                        />
-                                    </div>
+                                <div className="flex-1 space-y-6 animate-scroll-down">
+                                    {[3, 4, 3, 4].map((num, i) => (
+                                        <div key={i} className="relative group rounded-[2rem] overflow-hidden shadow-2xl border border-white/20 aspect-[3/4] bg-emerald-100">
+                                            <img
+                                                src={`/src/assets/hero-${num}.jpg`}
+                                                alt="Growth"
+                                                className="w-full h-full object-cover transition-transform duration-700"
+                                                onError={(e) => {
+                                                    e.target.src = num === 3
+                                                        ? 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=600&h=800&fit=crop'
+                                                        : 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&h=800&fit=crop';
+                                                }}
+                                            />
+                                            {/* Ask Me A Question Bar */}
+                                            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-center">
+                                                <div className="bg-black/80 backdrop-blur-md rounded-full pl-6 pr-1.5 py-1.5 flex items-center gap-3 w-full border border-white/10 group-hover:scale-[1.03] transition-transform duration-300">
+                                                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">Ask Me A Question</span>
+                                                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center ml-auto">
+                                                        <ArrowDownLeft className="w-4 h-4 text-black" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -261,18 +256,18 @@ const Landing = () => {
                 <style jsx>{`
                     @keyframes scrollUp {
                         0% { transform: translateY(0); }
-                        100% { transform: translateY(-33.33%); }
+                        100% { transform: translateY(-50%); }
                     }
                     @keyframes scrollDown {
-                        0% { transform: translateY(-33.33%); }
+                        0% { transform: translateY(-50%); }
                         100% { transform: translateY(0); }
                     }
                     @keyframes float {
                         0%, 100% { transform: translateY(0px); }
                         50% { transform: translateY(-20px); }
                     }
-                    .animate-scroll-up { animation: scrollUp 20s linear infinite; }
-                    .animate-scroll-down { animation: scrollDown 20s linear infinite; }
+                    .animate-scroll-up { animation: scrollUp 15s linear infinite; }
+                    .animate-scroll-down { animation: scrollDown 15s linear infinite; }
                     .animate-float { animation: float 3s ease-in-out infinite; }
                     .animate-float-delayed { animation: float 3s ease-in-out infinite; animation-delay: 1.5s; }
                 `}</style>
