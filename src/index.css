@@ -1,32 +1,65 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand-primary: #10b981;
+  --color-brand-primary-dark: #065f46;
+  --color-brand-primary-light: #ecfdf5;
+  --color-brand-accent: #059669;
+
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+}
+
+:root {
+  --primary: #10b981;
+  --primary-dark: #064e3b;
+  --primary-light: #f0fdf4;
+  --accent: #059669;
+  --surface: #f8fafc;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+}
+
+@layer base {
+  body {
+    @apply antialiased text-[#0f172a] bg-white;
+    font-family: var(--font-sans);
+  }
+}
+
 @layer utilities {
+  .glass-effect {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+
+  .green-gradient {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  }
+
+  .green-glow {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+  }
+
   .animate-fade-in {
-    animation: fadeIn 0.5s ease-out forwards;
+    animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .animate-scroll-up {
-    animation: scrollUp 20s linear infinite;
+    animation: scrollUp 30s linear infinite;
   }
 
   .animate-scroll-down {
-    animation: scrollDown 20s linear infinite;
+    animation: scrollDown 30s linear infinite;
   }
 
   .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-
-  .animate-float-delayed {
-    animation: float 3s ease-in-out infinite;
-    animation-delay: 1.5s;
+    animation: float 4s ease-in-out infinite;
   }
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(20px);
   }
 
   to {
@@ -63,6 +96,19 @@
   }
 
   50% {
-    transform: translateY(-20px);
+    transform: translateY(-15px);
   }
+}
+
+/* Professional Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-50;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-emerald-200 rounded-full hover:bg-emerald-300 transition-colors;
 }

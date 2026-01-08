@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Sparkles, Users, TrendingUp, Lightbulb, AlertCircle, UserX, DollarSign, Building, Rocket, Target, Settings, Globe } from 'lucide-react';
+import { ArrowUpRight, ArrowRight, Sparkles, Users, TrendingUp, Lightbulb, AlertCircle, UserX, DollarSign, Building, Rocket, Target, Settings, Globe } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
@@ -134,53 +134,48 @@ const Landing = () => {
             <Header />
 
             {/* HERO SECTION */}
-            <section className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 pt-24 pb-16 overflow-hidden">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <section className="min-h-screen bg-[#fcfdfd] relative pt-32 pb-20 overflow-hidden">
+                {/* Decorative background elements */}
+                <div className="absolute top-0 right-0 w-1/2 h-full bg-emerald-50/30 -skew-x-12 translate-x-1/4 pointer-events-none"></div>
+
+                <div className="max-w-[1400px] mx-auto px-4 relative z-10">
+                    <div className="grid lg:grid-cols-2 gap-16 items-center">
                         {/* Left Content */}
-                        <div className={`space-y-8 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
-                            <div className="inline-flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-full">
+                        <div className={`space-y-10 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
+                            <div className="inline-flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-6 py-2 rounded-full border border-emerald-100">
                                 <Sparkles className="w-4 h-4" />
-                                <span className="text-sm font-medium">Youth Entrepreneur Network</span>
+                                <span className="text-sm font-bold tracking-wide uppercase">Youth Entrepreneur Network</span>
                             </div>
 
-                            <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
+                            <h1 className="text-5xl lg:text-7xl font-bold text-gray-900 leading-[1.1]">
                                 Empower Your
-                                <span className="block text-gray-900">
-                                    Entrepreneurial Journey
+                                <span className="block text-emerald-600 mt-2">
+                                    Growth Journey
                                 </span>
                             </h1>
 
-                            <p className="text-lg text-gray-600 leading-relaxed">
-                                Connect with mentors, investors, and fellow entrepreneurs.
-                                Build your network, access resources, and transform your innovative ideas into successful ventures.
+                            <p className="text-xl text-gray-600 leading-relaxed max-w-lg">
+                                Connect with world-class mentors, find visionary investors, and scale your startup with YEN's premium ecosystem.
                             </p>
 
-                            <div className="flex flex-wrap gap-4">
-                                {heroFeatures.map((feature, index) => (
-                                    <div key={index} className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-lg shadow-sm border border-gray-100">
-                                        <feature.icon className="w-4 h-4 text-gray-700" />
-                                        <span className="text-[10px] font-medium text-gray-700">{feature.text}</span>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="flex flex-wrap gap-4 pt-4">
+                            <div className="flex flex-wrap gap-5 pt-4">
                                 <button
                                     onClick={() => navigate('/portal-select/signup')}
-                                    className="group px-8 py-4 bg-black text-white rounded-full hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl font-semibold flex items-center space-x-2"
+                                    className="group px-8 py-4 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200 font-bold flex items-center space-x-3 transform active:scale-95"
                                 >
-                                    <span>Get Started</span>
-                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    <span>Start Your Journey</span>
+                                    <ArrowUpRight className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                                 </button>
+
                                 <button
                                     onClick={() => navigate('/portal-select/login')}
-                                    className="px-8 py-4 bg-white text-gray-700 rounded-full hover:bg-gray-50 transition-all shadow-md hover:shadow-lg font-semibold border border-gray-200"
+                                    className="px-8 py-4 bg-white text-gray-900 rounded-full hover:bg-gray-50 transition-all font-bold border-2 border-gray-100 flex items-center"
                                 >
-                                    Login
+                                    View Demo
                                 </button>
                             </div>
                         </div>
+
 
                         {/* Right Content - Animated Images */}
                         <div className={`relative h-[600px] transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`}>
@@ -280,68 +275,71 @@ const Landing = () => {
             </section>
 
             {/* WHY YEN SECTION */}
-            <section className="py-20 bg-white">
+            <section className="py-32 bg-white" id="features">
                 <div className="max-w-7xl mx-auto px-6">
                     {/* Header */}
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                            Why YEN Exists
+                    <div className="text-center mb-20">
+                        <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6 italic-not">
+                            The Startup Ecosystem <span className="text-emerald-600">Reimagined</span>
                         </h2>
-                        <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-                            The startup ecosystem is broken for young founders — YEN is built to fix it.
+                        <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                            We've identified the core barriers for young founders and built a professional system to dismantle them.
                         </p>
                     </div>
 
                     {/* Cards Grid */}
-                    <div className="grid grid-cols-5 gap-6 mb-12">
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8 mb-20">
                         {problems.map((problem) => (
                             <div
                                 key={problem.id}
-                                className="bg-gray-50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative flex flex-col h-64"
+                                className="group bg-neutral-50 rounded-[2rem] p-8 hover:bg-emerald-600 transition-all duration-500 relative flex flex-col h-[320px] shadow-sm border border-neutral-100"
                             >
-                                {/* Content */}
+                                <div className="mb-6">
+                                    <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-500">
+                                        <problem.icon className="w-7 h-7 text-emerald-600" />
+                                    </div>
+                                </div>
+
                                 <div className="flex-1">
-                                    <h3 className="text-lg font-bold text-gray-900 mb-3">
+                                    <h3 className="text-xl font-bold text-gray-900 mb-4 group-hover:text-white transition-colors">
                                         {problem.title}
                                     </h3>
-                                    <p className="text-sm text-gray-600 leading-relaxed">
+                                    <p className="text-sm text-gray-600 leading-relaxed group-hover:text-emerald-100 transition-colors">
                                         {problem.description}
                                     </p>
                                 </div>
 
-                                {/* Icon at bottom */}
-                                <div className="mt-4">
-                                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                                        <problem.icon className="w-5 h-5 text-gray-700" />
-                                    </div>
+                                <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <ArrowUpRight className="w-6 h-6 text-white" />
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     {/* Buttons */}
-                    <div className="flex justify-center gap-4">
+                    <div className="flex flex-col sm:flex-row justify-center items-center gap-6">
                         <button
                             onClick={() => navigate('/portal-select/signup')}
-                            className="px-8 py-3 bg-black text-white rounded-full hover:bg-gray-800 transition-all shadow-md hover:shadow-lg font-semibold"
+                            className="px-10 py-4 bg-gray-900 text-white rounded-full hover:bg-emerald-600 transition-all shadow-xl font-bold transform hover:-translate-y-1"
                         >
-                            Get Started
+                            Get Started Now
                         </button>
                         <button
                             onClick={() => navigate('/about')}
-                            className="px-8 py-3 bg-white text-gray-700 rounded-full hover:bg-gray-50 transition-all shadow-md hover:shadow-lg font-semibold border border-gray-300"
+                            className="px-10 py-4 bg-white text-emerald-600 rounded-full hover:bg-emerald-50 transition-all font-bold border-2 border-emerald-100"
                         >
-                            Learn More
+                            Explore Platform
                         </button>
                     </div>
                 </div>
             </section>
 
+
             {/* BENEFITS SECTION */}
-            <section className="py-20 bg-gray-50">
-                <div className="max-w-7xl mx-auto px-6">
-                    {/* Header */}
-                    <div className="text-center mb-16">
+            {/* <section className="py-20 bg-gray-50 z-10">
+                <div className="max-w-7xl mx-auto px-6"> */}
+            {/* Header */}
+            {/* <div className="text-center mb-16">
                         <div className="inline-flex items-center space-x-2 bg-white border border-gray-200 px-4 py-2 rounded-full mb-6">
                             <Target className="w-4 h-4 text-gray-500" />
                             <span className="text-sm font-medium text-gray-500">Unlocking Value</span>
@@ -352,14 +350,14 @@ const Landing = () => {
                         <p className="text-lg text-gray-600">
                             How YEN transforms students into real founders
                         </p>
-                    </div>
+                    </div> */}
 
-                    {/* Benefit Rows */}
-                    <div className="space-y-8">
+            {/* Benefit Rows */}
+            {/* <div className="space-y-8">
                         {benefits.map((benefit) => (
-                            <div key={benefit.id} className="grid grid-cols-2 gap-8">
-                                {/* Left Card */}
-                                <div className="bg-white rounded-[2rem] p-10 flex flex-col justify-center shadow-sm hover:shadow-md transition-shadow">
+                            <div key={benefit.id} className="grid grid-cols-2 gap-8"> */}
+            {/* Left Card */}
+            {/* <div className="bg-white rounded-[2rem] p-10 flex flex-col justify-center shadow-sm hover:shadow-md transition-shadow">
                                     <div className="mb-6">
                                         <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center mb-6">
                                             <benefit.left.icon className="w-6 h-6 text-white" />
@@ -369,31 +367,37 @@ const Landing = () => {
                                             {benefit.left.description}
                                         </p>
                                     </div>
-                                </div>
+                                </div> */}
 
-                                {/* Right Card */}
-                                <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-[2rem] p-10 flex items-center justify-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            {/* Right Card */}
+            {/* <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-[2rem] p-10 flex items-center justify-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                                     <h3 className="text-3xl font-bold text-gray-900 text-center max-w-lg relative z-10">
                                         {benefit.right.text}
-                                    </h3>
+                                    </h3> */}
 
-                                    {/* Subtle hover effect overlay */}
-                                    <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
+            {/* Subtle hover effect overlay */}
+            {/* <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
-            </section>
+            </section> */}
 
             {/* TESTIMONIALS SECTION */}
-            <section className="py-32 bg-white overflow-hidden relative">
+            <section className="py-32 bg-emerald-950 overflow-hidden relative" id="testimonials">
                 {/* Background Decoration - Manual Grid */}
-                <div className="absolute inset-0 opacity-[0.05] pointer-events-none">
+                <div
+                    className="absolute inset-0 opacity-[0.1] pointer-events-none"
+                    style={{
+                        maskImage: 'linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)',
+                        WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)'
+                    }}
+                >
                     {testimonialGridItems.map((grid, i) => (
                         <div
                             key={i}
-                            className="bg-black rounded-xl absolute"
+                            className="bg-emerald-500 rounded-xl absolute"
                             style={{
                                 left: grid.left,
                                 top: grid.top,
@@ -406,15 +410,15 @@ const Landing = () => {
 
                 <div className="max-w-7xl mx-auto px-6 relative">
                     {/* Vertical Lines */}
-                    <div className="absolute top-0 bottom-0 left-[15%] w-px bg-gray-100 pointer-events-none"></div>
-                    <div className="absolute top-0 bottom-0 left-[85%] w-px bg-gray-100 pointer-events-none"></div>
+                    <div className="absolute top-0 bottom-0 left-[15%] w-px bg-white/5 pointer-events-none"></div>
+                    <div className="absolute top-0 bottom-0 left-[85%] w-px bg-white/5 pointer-events-none"></div>
 
                     {/* Staggered Leader Headshots Cloud */}
                     <div className="relative h-[650px] -mb-80">
                         {testimonialItems.map((item, index) => (
                             <div
                                 key={index}
-                                className="absolute rounded-2xl overflow-hidden grayscale shadow-lg text-black"
+                                className="absolute rounded-2xl overflow-hidden shadow-2xl transition-all duration-700 hover:scale-110 hover:z-50 group"
                                 style={{
                                     left: item.left,
                                     top: item.top,
@@ -426,36 +430,37 @@ const Landing = () => {
                                 <img
                                     src={item.img}
                                     alt="Leader"
-                                    style={{ width: '100%', height: '100%' }}
+                                    className="w-full h-full object-cover filter grayscale group-hover:grayscale-0 transition-all duration-500"
                                 />
+                                <div className="absolute inset-0 bg-emerald-600/20 group-hover:bg-transparent transition-colors"></div>
                             </div>
                         ))}
                     </div>
+
                     {/* Central Content */}
-                    <div className="text-center relative z-30 max-w-3xl mx-auto ">
-                        <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-800 text-sm font-medium mb-4">
-                            Testimonials
+                    <div className="text-center relative z-30 max-w-3xl mx-auto">
+                        <div className="inline-flex items-center px-4 py-2 rounded-full bg-emerald-900/50 text-emerald-400 text-sm font-bold mb-6 border border-emerald-800/50 backdrop-blur-sm">
+                            Real Impact
                         </div>
 
-                        <h2 className="text-5xl md:text-6xl font-semibold text-gray-900 mb-2 tracking-tight leading-tight">
-                            Trusted by leaders <br />
-                            <span className="text-gray-300">from various industries</span>
+                        <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight leading-tight">
+                            Trusted by <span className="text-emerald-500">Visionaries</span>
                         </h2>
 
-                        <p className="text-lg md:text-lg text-gray-600 mb-10 max-w-xl mx-auto leading-relaxed">
-                            Learn why professionals trust our solutions to
-                            complete their customer journeys.
+                        <p className="text-xl text-emerald-100/70 mb-12 max-w-xl mx-auto leading-relaxed font-medium">
+                            Join thousands of founders who have accelerated their growth through our professional network.
                         </p>
 
                         <button
-                            className="bg-black text-white px-10 py-3 rounded-full font-bold flex items-center gap-2 mx-auto hover:bg-gray-900 transition-all group shadow-xl hover:shadow-2xl"
+                            className="bg-emerald-600 text-white px-12 py-5 rounded-full font-bold flex items-center gap-3 mx-auto hover:bg-emerald-500 transition-all group shadow-2xl shadow-emerald-900/50 transform hover:-translate-y-1"
                         >
                             Read Success Stories
-                            <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                            <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                         </button>
                     </div>
                 </div>
             </section>
+
 
             <Footer />
         </div>
