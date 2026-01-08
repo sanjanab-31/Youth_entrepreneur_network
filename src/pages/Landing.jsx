@@ -141,37 +141,41 @@ const Landing = () => {
                 <div className="max-w-[1400px] mx-auto px-4 relative z-10">
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         {/* Left Content */}
-                        <div className={`space-y-10 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
-                            <div className="inline-flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-6 py-2 rounded-full border border-emerald-100">
-                                <Sparkles className="w-4 h-4" />
-                                <span className="text-sm font-bold tracking-wide uppercase">Youth Entrepreneur Network</span>
+                        <div className={`space-y-8 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
+                            <div className="inline-flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-4 py-1 rounded-full border border-emerald-100">
+                                <Sparkles className="w-3 h-3" />
+                                <span className="text-[10px] font-bold tracking-wide uppercase">Youth Entrepreneur Network</span>
                             </div>
 
-                            <h1 className="text-5xl lg:text-7xl font-bold text-gray-900 leading-[1.1]">
-                                Empower Your
+                            <h1 className="text-5xl lg:text-7xl font-semibold text-gray-900 leading-[1.1]">
+                                Disrupt Ideas 
                                 <span className="block text-emerald-600 mt-2">
-                                    Growth Journey
+                                    Build Empires
                                 </span>
                             </h1>
 
-                            <p className="text-xl text-gray-600 leading-relaxed max-w-lg">
+                            <p className="text-lg text-gray-600 leading-relaxed max-w-lg">
                                 Connect with world-class mentors, find visionary investors, and scale your startup with YEN's premium ecosystem.
                             </p>
 
                             <div className="flex flex-wrap gap-5 pt-4">
                                 <button
                                     onClick={() => navigate('/portal-select/signup')}
-                                    className="group px-8 py-4 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200 font-bold flex items-center space-x-3 transform active:scale-95"
+                                    className="bg-emerald-600 text-white rounded-full pl-4 pr-0.5 py-0.5 text-sm font-bold hover:bg-emerald-50 transition-all flex items-center gap-3 whitespace-nowrap"
                                 >
-                                    <span>Start Your Journey</span>
-                                    <ArrowUpRight className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                                    Try out 
+                                    <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                                        <ArrowUpRight className="w-5 h-5 text-emerald-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                                    </div>
                                 </button>
-
                                 <button
                                     onClick={() => navigate('/portal-select/login')}
-                                    className="px-8 py-4 bg-white text-gray-900 rounded-full hover:bg-gray-50 transition-all font-bold border-2 border-gray-100 flex items-center"
+                                    className="pl-4 pr-0.5 py-0.5 bg-white text-gray-900 rounded-full hover:bg-gray-50 transition-all font-bold border-1 border-gray-100 flex items-center gap-1"
                                 >
-                                    View Demo
+                                    Learn more
+                                    <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                                        <ArrowUpRight className="w-5 h-5 text-emerald-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                                    </div>
                                 </button>
                             </div>
                         </div>
