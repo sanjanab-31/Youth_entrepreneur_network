@@ -61,11 +61,11 @@ const Landing = () => {
             {/* WHO CAN USE YEN SECTION */}
             <WhoCanUseYEN />
             {/* TESTIMONIALS SECTION */}
-            <section className="py-32 bg-sky-950 overflow-hidden relative" id="testimonials">
+            <section className="py-30 bg-black overflow-hidden relative" id="testimonials">
 
                 {/* Background Decoration - Manual Grid */}
                 <div
-                    className="absolute inset-0 opacity-[0.1] pointer-events-none"
+                    className="absolute inset-0  pointer-events-none"
                     style={{
                         maskImage: 'linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)',
                         WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)'
@@ -74,7 +74,7 @@ const Landing = () => {
                     {testimonialGridItems.map((grid, i) => (
                         <div
                             key={i}
-                            className="bg-sky-500 rounded-xl absolute"
+                            className="bg-purple rounded-xl absolute border border-white"
                             style={{
                                 left: grid.left,
                                 top: grid.top,
@@ -84,6 +84,10 @@ const Landing = () => {
                         />
                     ))}
                 </div>
+
+                {/* Decorative background glows */}
+                <div className="absolute top-1/4 -left-1/4 w-1/2 h-1/2 bg-purple-600/10 blur-[120px] rounded-full"></div>
+                <div className="absolute bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-violet-600/10 blur-[120px] rounded-full"></div>
 
                 <div className="max-w-7xl mx-auto px-6 relative">
 
@@ -96,7 +100,7 @@ const Landing = () => {
                         {testimonialItems.map((item, index) => (
                             <div
                                 key={index}
-                                className="absolute rounded-2xl overflow-hidden shadow-xl transition-all duration-700 hover:scale-110 hover:z-50 group bg-white/5 backdrop-blur-md ring-1 ring-white/10"
+                                className="absolute rounded-2xl overflow-hidden shadow-2xl transition-all duration-700 hover:scale-110 hover:z-50 group bg-neutral-900/40 backdrop-blur-md ring-1 ring-purple-500/20"
                                 style={{
                                     left: item.left,
                                     top: item.top,
@@ -112,27 +116,27 @@ const Landing = () => {
                                 />
 
                                 {/* Premium light overlay */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-sky-900/40 via-transparent to-transparent group-hover:from-sky-500/30 transition-all"></div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-purple-900/40 via-transparent to-transparent group-hover:from-purple-500/30 transition-all"></div>
                             </div>
                         ))}
                     </div>
 
                     {/* Center Content */}
                     <div className="text-center relative z-30 max-w-3xl mx-auto">
-                        <div className="inline-flex items-center px-4 py-2 rounded-full bg-sky-900/50 text-sky-400 mb-6 border border-sky-800/50 backdrop-blur-sm type-label">
+                        <div className="inline-flex items-center px-4 py-2 rounded-full bg-purple-900/30 text-purple-400 mb-6 border border-purple-800/50 backdrop-blur-sm type-label">
                             Real Impact
                         </div>
 
                         <h2 className="type-h2 text-white mb-6 tracking-tight leading-tight">
-                            Trusted by <span className="text-sky-500">Visionaries</span>
+                            Trusted by <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-500">Visionaries</span>
                         </h2>
 
-                        <p className="type-body text-sky-100/70 mb-12 max-w-xl mx-auto leading-relaxed font-medium">
+                        <p className="type-body text-gray-400 mb-12 max-w-xl mx-auto leading-relaxed font-medium">
                             Join thousands of founders who have accelerated their growth through our professional network.
                         </p>
 
                         <button
-                            className="bg-sky-500 text-white px-12 py-5 rounded-full font-bold flex items-center gap-3 mx-auto hover:bg-sky-400 transition-all group shadow-2xl shadow-sky-900/50 transform hover:-translate-y-1"
+                            className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-12 py-5 rounded-full font-bold flex items-center gap-3 mx-auto hover:scale-105 transition-all group shadow-2xl shadow-purple-900/50"
                         >
                             Read Success Stories
                             <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
