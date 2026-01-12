@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import WhoCanUseYEN from '../components/WhoCanUseYEN';
 import HeroSection from '../components/HeroSection';
+import WhyYENSection from '../components/WhyYENSection';
 
 const Landing = () => {
 
@@ -50,11 +51,12 @@ const Landing = () => {
 
     return (
         <div className="min-h-screen">
-            <Header/>
+            <Header />
             {/* New Hero Section with Purple Globe */}
             <HeroSection />
 
-
+            {/* WHY YEN SECTION */}
+            <WhyYENSection />
 
             {/* WHO CAN USE YEN SECTION */}
             <WhoCanUseYEN />
