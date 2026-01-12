@@ -16,9 +16,9 @@ const Dashboard = () => {
 
     const getDashboardConfig = () => {
         const baseConfig = {
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-50',
-            borderColor: 'border-emerald-100'
+            color: 'text-sky-600',
+            bg: 'bg-blue-50',
+            borderColor: 'border-blue-100'
         };
 
         switch (user?.role || role) {
@@ -66,19 +66,19 @@ const Dashboard = () => {
     return (
         <div className="min-h-screen bg-[#fcfdfd] flex">
             {/* Sidebar */}
-            <aside className="fixed inset-y-0 left-0 w-72 bg-white border-r border-gray-100 hidden lg:flex flex-col shadow-xl shadow-emerald-900/5">
+            <aside className="fixed inset-y-0 left-0 w-72 bg-white border-r border-gray-100 hidden lg:flex flex-col shadow-xl shadow-sky-900/5">
                 <div className="p-8">
                     <div className="flex items-center space-x-3 mb-2">
-                        <div className="w-10 h-10 overflow-hidden rounded-xl border border-emerald-100 shadow-lg shadow-emerald-900/5">
+                        <div className="w-10 h-10 overflow-hidden rounded-xl border border-blue-100 shadow-lg shadow-sky-900/5">
                             <img src={logo} alt="Logo" className="w-full h-full object-cover" />
                         </div>
                         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">YEN</h1>
                     </div>
-                    <p className="text-xs text-emerald-600 font-bold uppercase tracking-widest pl-1">{user?.role || role} Portal</p>
+                    <p className="text-xs text-sky-600 font-bold uppercase tracking-widest pl-1">{user?.role || role} Portal</p>
                 </div>
 
                 <nav className="flex-1 px-6 space-y-2">
-                    <button className="w-full text-left px-5 py-3.5 rounded-2xl bg-emerald-50 text-emerald-700 font-bold flex items-center gap-3 transition-all border border-emerald-100">
+                    <button className="w-full text-left px-5 py-3.5 rounded-2xl bg-blue-50 text-sky-700 font-bold flex items-center gap-3 transition-all border border-blue-100">
                         <Rocket className="w-5 h-5" />
                         Dashboard
                     </button>
@@ -115,7 +115,7 @@ const Dashboard = () => {
                             <p className="text-sm font-bold text-gray-900">{user?.name || 'Explorer'}</p>
                             <p className="text-xs text-gray-400 font-medium">Free Plan</p>
                         </div>
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 overflow-hidden border-2 border-white shadow-lg ring-4 ring-emerald-50">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-100 overflow-hidden border-2 border-white shadow-lg ring-4 ring-blue-50">
                             <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'yen'}`} alt="avatar" />
                         </div>
                     </div>
@@ -123,34 +123,34 @@ const Dashboard = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                     {config.stats.map((stat, index) => (
-                        <div key={index} className="bg-white p-8 rounded-[2rem] shadow-xl shadow-emerald-900/5 border border-gray-50 flex items-center justify-between group hover:border-emerald-200 transition-all duration-300">
+                        <div key={index} className="bg-white p-8 rounded-[2rem] shadow-xl shadow-sky-900/5 border border-gray-50 flex items-center justify-between group hover:border-sky-200 transition-all duration-300">
                             <div>
                                 <p className="text-sm text-gray-400 font-bold uppercase tracking-wider mb-2">{stat.label}</p>
-                                <h3 className="text-3xl font-bold text-gray-900 group-hover:text-emerald-600 transition-colors">{stat.value}</h3>
+                                <h3 className="text-3xl font-bold text-gray-900 group-hover:text-sky-600 transition-colors">{stat.value}</h3>
                             </div>
-                            <div className={`p-5 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:scale-110 transition-transform`}>
+                            <div className={`p-5 rounded-2xl bg-blue-50 text-sky-600 group-hover:scale-110 transition-transform`}>
                                 <stat.icon className="w-7 h-7" />
                             </div>
                         </div>
                     ))}
                 </div>
 
-                <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-emerald-900/5 border border-gray-50 p-10 min-h-[500px]">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-sky-900/5 border border-gray-50 p-10 min-h-[500px]">
                     <div className="flex items-center justify-between mb-8">
                         <h3 className="text-2xl font-bold text-gray-900">Recent Activity</h3>
-                        <button className="text-sm font-bold text-emerald-600 hover:text-emerald-700 hover:underline">View All</button>
+                        <button className="text-sm font-bold text-sky-600 hover:text-sky-700 hover:underline">View All</button>
                     </div>
                     <div className="space-y-6">
                         {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="flex items-center gap-6 p-6 hover:bg-emerald-50/50 rounded-3xl transition-all duration-300 cursor-pointer border-b border-gray-50 last:border-0 group">
+                            <div key={i} className="flex items-center gap-6 p-6 hover:bg-blue-50/50 rounded-3xl transition-all duration-300 cursor-pointer border-b border-gray-50 last:border-0 group">
                                 <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center group-hover:bg-white group-hover:shadow-md transition-all">
-                                    <Rocket className="w-6 h-6 text-emerald-500" />
+                                    <Rocket className="w-6 h-6 text-sky-500" />
                                 </div>
                                 <div className="flex-1">
                                     <h4 className="text-lg font-bold text-gray-900 mb-1">Ecosystem Update</h4>
                                     <p className="text-gray-500 font-medium">A new opportunity in the AI sector matches your profile.</p>
                                 </div>
-                                <span className="text-sm font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-colors">2h ago</span>
+                                <span className="text-sm font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full group-hover:bg-blue-100 group-hover:text-sky-600 transition-colors">2h ago</span>
                             </div>
                         ))}
                     </div>

@@ -244,7 +244,7 @@ const InvestorSignup = () => {
                                         name="investorType"
                                         value={formData.investorType}
                                         onChange={handleChange}
-                                        className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all"
+                                        className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition-all"
                                         required
                                     >
                                         <option value="">Select Type</option>
@@ -307,7 +307,7 @@ const InvestorSignup = () => {
                                     name="investmentRange"
                                     value={formData.investmentRange}
                                     onChange={handleChange}
-                                    className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all"
+                                    className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition-all"
                                     required
                                 >
                                     <option value="">Select Range</option>
@@ -405,7 +405,7 @@ const InvestorSignup = () => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-4 bg-gray-900 text-white rounded-xl font-semibold shadow-lg hover:bg-black hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
+                            className="w-full py-4 bg-sky-600 text-white rounded-xl font-semibold shadow-lg hover:bg-sky-700 hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -442,7 +442,7 @@ const Input = ({ label, ...props }) => (
     <div className="space-y-1">
         {label && <label className="text-sm font-medium text-gray-700 ml-1">{label}</label>}
         <input
-            className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all"
+            className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition-all"
             {...props}
         />
     </div>
@@ -458,8 +458,8 @@ const MultiSelect = ({ label, options, selected, onToggle }) => (
                     type="button"
                     onClick={() => onToggle(option)}
                     className={`px-4 py-2 rounded-lg border transition-all ${selected.includes(option)
-                            ? 'bg-gray-900 text-white border-gray-900'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                        ? 'bg-sky-600 text-white border-sky-600'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-sky-400'
                         }`}
                 >
                     {option}

@@ -263,7 +263,7 @@ const MentorSignup = () => {
                                         name="currentRole"
                                         value={formData.currentRole}
                                         onChange={handleChange}
-                                        className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                                        className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition-all"
                                         required
                                     >
                                         <option value="">Select Role</option>
@@ -479,7 +479,7 @@ const MentorSignup = () => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-4 bg-emerald-600 text-white rounded-xl font-semibold shadow-lg hover:bg-emerald-700 hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
+                            className="w-full py-4 bg-sky-600 text-white rounded-xl font-semibold shadow-lg hover:bg-sky-700 hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -532,8 +532,8 @@ const MultiSelect = ({ label, options, selected, onToggle }) => (
                     type="button"
                     onClick={() => onToggle(option)}
                     className={`px-4 py-2 rounded-lg border transition-all ${selected.includes(option)
-                        ? 'bg-emerald-600 text-white border-emerald-600'
-                        : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-400'
+                        ? 'bg-sky-600 text-white border-sky-600'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-sky-400'
                         }`}
                 >
                     {option}

@@ -10,10 +10,10 @@ const cards = [
         footerTitle: "For: Student Entrepreneurs & Early-Stage Founders",
         footerSub: "People turning ideas into real startups",
         role: "Founders",
-        color: "from-emerald-600 to-emerald-400",
-        accent: "text-emerald-600",
-        bgAccent: "bg-emerald-600",
-        borderColor: "border-emerald-100",
+        color: "from-sky-600 to-sky-400",
+        accent: "text-sky-600",
+        bgAccent: "bg-sky-600",
+        borderColor: "border-sky-100",
         image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&h=800&fit=crop",
     },
     {
@@ -23,10 +23,10 @@ const cards = [
         footerTitle: "For: Mentors, Coaches & Industry Experts",
         footerSub: "People who guide startups to success",
         role: "Mentors",
-        color: "from-blue-600 to-blue-400",
-        accent: "text-blue-600",
-        bgAccent: "bg-blue-600",
-        borderColor: "border-blue-100",
+        color: "from-violet-600 to-violet-400",
+        accent: "text-violet-600",
+        bgAccent: "bg-violet-600",
+        borderColor: "border-violet-100",
         image: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=1200&h=800&fit=crop",
     },
     {
@@ -79,8 +79,8 @@ const Card = ({ card, index, progress, targetScale, range }) => {
                         <div
                             key={i}
                             className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-500 ${i === index
-                                    ? `${card.bgAccent} text-white scale-110 shadow-lg`
-                                    : "bg-gray-100 text-gray-400"
+                                ? `${card.bgAccent} text-white scale-110 shadow-lg`
+                                : "bg-gray-100 text-gray-400"
                                 }`}
                         >
                             {i + 1}
@@ -158,7 +158,7 @@ const WhoCanUseYEN = () => {
                     transition={{ duration: 0.8 }}
                 >
                     <h2 className="text-4xl md:text-7xl font-bold text-gray-950 mb-6 tracking-tight">
-                        Built For Every <span className="text-emerald-500">Startup Role</span>
+                        Built For Every <span className="text-sky-500">Startup Role</span>
                     </h2>
                     <p className="text-lg md:text-2xl text-gray-500 max-w-3xl mx-auto leading-relaxed">
                         Whether you’re building, guiding, funding, or scaling — YEN gives you the tools to win.

@@ -116,12 +116,12 @@ const AuthForms = ({ type }) => {
 
     return (
         <div className="min-h-screen bg-[#fcfdfd] flex items-center justify-center p-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-sky-500 via-blue-500 to-sky-500"></div>
 
-            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-emerald-900/10 w-full max-w-xl p-12 relative border border-gray-50 animate-fade-in">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-sky-900/10 w-full max-w-xl p-12 relative border border-gray-50 animate-fade-in">
                 <button
                     onClick={() => navigate('/')}
-                    className="absolute top-10 left-10 text-gray-400 hover:text-emerald-600 transition-all flex items-center gap-2 font-bold text-sm group"
+                    className="absolute top-10 left-10 text-gray-400 hover:text-sky-600 transition-all flex items-center gap-2 font-bold text-sm group"
                 >
                     <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                     <span>Back</span>
@@ -153,7 +153,7 @@ const AuthForms = ({ type }) => {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl shadow-emerald-200 hover:bg-emerald-700 hover:shadow-emerald-300 transform active:scale-95 transition-all flex items-center justify-center gap-3 mt-4"
+                        className="w-full py-4 bg-sky-600 text-white rounded-2xl font-bold shadow-xl shadow-sky-200 hover:bg-sky-500 hover:shadow-sky-300 transform active:scale-95 transition-all flex items-center justify-center gap-3 mt-4"
                     >
                         {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? 'Enter Portal' : 'Create Account')}
                     </button>
@@ -164,7 +164,7 @@ const AuthForms = ({ type }) => {
                         {isLogin ? "Don't have an account? " : "Already part of the network? "}
                         <Link
                             to={`/${isLogin ? 'signup' : 'login'}/${role}`}
-                            className="text-emerald-600 font-bold hover:underline ml-1"
+                            className="text-sky-600 font-bold hover:underline ml-1"
                         >
                             {isLogin ? 'Sign up' : 'Login'}
                         </Link>
@@ -179,7 +179,7 @@ const Input = ({ label, ...props }) => (
     <div className="space-y-1">
         {label && <label className="text-sm font-bold text-gray-700 ml-1">{label}</label>}
         <input
-            className="w-full p-4 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all bg-gray-50/50 placeholder:text-gray-300 font-medium"
+            className="w-full p-4 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 outline-none transition-all bg-gray-50/50 placeholder:text-gray-300 font-medium"
             {...props}
         />
     </div>
