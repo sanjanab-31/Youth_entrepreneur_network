@@ -4,9 +4,9 @@ import { ArrowRight } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import WhoCanUseYEN from '../components/WhoCanUseYEN';
+import HeroSection from '../components/HeroSection';
 
 const Landing = () => {
-
 
 
 
@@ -50,8 +50,9 @@ const Landing = () => {
 
     return (
         <div className="min-h-screen">
-            <Header />
-
+            <Header/>
+            {/* New Hero Section with Purple Globe */}
+            <HeroSection />
 
 
 

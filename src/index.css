@@ -5,8 +5,10 @@
   --color-brand-primary-dark: #0284C7;
   --color-brand-primary-light: #EFF6FF;
   --color-brand-accent: #0EA5E9;
+  --color-purple-primary: #7C3AED;
+  --color-purple-glow: #A78BFA;
 
-  --font-sans: "Mazzard", "Mazzard H", "Mazzard M", "Mazzard L",  system-ui, -apple-system, sans-serif;
+  --font-sans: "Archivo", system-ui, -apple-system, sans-serif;
 }
 
 :root {
@@ -161,4 +163,35 @@
 .animate-float-delayed {
   animation: float 3s ease-in-out infinite;
   animation-delay: 1.5s;
+}
+
+@keyframes gradient {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 3s ease infinite;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
 }
