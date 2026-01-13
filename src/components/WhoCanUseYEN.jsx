@@ -63,7 +63,7 @@ const Card = ({ card, index, progress, targetScale, range }) => {
     const blur = useTransform(progress, range, [0, 8]);
 
     return (
-        <div className="h-screen flex items-center justify-center sticky top-0">
+        <div className="h-auto md:h-screen flex items-center justify-center relative md:sticky md:top-0 py-10 md:py-0">
             <motion.div
                 style={{
                     scale,
@@ -71,7 +71,7 @@ const Card = ({ card, index, progress, targetScale, range }) => {
                     opacity,
                     top: `calc(2vh + ${index * 20}px)`,
                 }}
-                className="relative w-full max-w-7xl h-[60vh] md:h-[65vh] bg-neutral-900/40 backdrop-blur-3xl rounded-[4rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col md:flex-row border border-purple-500/20 group"
+                className="relative w-full max-w-7xl h-[80vh] md:h-[65vh] bg-neutral-900/40 backdrop-blur-3xl rounded-[2rem] md:rounded-[4rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col md:flex-row border border-purple-500/20 group"
             >
                 {/* Step Indicator (1, 2, 3, 4) */}
                 <div className="absolute left-8 top-1/2 -translate-y-1/2 hidden lg:flex flex-col gap-4 z-20">
@@ -89,33 +89,33 @@ const Card = ({ card, index, progress, targetScale, range }) => {
                 </div>
 
                 {/* Left Side: Content */}
-                <div className="flex-[1.2] p-10 md:p-16 lg:pl-32 lg:pr-10 flex flex-col justify-between relative z-10">
-                    <div className="space-y-6">
-                        <div className={`inline-flex px-4 py-1.5 rounded-full border border-purple-500/30 bg-purple-500/5 ${card.accent} text-[11px] font-black uppercase tracking-[0.2em]`}>
+                <div className="flex-[1.2] p-8 md:p-16 lg:pl-32 lg:pr-10 flex flex-col justify-between relative z-10">
+                    <div className="space-y-4 md:space-y-6">
+                        <div className={`inline-flex px-3 py-1 rounded-full border border-purple-500/30 bg-purple-500/5 ${card.accent} type-label`}>
                             {card.label}
                         </div>
 
-                        <h3 className="text-3xl md:text-4xl lg:text-6xl font-semibold text-white leading-[1.1] tracking-tight">
+                        <h3 className="type-h2 leading-tight">
                             {card.title}
                         </h3>
 
-                        <p className="text-md text-gray-400 leading-relaxed max-w-lg font-medium">
+                        <p className="type-body-lg max-w-lg">
                             {card.description}
                         </p>
                     </div>
 
                     {/* Footer Style Infobox */}
-                    <div className="mt-2 pt-4 border-t border-white/5">
-                        <p className="text-sm font-bold text-white mb-1 uppercase tracking-wide">{card.footerTitle}</p>
-                        <p className="text-xs text-purple-400/80">{card.footerSub}</p>
+                    <div className="mt-4 pt-4 border-t border-white/5">
+                        <p className="type-label text-white mb-1">{card.footerTitle}</p>
+                        <p className="type-small text-purple-400/80">{card.footerSub}</p>
                     </div>
                 </div>
 
                 {/* Right Side: Image with Floating Button */}
-                <div className="flex-1 relative h-full overflow-hidden p-6 md:p-12">
+                <div className="flex-1 relative h-48 md:h-full overflow-hidden p-4 md:p-12">
                     <div className="absolute inset-x-0 inset-y-0 z-10 w-full h-full pointer-events-none bg-gradient-to-t from-black/20 via-transparent to-transparent" />
 
-                    <div className="relative w-full h-full overflow-hidden rounded-[40px] border border-white/10 shadow-2xl">
+                    <div className="relative w-full h-full overflow-hidden rounded-[20px] md:rounded-[40px] border border-white/10 shadow-2xl">
                         <motion.img
                             initial={{ scale: 1.1, opacity: 0 }}
                             whileInView={{ scale: 1, opacity: 1 }}
@@ -125,12 +125,11 @@ const Card = ({ card, index, progress, targetScale, range }) => {
                             className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-700"
                         />
 
-                        {/* Ask-me-style Button Overlay */}
-                        <div className="absolute bottom-5 right-5 flex items-center justify-center translate-z-10">
-                            <button className="bg-black/80 backdrop-blur-xl rounded-full pl-6 pr-2 py-2 flex items-center gap-3 w-full border border-white/20 hover:border-purple-500/50 hover:scale-[1.05] transition-all duration-300 group/btn">
-                                <span className="text-[10px] md:text-xs font-bold text-white uppercase tracking-widest">Connect Now</span>
-                                <div className={`w-8 h-8 ${card.bgAccent} rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.4)] group-hover/btn:scale-110 transition-transform`}>
-                                    <ArrowUpRight className="w-4 h-4 text-white" />
+                        <div className="absolute bottom-3 right-3 md:bottom-5 md:right-5 flex items-center justify-center translate-z-10">
+                            <button className="btn-sm bg-black/80 backdrop-blur-xl border border-white/20 hover:border-purple-500/50 hover:scale-[1.05] group/btn">
+                                <span className="uppercase tracking-widest text-[10px]">Connect Now</span>
+                                <div className={`w-6 h-6 md:w-8 md:h-8 ${card.bgAccent} rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.4)] group-hover/btn:scale-110 transition-transform`}>
+                                    <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4 text-white" />
                                 </div>
                             </button>
                         </div>
@@ -164,10 +163,10 @@ const WhoCanUseYEN = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.8 }}
                 >
-                    <h2 className="text-4xl md:text-7xl font-bold text-white mb-6 tracking-tight">
+                    <h2 className="type-h1 mb-6">
                         Built For Every <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-500">Startup Role</span>
                     </h2>
-                    <p className="text-lg md:text-2xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
+                    <p className="type-body-lg max-w-3xl mx-auto mb-10">
                         Whether you’re building, guiding, funding, or scaling — YEN gives you the tools to win.
                     </p>
                 </motion.div>
@@ -191,10 +190,7 @@ const WhoCanUseYEN = () => {
                 })}
             </div>
 
-            <div className="h-[50vh]" />
-
-            {/* Bottom transition gradient */}
-            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#050505] to-transparent pointer-events-none"></div>
+            <div className="h-[10vh]" />
         </section>
     );
 };
