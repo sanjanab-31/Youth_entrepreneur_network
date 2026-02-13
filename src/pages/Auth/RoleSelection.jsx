@@ -1,43 +1,57 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { User, Briefcase, Building2, ShieldCheck, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Briefcase, Building2, ShieldCheck, ArrowRight, Zap } from 'lucide-react';
 import AuthLayout from '../../layouts/AuthLayout';
 
-const RoleCard = ({ title, description, icon: Icon, onClick, accentColor = "purple", index }) => {
+const FlipCard = ({ title, description, icon: Icon, onClick, index, color = "purple" }) => {
+    const [isFlipped, setIsFlipped] = useState(false);
+
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, delay: index * 0.1 }}
+            className="relative w-full aspect-square cursor-pointer perspective-1000 group"
+            onMouseEnter={() => setIsFlipped(true)}
+            onMouseLeave={() => setIsFlipped(false)}
             onClick={onClick}
-            className="group relative bg-[#1E1E2F]/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 hover:bg-[#1E1E2F]/60 transition-all duration-500 cursor-pointer hover:border-purple-500/50 flex flex-col items-start text-left h-full shadow-lg hover:shadow-purple-500/10"
         >
-            {/* Hover Glow Effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+            <motion.div
+                className="w-full h-full relative preserve-3d"
+                animate={{ rotateY: isFlipped ? 180 : 0 }}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
+                style={{ transformStyle: 'preserve-3d' }}
+            >
+                {/* Front Side */}
+                <div className="absolute inset-0 backface-hidden bg-[#1E1E2F]/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 flex flex-col justify-end group-hover:border-purple-500/30 transition-colors">
+                    <h3 className="text-2xl font-black text-white leading-tight">
+                        {title.split(' ').map((word, i) => (
+                            <span key={i} className="block">{word}</span>
+                        ))}
+                    </h3>
+                </div>
 
-            <div className={`w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mb-8 border border-white/10 group-hover:border-${accentColor}-500/50 group-hover:bg-${accentColor}-500/10 transition-all duration-500`}>
-                <Icon className={`w-7 h-7 text-gray-400 group-hover:text-${accentColor}-400 transition-colors duration-500`} />
-            </div>
+                {/* Back Side */}
+                <div
+                    className="absolute inset-0 backface-hidden bg-gradient-to-br from-purple-900/40 to-[#1E1E2F] backdrop-blur-xl border border-purple-500/30 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-purple-500/10"
+                    style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}
+                >
+                    <div className="space-y-4">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30">
+                            <Icon size={20} className="text-purple-400" />
+                        </div>
+                        <p className="text-gray-200 text-sm font-medium leading-relaxed">
+                            {description}
+                        </p>
+                    </div>
 
-            <div className="relative z-10 flex flex-col h-full w-full">
-                <h3 className="text-2xl font-bold text-white mb-3 tracking-tight group-hover:text-purple-300 transition-colors">
-                    {title}
-                </h3>
-                <p className="text-gray-400 text-base leading-relaxed mb-8 flex-grow">
-                    {description}
-                </p>
-
-                <div className="flex items-center justify-between w-full pt-6 border-t border-white/5 mt-auto">
-                    <span className="text-sm font-semibold text-gray-500 group-hover:text-white transition-colors uppercase tracking-widest">
-                        Select Role
-                    </span>
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-purple-600 transition-all duration-500 group-hover:rotate-[-45deg]">
-                        <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-white" />
+                    <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                        <span className="text-white text-xs font-bold tracking-tight uppercase">Portal</span>
+                        <ArrowRight className="text-purple-400" size={18} />
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </motion.div>
     );
 };
@@ -45,94 +59,75 @@ const RoleCard = ({ title, description, icon: Icon, onClick, accentColor = "purp
 const RoleSelection = () => {
     const navigate = useNavigate();
 
-    const handleRoleSelect = (role) => {
-        navigate(`/auth/login?role=${role}`);
-    };
+    const roles = [
+        {
+            id: 'founder',
+            title: 'Startup Founder',
+            description: 'Execute your vision with structured paths and verified metrics. Find co-founders and incubation support.',
+            icon: User
+        },
+        {
+            id: 'mentor',
+            title: 'Expert Mentor',
+            description: 'Guide the next generation of innovators with operational insights and structured feedback tools.',
+            icon: Briefcase
+        },
+        {
+            id: 'incubator',
+            title: 'Venture Partner',
+            description: 'Discover verified startups, manage institutional deal flow, and track portfolio performance.',
+            icon: Building2
+        },
+        {
+            id: 'admin',
+            title: 'Platform Admin',
+            description: 'Internal governance and management portal for the Vanguard ecosystem control center.',
+            icon: ShieldCheck
+        }
+    ];
 
     return (
         <AuthLayout>
-            <div className="w-full max-w-6xl mx-auto px-6 py-12">
-                <div className="text-center mb-20">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5 }}
-                        className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-bold uppercase tracking-widest mb-6"
-                    >
-                        <CheckCircle2 size={14} />
-                        Identity Verification
-                    </motion.div>
+            <style>{`
+                .perspective-1000 { perspective: 1000px; }
+                .preserve-3d { transform-style: preserve-3d; }
+                .backface-hidden { backface-visibility: hidden; }
+            `}</style>
 
-                    <motion.h2
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.1 }}
-                        className="text-5xl md:text-6xl font-black text-white tracking-tighter mb-6"
-                    >
-                        Who are you <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400">building</span> for?
-                    </motion.h2>
-
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.6, delay: 0.2 }}
-                        className="text-gray-450 text-xl max-w-2xl mx-auto font-medium"
-                    >
-                        Step into the Vanguard ecosystem with a specialized interface tailored to your professional objectives.
-                    </motion.p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 px-4">
-                    <RoleCard
-                        index={0}
-                        title="Founder"
-                        description="Scale your vision with structured execution paths. Connect with co-founders and secure incubation."
-                        icon={User}
-                        onClick={() => handleRoleSelect('founder')}
-                        accentColor="purple"
-                    />
-
-                    <RoleCard
-                        index={1}
-                        title="Mentor"
-                        description="Professional guidance for high-growth startups. Share expertise through a structured tracking system."
-                        icon={Briefcase}
-                        onClick={() => handleRoleSelect('mentor')}
-                        accentColor="purple"
-                    />
-
-                    <RoleCard
-                        index={2}
-                        title="Incubator"
-                        description="Optimize portfolio management and institutional deal flow with verified performance metrics."
-                        icon={Building2}
-                        onClick={() => handleRoleSelect('incubator')}
-                        accentColor="purple"
-                    />
-                </div>
-
+            <div className="w-full h-full max-w-7xl px-6 flex flex-col items-center justify-center">
                 <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-16"
+                >
+                    <h2 className="text-5xl md:text-6xl font-black text-white tracking-tighter">
+                        Select your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 italic">Command</span>
+                    </h2>
+                </motion.div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full mb-8">
+                    {roles.map((role, idx) => (
+                        <FlipCard
+                            key={role.id}
+                            index={idx}
+                            title={role.title}
+                            description={role.description}
+                            icon={role.icon}
+                            onClick={() => navigate(`/auth/login?role=${role.id}`)}
+                        />
+                    ))}
+                </div>
+
+                <motion.button
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.8 }}
-                    className="flex flex-col items-center border-t border-white/5 pt-12"
+                    onClick={() => navigate('/')}
+                    className="mt-8 text-gray-500 hover:text-white font-bold transition-all text-sm uppercase tracking-[0.2em] flex items-center gap-3 group"
                 >
-                    <p className="text-gray-500 text-sm mb-6 font-medium">Internal Administration Access</p>
-                    <button
-                        onClick={() => handleRoleSelect('admin')}
-                        className="group flex items-center px-8 py-3 rounded-2xl bg-[#1E1E2F] border border-white/5 text-gray-400 hover:text-white hover:border-purple-500/30 transition-all duration-300 shadow-xl"
-                    >
-                        <ShieldCheck className="w-5 h-5 mr-3 group-hover:text-purple-400 transition-colors" />
-                        <span className="font-bold tracking-tight">Access Control Portal</span>
-                    </button>
-
-                    <button
-                        onClick={() => navigate('/')}
-                        className="mt-8 text-gray-600 hover:text-gray-400 text-sm font-bold transition-colors"
-                    >
-                        Back to Landing
-                    </button>
-                </motion.div>
+                    <div className="w-8 h-[1px] bg-gray-500 group-hover:bg-white group-hover:w-12 transition-all" />
+                    Abort to Home
+                </motion.button>
             </div>
         </AuthLayout>
     );
