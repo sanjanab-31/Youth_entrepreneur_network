@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { ArrowRight, CheckCircle, Users, Briefcase, Zap, Globe, MessageSquare, TrendingUp, Shield, Star, ChevronLeft, ChevronRight, Play, Info } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -26,6 +27,7 @@ const FadeIn = ({ children, delay = 0 }) => (
 
 const HeroCarousel = () => {
     const [currentSlide, setCurrentSlide] = React.useState(0);
+    const navigate = useNavigate();
 
     const slides = [
         {
@@ -54,7 +56,7 @@ const HeroCarousel = () => {
     React.useEffect(() => {
         const timer = setInterval(() => {
             setCurrentSlide((prev) => (prev + 1) % slides.length);
-        }, 10000); // 10 seconds
+        }, 5000); // 5 seconds
         return () => clearInterval(timer);
     }, []);
 
@@ -85,7 +87,7 @@ const HeroCarousel = () => {
             </AnimatePresence>
 
             {/* Content Container */}
-            <div className="relative z-10 h-full max-w-7xl mx-auto px-6 flex flex-col justify-center">
+            <div className="relative z-10 h-full  px-6 flex flex-col justify-center items-center text-center">
                 <AnimatePresence mode='wait'>
                     <motion.div
                         key={currentSlide}
@@ -93,7 +95,7 @@ const HeroCarousel = () => {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 50, transition: { duration: 0.5 } }}
                         transition={{ duration: 0.8, delay: 0.3 }}
-                        className="max-w-2xl"
+                        className="max-w-7xl"
                     >
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
@@ -114,13 +116,16 @@ const HeroCarousel = () => {
                         </motion.h1>
 
                         <motion.p
-                            className="text-xl text-gray-200 mb-10 leading-relaxed max-w-xl shadow-black drop-shadow-md"
+                            className="text-xl text-gray-200 mb-10 leading-relaxed max-w-7xl mx-auto shadow-black drop-shadow-md"
                         >
                             {slides[currentSlide].subtitle}
                         </motion.p>
 
-                        <div className="flex gap-4">
-                            <button className="px-8 py-4 rounded-full bg-brand-purple hover:bg-brand-purple-hover text-white font-bold text-lg shadow-[0_0_30px_rgba(139,92,246,0.3)] hover:shadow-[0_0_50px_rgba(139,92,246,0.5)] transition-all flex items-center gap-2">
+                        <div className="flex gap-4 justify-center">
+                            <button
+                                onClick={() => navigate('/auth/role-selection')}
+                                className="px-8 py-4 rounded-full bg-brand-purple hover:bg-brand-purple-hover text-white font-bold text-lg shadow-[0_0_30px_rgba(139,92,246,0.3)] hover:shadow-[0_0_50px_rgba(139,92,246,0.5)] transition-all flex items-center gap-2"
+                            >
                                 Get Started <ArrowRight size={20} />
                             </button>
                             <button className="px-8 py-4 rounded-full border border-white/20 hover:bg-white/10 text-white font-semibold text-lg backdrop-blur-md transition-all">
@@ -148,6 +153,8 @@ const HeroCarousel = () => {
 };
 
 const Landing = () => {
+    const [activeMentor, setActiveMentor] = React.useState(0);
+
     return (
         <div className="min-h-screen bg-brand-black selection:bg-brand-purple selection:text-white overflow-x-hidden">
             <Navbar />
@@ -158,7 +165,7 @@ const Landing = () => {
             </section>
 
             {/* PROBLEM SECTION */}
-            <Section className="bg-brand-black/50">
+            {/* <Section className="bg-brand-black/50">
                 <FadeIn>
                     <div className="text-center mb-16">
                         <h2 className="text-3xl md:text-5xl font-bold mb-4">The Startup Ecosystem Is <span className="text-gradient">Fragmented.</span></h2>
@@ -185,9 +192,9 @@ const Landing = () => {
                         }
                     ].map((card, i) => (
                         <FadeIn key={i} delay={i * 0.1}>
-                            <div className="glass-card p-8 rounded-2xl h-full card-hover group relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-purple/5 rounded-full blur-2xl group-hover:bg-brand-purple/10 transition-colors" />
-                                <div className="text-brand-purple mb-6 group-hover:scale-110 transition-transform duration-300 inline-block">
+                            <div className="p-8 rounded-2xl h-full transition-all duration-300 hover:-translate-y-2 border border-white/5 hover:border-brand-purple/50 bg-gradient-to-b from-white/5 to-transparent hover:bg-brand-purple/5 group relative overflow-hidden text-center">
+                                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-brand-purple/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-purple/10 text-brand-purple mb-6 group-hover:scale-110 group-hover:bg-brand-purple group-hover:text-white transition-all duration-300">
                                     {card.icon}
                                 </div>
                                 <h3 className="text-xl font-bold text-white mb-3">{card.title}</h3>
@@ -196,7 +203,7 @@ const Landing = () => {
                         </FadeIn>
                     ))}
                 </div>
-            </Section>
+            </Section> */}
 
             {/* ROLE SELECTION SECTION (Redesigned Premium Cards) */}
             {/* ROLE SELECTION SECTION (Redesigned Premium Cards) */}
@@ -208,23 +215,16 @@ const Landing = () => {
                             Get Started
                         </div>
 
-                        <h2 className="text-4xl md:text-5xl font-bold mb-4">
+                        <h2 className="text-3xl md:text-5xl font-bold mb-4">
                             Explore All Programs
                         </h2>
 
-                        <p className="text-brand-muted text-lg max-w-2xl">
+                        <p className="text-brand-muted max-w-2xl">
                             Choose your role and access a structured startup ecosystem.
                         </p>
                     </div>
 
-                    <div className="hidden md:flex gap-2">
-                        <button className="p-3 rounded-full border border-white/10 hover:bg-white/5 text-white transition-colors">
-                            <ChevronLeft size={20} />
-                        </button>
-                        <button className="p-3 rounded-full border border-white/10 hover:bg-white/5 text-white transition-colors">
-                            <ChevronRight size={20} />
-                        </button>
-                    </div>
+
                 </div>
 
                 <div className="flex gap-6 overflow-x-auto pb-12 snap-x px-6 md:px-20 scrollbar-hide">
@@ -282,10 +282,10 @@ const Landing = () => {
 
                         <div
                             key={i}
-                            className="group relative min-w-[600px]  rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20"
+                            className="group relative min-w-[500px]  rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20 border border-brand-purple/20"
 
                         >
-                            <div className="relative h-[550px]">
+                            <div className="relative h-[500px]">
 
                                 {/* Image */}
                                 <img
@@ -341,11 +341,17 @@ const Landing = () => {
                                     </div>
 
                                     <div className="flex gap-3 w-full max-w-md">
-                                        <button className="flex-1 border border-gray-600 rounded-full py-3 hover:bg-gray-800">
-                                            {card.btnSec}
+                                        <button
+                                            onClick={() => navigate(`/auth/login?role=${card.role.toLowerCase().includes('founder') ? 'founder' : card.role.toLowerCase().includes('mentor') ? 'mentor' : 'incubator'}`)}
+                                            className="flex-1 border border-gray-600 rounded-full py-3 hover:bg-gray-800"
+                                        >
+                                            Login
                                         </button>
 
-                                        <button className="flex-1 bg-gradient-to-r from-purple-600 to-purple-500 rounded-full py-3 shadow-lg shadow-purple-500/40">
+                                        <button
+                                            onClick={() => navigate(`/auth/signup?role=${card.role.toLowerCase().includes('founder') ? 'founder' : card.role.toLowerCase().includes('mentor') ? 'mentor' : 'incubator'}`)}
+                                            className="flex-1 bg-gradient-to-r from-purple-600 to-purple-500 rounded-full py-3 shadow-lg shadow-purple-500/40"
+                                        >
                                             {card.btnMain}
                                         </button>
                                     </div>
@@ -360,43 +366,40 @@ const Landing = () => {
             </section>
 
 
-            {/* MENTOR SPOTLIGHT (Horizontal Scroll) */}
-            <Section className="bg-brand-black overflow-hidden">
-                <div className="grid grid-cols-12 gap-8 items-center">
+            {/* MENTOR SPOTLIGHT (Accordion) */}
+            <Section className="relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-brand-purple/20 to-transparent" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                     {/* Left Content Section */}
-                    <div className="col-span-4">
+                    <div>
                         <h2 className="text-5xl font-bold mb-4 leading-tight">
-                            Learn From Builders. <span className="text-gray-500">Not Theorists.</span>
+                            Learn From <span className="text-brand-purple">Builders.</span> <span className="text-gray-500">Not Theorists.</span>
                         </h2>
-                        <p className="text-gray-400 text-lg mb-6 leading-relaxed">
-                            Connect with mentors who have actually walked the path.
+                        <p className="text-gray-400 text-lg mb-8 leading-relaxed max-w-lg">
+                            Connect with mentors who have actually walked the path. Get operational advice, not just high-level theory.
                         </p>
 
                         {/* Feature Tags */}
-                        <div className="flex items-center gap-6 text-sm text-gray-400 mb-8">
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center">
-                                    <div className="w-2 h-2 rounded-full bg-white"></div>
+                        <div className="flex flex-wrap items-center gap-6 text-sm text-gray-400">
+                            {[
+                                { label: "ONLINE", dot: true },
+                                { label: "SELF-PACED", dot: true },
+                                { label: "CERTIFICATE", dot: true }
+                            ].map((tag, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                    {tag.dot && (
+                                        <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center">
+                                            <div className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-brand-purple' : 'bg-white/50'}`}></div>
+                                        </div>
+                                    )}
+                                    <span className="tracking-wider text-xs font-bold">{tag.label}</span>
                                 </div>
-                                <span>ONLINE</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center">
-                                    <div className="w-2 h-2 rounded-full bg-white"></div>
-                                </div>
-                                <span>SELF-PACED</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center">
-                                    <div className="w-2 h-2 rounded-full bg-white"></div>
-                                </div>
-                                <span>CERTIFICATE</span>
-                            </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Right Mentor Cards Section */}
-                    <div className="col-span-8 flex gap-4 justify-end">
+                    {/* Right Mentor Cards Accordion */}
+                    <div className="flex gap-4 h-[500px] w-full">
                         {[
                             { name: "Gabriella Hersham", company: "HUCKLETREE", role: "Founder of Huckletree", quote: "Building communities that inspire innovation.", img: "photo-1573496359142-b8d87734a5a2" },
                             { name: "Caen Contee", company: "LIME", role: "Co-Founder", quote: "Fall in love with the problem, not the solution.", img: "photo-1507003211169-0a1dd7228f2d" },
@@ -405,75 +408,72 @@ const Landing = () => {
                         ].map((mentor, i) => (
                             <div
                                 key={i}
-                                className="mentor-card relative rounded-3xl overflow-hidden cursor-pointer w-64 h-[500px] transition-all duration-500 ease-out hover:w-80 group"
+                                onMouseEnter={() => setActiveMentor(i)}
+                                className={`relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 ease-out bg-cover bg-center ${activeMentor === i ? 'flex-[3]' : 'flex-[1]'}`}
                                 style={{
-                                    background: `linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.8)), url('https://images.unsplash.com/${mentor.img}?w=400&h=600&fit=crop')`,
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center'
+                                    backgroundImage: `url('https://images.unsplash.com/${mentor.img}?w=600&h=800&fit=crop')`
                                 }}
                             >
-                                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/90"></div>
-                                <div className="absolute bottom-0 left-0 right-0 p-6">
-                                    <div className="company-name text-white/60 text-sm font-medium tracking-widest uppercase mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        {mentor.company}
+                                <div className={`absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/90 transition-opacity duration-300 ${activeMentor === i ? 'opacity-100' : 'opacity-80'}`} />
+
+                                <div className="absolute bottom-0 left-0 right-0 p-6 whitespace-nowrap overflow-hidden">
+                                    <div className={`transition-all duration-500 transform ${activeMentor === i ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+                                        <div className="text-brand-purple text-xs font-bold tracking-widest uppercase mb-1">{mentor.company}</div>
+                                        <div className="text-gray-300 text-xs mb-2">{mentor.role}</div>
                                     </div>
-                                    <div className="mentor-role text-gray-400 text-sm mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        {mentor.role}
-                                    </div>
-                                    <h3 className="mentor-name text-white font-semibold text-xl group-hover:text-2xl transition-all duration-300">
+
+                                    <h3
+                                        className={`text-white font-bold transition-all duration-300 origin-bottom-left whitespace-nowrap
+                                        ${activeMentor === i
+                                                ? 'text-2xl mb-2 translate-x-0 translate-y-0 rotate-0 relative'
+                                                : 'text-3xl absolute bottom-8 left-8 -rotate-90 translate-x-0 translate-y-0'
+                                            }`}
+                                    >
                                         {mentor.name}
                                     </h3>
-                                    <div className="mentor-quote mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        <p className="text-gray-300 text-sm leading-relaxed">
-                                            {mentor.quote}
-                                        </p>
-                                    </div>
+
+                                    <p className={`text-gray-400 text-xs leading-relaxed max-w-xs whitespace-normal transition-all duration-500 delay-100 ${activeMentor === i ? 'opacity-100 h-auto' : 'opacity-0 h-0 pointer-events-none'}`}>
+                                        "{mentor.quote}"
+                                    </p>
                                 </div>
-                                <div className="absolute inset-0 border-2 rounded-3xl border-transparent group-hover:border-white/20 transition-colors duration-300"></div>
+
+                                <div className={`absolute inset-0 border-2 rounded-3xl transition-colors duration-300 ${activeMentor === i ? 'border-brand-purple/50' : 'border-transparent'}`} />
                             </div>
                         ))}
                     </div>
                 </div>
             </Section>
-            {/* HOW IT WORKS */}
-            {/* <Section>
+            {/* HOW VANGUARD WORKS */}
+            <Section className="relative overflow-hidden">
                 <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
-                    <p className="text-brand-muted">A structured path from idea to incubation.</p>
+                    <h2 className="text-3xl md:text-5xl font-bold mb-4">How Vanguard <span className="text-brand-purple">Works</span></h2>
+                    <p className="text-brand-muted max-w-2xl mx-auto">A structured path from idea to incubation.</p>
                 </div>
 
-                <div className="relative max-w-3xl mx-auto"> */}
-                    {/* Vertical Line */}
-                    {/* <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-brand-purple/0 via-brand-purple to-brand-purple/0 -translate-x-1/2 hidden md:block" />
-
-                    <div className="space-y-12">
-                        {[
-                            { step: "01", title: "Create Structured Profile", desc: "Showcase your vision, traction, and team clearly." },
-                            { step: "02", title: "Find The Right Match", desc: "Connect with co-founders who complement your skills." },
-                            { step: "03", title: "Build With Mentorship", desc: "Get stage-specific guidance from vetted experts." },
-                            { step: "04", title: "Become Incubator Ready", desc: "Apply to top incubators with a verified profile." }
-                        ].map((step, i) => (
-                            <FadeIn key={i} delay={i * 0.1}>
-                                <div className={`flex flex-col md:flex-row items-center gap-8 ${i % 2 === 0 ? 'md:flex-row-reverse' : ''}`}>
-                                    <div className="flex-1 text-center md:text-left">
-                                        <div className={`glass-card p-6 rounded-2xl border-l-4 ${i % 2 === 0 ? 'border-l-brand-purple' : 'border-l-white/20'}`}>
-                                            <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
-                                            <p className="text-brand-muted text-sm">{step.desc}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="relative z-10 flex-shrink-0 w-12 h-12 rounded-full bg-brand-black border-2 border-brand-purple flex items-center justify-center text-brand-purple font-bold text-sm shadow-[0_0_15px_rgba(139,92,246,0.3)]">
-                                        {step.step}
-                                    </div>
-
-                                    <div className="flex-1 md:block hidden" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+                    {[
+                        { step: "01", title: "Create Your Profile", desc: "Build a structured startup profile with stage, traction, and skill gaps." },
+                        { step: "02", title: "Find The Right Match", desc: "Connect with co-founders and mentors based on real needs and compatibility." },
+                        { step: "03", title: "Execute With Structure", desc: "Track milestones, mentorship sessions, and startup progress in one place." },
+                        { step: "04", title: "Become Incubator Ready", desc: "Apply with verified execution data and structured startup visibility." }
+                    ].map((item, i) => (
+                        <FadeIn key={i} delay={i * 0.1}>
+                            <div className="relative group pt-8 px-8 rounded-3xl bg-brand-card/20 border border-white/5 hover:border-brand-purple/30 transition-all duration-300 hover:bg-brand-card/40 h-full overflow-hidden">
+                                <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-100 transition-opacity duration-300">
+                                    <span className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-brand-purple to-transparent">{item.step}</span>
                                 </div>
-                            </FadeIn>
-                        ))}
-                    </div>
-                </div>
-            </Section> */}
 
+                                <div className="relative z-10 pt-30">
+                                    <h3 className="text-xl font-bold text-white mb-3 ">{item.title}</h3>
+                                    <p className="text-brand-muted text-sm leading-relaxed mb-4">{item.desc}</p>
+                                </div>
+
+                                <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-brand-purple to-transparent w-0 group-hover:w-full transition-all duration-500" />
+                            </div>
+                        </FadeIn>
+                    ))}
+                </div>
+            </Section>
             {/* SOCIAL PROOF
             <Section className="bg-gradient-to-b from-brand-black to-brand-card/20">
                 <div className="text-center mb-16">
@@ -496,7 +496,7 @@ const Landing = () => {
             </Section> */}
 
             {/* CTA SECTION */}
-            <Section className="pb-32">
+            {/* <Section className="pb-32">
                 <div className="relative glass-card rounded-3xl p-12 md:p-20 text-center overflow-hidden border border-brand-purple/30">
                     <div className="absolute inset-0 bg-brand-purple/5 mix-blend-overlay pointer-events-none" />
                     <div className="absolute -top-20 -left-20 w-60 h-60 bg-brand-purple/20 rounded-full blur-[80px]" />
@@ -511,7 +511,7 @@ const Landing = () => {
                         Join Vanguard Today
                     </button>
                 </div>
-            </Section>
+            </Section> */}
 
             <Footer />
         </div>

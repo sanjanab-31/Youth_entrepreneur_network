@@ -29,12 +29,12 @@ const Navbar = () => {
 
                 {/* CTA Buttons */}
                 <div className="flex items-center gap-4">
-                    <button className="hidden sm:block px-5 py-2 rounded-full border border-brand-purple text-brand-purple text-sm font-medium hover:bg-brand-purple/10 transition-all">
+                    <Link to="/auth/login?role=founder" className="hidden sm:block px-5 py-2 rounded-full border border-brand-purple text-brand-purple text-sm font-medium hover:bg-brand-purple/10 transition-all">
                         Login
-                    </button>
-                    <button className="px-5 py-2 rounded-full bg-brand-purple text-white text-sm font-medium hover:bg-brand-purple-hover shadow-lg shadow-purple-900/20 hover:shadow-purple-900/40 transition-all">
+                    </Link>
+                    <Link to="/auth/role-selection" className="px-5 py-2 rounded-full bg-brand-purple text-white text-sm font-medium hover:bg-brand-purple-hover shadow-lg shadow-purple-900/20 hover:shadow-purple-900/40 transition-all">
                         Get Started
-                    </button>
+                    </Link>
                 </div>
             </div>
         </nav>
