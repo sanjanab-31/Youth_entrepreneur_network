@@ -24,8 +24,8 @@ const FlipCard = ({ title, description, icon: Icon, onClick, index, color = "pur
                 style={{ transformStyle: 'preserve-3d' }}
             >
                 {/* Front Side */}
-                <div className="absolute inset-0 backface-hidden bg-[#1E1E2F]/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 flex flex-col justify-end group-hover:border-purple-500/30 transition-colors">
-                    <h3 className="text-2xl font-black text-white leading-tight">
+                <div className="absolute inset-0 backface-hidden bg-[#1E1E2F]/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col justify-end group-hover:border-purple-500/30 transition-colors">
+                    <h3 className="text-xl font-black text-white leading-tight">
                         {title.split(' ').map((word, i) => (
                             <span key={i} className="block">{word}</span>
                         ))}
@@ -34,7 +34,7 @@ const FlipCard = ({ title, description, icon: Icon, onClick, index, color = "pur
 
                 {/* Back Side */}
                 <div
-                    className="absolute inset-0 backface-hidden bg-gradient-to-br from-purple-900/40 to-[#1E1E2F] backdrop-blur-xl border border-purple-500/30 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-purple-500/10"
+                    className="absolute inset-0 backface-hidden bg-gradient-to-br from-purple-900/40 to-[#1E1E2F] backdrop-blur-xl border border-purple-500/30 rounded-3xl p-6 flex flex-col justify-between shadow-2xl shadow-purple-500/10"
                     style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}
                 >
                     <div className="space-y-4">
@@ -100,18 +100,18 @@ const RoleSelection = () => {
                 .backface-hidden { backface-visibility: hidden; }
             `}</style>
 
-            <div className="w-full h-full max-w-7xl px-6 flex flex-col items-center justify-center">
+            <div className="w-full h-full max-w-7xl px-4 flex flex-col items-center justify-center">
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center mb-16"
                 >
                     <h2 className="text-5xl md:text-6xl font-black text-white tracking-tighter">
-                        Select your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 italic">Command</span>
+                        Select  your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 italic">Command</span>
                     </h2>
                 </motion.div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 w-full mb-8">
                     {roles.map((role, idx) => (
                         <FlipCard
                             key={role.id}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -28,6 +27,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
+import logo from '../assets/logo.jpg';
 
 const DashboardLayout = ({ children, role }) => {
     const { user, logout } = useAuth();
@@ -94,20 +94,32 @@ const DashboardLayout = ({ children, role }) => {
         <div className="min-h-screen bg-[#0F0F14] text-white flex">
             {/* Sidebar Desktop */}
             <aside
-                className={`fixed left-0 top-0 h-full bg-[#1E1E2F] border-r border-white/5 transition-all duration-300 z-50 flex flex-col
+                className={`fixed left-0 top-0 h-full bg-[#15151e] border-r border-white/5 transition-all duration-500 z-50 flex flex-col
                     ${isSidebarOpen ? 'w-64' : 'w-20'}`}
             >
                 {/* Logo Section */}
-                <div className="p-6 flex items-center justify-between">
-                    <div className={`flex items-center gap-3 overflow-hidden ${!isSidebarOpen && 'hidden'}`}>
-                        <div className="w-8 h-8 bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] rounded-lg flex-shrink-0" />
-                        <span className="font-bold text-xl tracking-tight">Vanguard</span>
-                    </div>
-                    {!isSidebarOpen && <div className="w-8 h-8 bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] rounded-lg mx-auto" />}
+                <div className="p-6">
+                    <Link to="/" className="flex items-center gap-3 group">
+                        <div className="relative flex-shrink-0">
+                            <div className={`rounded-xl overflow-hidden bg-brand-purple/20 p-2 group-hover:bg-brand-purple/30 transition-all duration-300 border border-brand-purple/30 flex items-center justify-center transform group-hover:rotate-6 ${isSidebarOpen ? 'w-10 h-10' : 'w-8 h-8 mx-auto'}`}>
+                                <img
+                                    src={logo}
+                                    alt="Vanguard Logo"
+                                    className="w-full h-full object-contain rounded-lg mix-blend-screen"
+                                />
+                            </div>
+                        </div>
+                        {isSidebarOpen && (
+                            <div className="flex flex-col">
+                                <span className="text-lg font-bold tracking-tight text-white group-hover:text-brand-purple transition-colors leading-none">Vanguard</span>
+                                <span className="text-[8px] font-bold text-brand-purple tracking-[0.2em] uppercase leading-none mt-1">Ecosystem</span>
+                            </div>
+                        )}
+                    </Link>
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 px-3 space-y-1 mt-4">
+                <nav className="flex-1 px-3 space-y-1 mt-6 overflow-y-auto scrollbar-hide">
                     {menuItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = location.pathname === item.path || (item.id === 'dashboard' && location.pathname.includes('/dashboard'));
@@ -118,14 +130,14 @@ const DashboardLayout = ({ children, role }) => {
                                 to={item.path}
                                 className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group relative
                                     ${isActive
-                                        ? 'bg-[#8B5CF6]/10 text-[#8B5CF6] border border-[#8B5CF6]/20'
+                                        ? 'bg-brand-purple text-white shadow-lg shadow-purple-600/20'
                                         : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'}`}
                             >
-                                <Icon size={20} className={isActive ? 'text-[#8B5CF6]' : 'group-hover:text-white'} />
-                                {isSidebarOpen && <span className="font-medium whitespace-nowrap">{item.label}</span>}
+                                <Icon size={20} className={isActive ? 'text-white' : 'group-hover:text-white transition-colors'} />
+                                {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">{item.label}</span>}
 
                                 {!isSidebarOpen && (
-                                    <div className="absolute left-full ml-4 px-2 py-1 bg-[#1E1E2F] border border-white/10 rounded-md text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                                    <div className="absolute left-full ml-4 px-3 py-1.5 bg-[#1E1E2F] border border-white/10 rounded-lg text-xs font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                                         {item.label}
                                     </div>
                                 )}
@@ -135,44 +147,56 @@ const DashboardLayout = ({ children, role }) => {
                 </nav>
 
                 {/* User Profile Section */}
-                <div className="p-4 border-t border-white/5">
-                    <div className={`flex items-center gap-3 mb-4 ${!isSidebarOpen && 'justify-center'}`}>
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg border border-white/10">
+                <div className="p-4 border-t border-white/5 space-y-2">
+                    <Link
+                        to={`/${role}/settings`}
+                        className={`flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-all group ${!isSidebarOpen && 'justify-center'}`}
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-500 flex-shrink-0 flex items-center justify-center font-bold text-white shadow-lg border border-white/10 group-hover:scale-105 transition-transform">
                             {user?.fullName?.[0] || 'U'}
                         </div>
                         {isSidebarOpen && (
                             <div className="overflow-hidden">
                                 <p className="text-sm font-bold truncate text-white">{user?.fullName || 'User'}</p>
-                                <p className="text-[10px] uppercase font-black text-[#8B5CF6] opacity-70 tracking-widest">{role}</p>
+                                <p className="text-[10px] uppercase font-black text-brand-purple opacity-70 tracking-widest">{role}</p>
                             </div>
                         )}
-                    </div>
+                    </Link>
                     <button
                         onClick={logout}
-                        className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-all group
+                        className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-500 hover:bg-red-500/10 hover:text-red-400 transition-all font-bold text-xs uppercase tracking-widest group
                             ${!isSidebarOpen && 'justify-center'}`}
                     >
-                        <LogOut size={20} />
-                        {isSidebarOpen && <span className="font-medium">Sign Out</span>}
+                        <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+                        {isSidebarOpen && <span>Sign Out</span>}
                     </button>
                 </div>
 
                 {/* Sidebar Toggle Button */}
                 <button
                     onClick={toggleSidebar}
-                    className="absolute -right-3 top-10 w-6 h-6 bg-[#8B5CF6] rounded-full flex items-center justify-center border-4 border-[#0F0F14] hover:scale-110 transition-transform hidden lg:flex"
+                    className="absolute -right-3 top-20 w-6 h-6 bg-brand-purple rounded-full flex items-center justify-center border-4 border-[#0F0F14] hover:scale-110 transition-transform hidden lg:flex shadow-lg shadow-purple-600/40"
                 >
-                    <ChevronRight size={10} className={`text-white transition-transform ${isSidebarOpen ? 'rotate-180' : ''}`} />
+                    <ChevronRight size={10} className={`text-white transition-transform duration-500 ${isSidebarOpen ? 'rotate-180' : ''}`} />
                 </button>
             </aside>
 
             {/* Mobile Header */}
-            <header className="lg:hidden fixed top-0 w-full bg-[#1E1E2F] border-bottom border-white/5 p-4 z-40 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-[#8B5CF6] rounded-md" />
-                    <span className="font-bold">Vanguard</span>
-                </div>
-                <button onClick={() => setIsMobileMenuOpen(true)}>
+            <header className="lg:hidden fixed top-0 w-full bg-[#1E1E2F]/80 backdrop-blur-xl border-b border-white/5 p-4 z-40 flex justify-between items-center shadow-lg">
+                <Link to="/" className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg overflow-hidden bg-brand-purple/20 p-1.5 border border-brand-purple/30">
+                        <img
+                            src={logo}
+                            className="w-full h-full object-contain mix-blend-screen"
+                            alt="Logo"
+                        />
+                    </div>
+                    <span className="font-black tracking-tight text-lg">Vanguard</span>
+                </Link>
+                <button
+                    onClick={() => setIsMobileMenuOpen(true)}
+                    className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                >
                     <Menu size={24} />
                 </button>
             </header>
@@ -196,10 +220,16 @@ const DashboardLayout = ({ children, role }) => {
                             className="fixed left-0 top-0 h-full w-72 bg-[#1E1E2F] z-[70] p-6 lg:hidden flex flex-col"
                         >
                             <div className="flex justify-between items-center mb-10">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 bg-[#8B5CF6] rounded-lg" />
+                                <Link to="/" className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg overflow-hidden bg-brand-purple/20 p-1.5 border border-brand-purple/30">
+                                        <img
+                                            src={logo}
+                                            className="w-full h-full object-contain mix-blend-screen"
+                                            alt="Logo"
+                                        />
+                                    </div>
                                     <span className="font-bold text-xl">Vanguard</span>
-                                </div>
+                                </Link>
                                 <button onClick={() => setIsMobileMenuOpen(false)}>
                                     <X size={24} />
                                 </button>
