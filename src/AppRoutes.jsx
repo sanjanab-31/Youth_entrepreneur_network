@@ -27,6 +27,16 @@ import Sessions from './pages/Dashboard/mentor/Sessions';
 import MentorProfile from './pages/Dashboard/mentor/MentorProfile';
 import MentorActivityFeed from './pages/Dashboard/mentor/MentorActivityFeed';
 
+// Incubator Dashboard Sub-page Imports
+import IncubatorDashboard from './pages/Dashboard/incubator/IncubatorDashboard';
+import StartupPipeline from './pages/Dashboard/incubator/StartupPipeline';
+import Applications from './pages/Dashboard/incubator/Applications';
+import Cohorts from './pages/Dashboard/incubator/Cohorts';
+import IncubatorMentors from './pages/Dashboard/incubator/Mentors';
+import Analytics from './pages/Dashboard/incubator/Analytics';
+import IncubatorProfile from './pages/Dashboard/incubator/IncubatorProfile';
+import IncubatorSettings from './pages/Dashboard/incubator/Settings';
+
 
 const AppRoutes = () => {
     return (
@@ -82,11 +92,14 @@ const AppRoutes = () => {
             {/* Incubator Dashboard Routes */}
             <Route element={<ProtectedRoute allowedRoles={['incubator']} />}>
                 <Route path="/incubator" element={<Dashboard role="incubator" />}>
-                    <Route path="dashboard" element={<DashboardHome role="incubator" />} />
-                    <Route path="incubators" element={<Incubators />} />
-                    <Route path="messages" element={<Messages />} />
-                    <Route path="activity-feed" element={<ActivityFeed />} />
-                    <Route path="settings" element={<Settings role="incubator" />} />
+                    <Route path="dashboard" element={<IncubatorDashboard />} />
+                    <Route path="startup-pipeline" element={<StartupPipeline />} />
+                    <Route path="applications" element={<Applications />} />
+                    <Route path="cohorts" element={<Cohorts />} />
+                    <Route path="mentors" element={<IncubatorMentors />} />
+                    <Route path="analytics" element={<Analytics />} />
+                    <Route path="profile" element={<IncubatorProfile />} />
+                    <Route path="settings" element={<IncubatorSettings />} />
                 </Route>
             </Route>
 

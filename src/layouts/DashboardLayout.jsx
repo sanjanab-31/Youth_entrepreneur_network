@@ -33,11 +33,19 @@ const DashboardLayout = ({ children, role }) => {
 
     const isFounder = role === 'founder';
     const isCoFounder = role === 'co-founder';
-
     const isMentor = role === 'mentor';
+    const isIncubator = role === 'incubator';
 
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: `/${role}/dashboard` },
+        ...(isIncubator ? [
+            { id: 'startup-pipeline', label: 'Startup Pipeline', icon: Rocket, path: `/${role}/startup-pipeline` },
+            { id: 'applications', label: 'Applications', icon: FileText, path: `/${role}/applications` },
+            { id: 'cohorts', label: 'Cohorts', icon: Users, path: `/${role}/cohorts` },
+            { id: 'mentors', label: 'Mentors', icon: Briefcase, path: `/${role}/mentors` },
+            { id: 'analytics', label: 'Analytics', icon: Activity, path: `/${role}/analytics` },
+            { id: 'profile', label: 'Profile', icon: User, path: `/${role}/profile` },
+        ] : []),
         ...(isFounder ? [
             { id: 'my-startup', label: 'My Startup', icon: Rocket, path: `/${role}/my-startup` },
             { id: 'find-co-founder', label: 'Find Co-Founder', icon: UserPlus, path: `/${role}/find-co-founder` }
@@ -46,21 +54,22 @@ const DashboardLayout = ({ children, role }) => {
             { id: 'startup-overview', label: 'Startup Overview', icon: Rocket, path: `/${role}/startup-overview` },
             { id: 'team-collaboration', label: 'Team Collaboration', icon: Users, path: `/${role}/team-collaboration` }
         ] : []),
-        ...(isMentor ? [
+        ...(!isIncubator && isMentor ? [
             { id: 'founder-requests', label: 'Founder Requests', icon: Briefcase, path: `/${role}/founder-requests` },
             { id: 'my-mentees', label: 'My Mentees', icon: Users, path: `/${role}/my-mentees` },
             { id: 'sessions', label: 'Sessions', icon: Calendar, path: `/${role}/sessions` },
-        ] : [
+        ] : []),
+        ...(!isMentor && !isIncubator ? [
             { id: 'mentors', label: 'Mentors', icon: Briefcase, path: `/${role}/mentors` },
             { id: 'incubators', label: 'Incubators', icon: Building, path: `/${role}/incubators` },
-        ]),
-        ...(isMentor ? [
+        ] : []),
+        ...(!isIncubator ? (isMentor ? [
             { id: 'activity-feed', label: 'Activity Feed', icon: Activity, path: `/${role}/activity-feed` },
             { id: 'profile', label: 'Profile', icon: User, path: `/${role}/profile` },
         ] : [
             { id: 'messages', label: 'Messages', icon: MessageSquare, path: `/${role}/messages` },
             { id: 'activity-feed', label: 'Activity Feed', icon: Activity, path: `/${role}/activity-feed` },
-        ]),
+        ]) : []),
         { id: 'settings', label: 'Settings', icon: Settings, path: `/${role}/settings` },
     ];
 
