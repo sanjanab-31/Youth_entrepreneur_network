@@ -37,6 +37,18 @@ import Analytics from './pages/Dashboard/incubator/Analytics';
 import IncubatorProfile from './pages/Dashboard/incubator/IncubatorProfile';
 import IncubatorSettings from './pages/Dashboard/incubator/Settings';
 
+// Admin Dashboard Sub-page Imports
+import AdminDashboard from './pages/Dashboard/admin/AdminDashboard';
+import UserManagement from './pages/Dashboard/admin/UserManagement';
+import StartupManagement from './pages/Dashboard/admin/StartupManagement';
+import MentorManagement from './pages/Dashboard/admin/MentorManagement';
+import IncubatorManagement from './pages/Dashboard/admin/IncubatorManagement';
+import ApplicationsControl from './pages/Dashboard/admin/ApplicationsControl';
+import ReportsModeration from './pages/Dashboard/admin/ReportsModeration';
+import AdminAnalytics from './pages/Dashboard/admin/Analytics';
+import ContentManagement from './pages/Dashboard/admin/ContentManagement';
+import AdminSettings from './pages/Dashboard/admin/AdminSettings';
+
 
 const AppRoutes = () => {
     return (
@@ -106,10 +118,16 @@ const AppRoutes = () => {
             {/* Admin Dashboard Routes */}
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                 <Route path="/admin" element={<Dashboard role="admin" />}>
-                    <Route path="dashboard" element={<DashboardHome role="admin" />} />
-                    <Route path="messages" element={<Messages />} />
-                    <Route path="activity-feed" element={<ActivityFeed />} />
-                    <Route path="settings" element={<Settings role="admin" />} />
+                    <Route path="dashboard" element={<AdminDashboard />} />
+                    <Route path="users" element={<UserManagement />} />
+                    <Route path="startups" element={<StartupManagement />} />
+                    <Route path="mentors" element={<MentorManagement />} />
+                    <Route path="incubators" element={<IncubatorManagement />} />
+                    <Route path="applications" element={<ApplicationsControl />} />
+                    <Route path="reports" element={<ReportsModeration />} />
+                    <Route path="analytics" element={<AdminAnalytics />} />
+                    <Route path="content" element={<ContentManagement />} />
+                    <Route path="settings" element={<AdminSettings />} />
                 </Route>
             </Route>
         </Routes>

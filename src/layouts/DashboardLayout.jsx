@@ -21,6 +21,10 @@ import {
     User,
     FileText,
     ClipboardList,
+    ShieldAlert,
+    BarChart3,
+    Megaphone,
+    Layers,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
@@ -35,9 +39,20 @@ const DashboardLayout = ({ children, role }) => {
     const isCoFounder = role === 'co-founder';
     const isMentor = role === 'mentor';
     const isIncubator = role === 'incubator';
+    const isAdmin = role === 'admin';
 
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: `/${role}/dashboard` },
+        ...(isAdmin ? [
+            { id: 'users', label: 'User Management', icon: Users, path: '/admin/users' },
+            { id: 'startups', label: 'Startup Management', icon: Rocket, path: '/admin/startups' },
+            { id: 'mentors', label: 'Mentor Management', icon: Briefcase, path: '/admin/mentors' },
+            { id: 'incubators', label: 'Incubator Management', icon: Building, path: '/admin/incubators' },
+            { id: 'applications', label: 'Applications Control', icon: ClipboardList, path: '/admin/applications' },
+            { id: 'reports', label: 'Reports & Moderation', icon: ShieldAlert, path: '/admin/reports' },
+            { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
+            { id: 'content', label: 'Content Management', icon: Megaphone, path: '/admin/content' },
+        ] : []),
         ...(isIncubator ? [
             { id: 'startup-pipeline', label: 'Startup Pipeline', icon: Rocket, path: `/${role}/startup-pipeline` },
             { id: 'applications', label: 'Applications', icon: FileText, path: `/${role}/applications` },
@@ -59,11 +74,11 @@ const DashboardLayout = ({ children, role }) => {
             { id: 'my-mentees', label: 'My Mentees', icon: Users, path: `/${role}/my-mentees` },
             { id: 'sessions', label: 'Sessions', icon: Calendar, path: `/${role}/sessions` },
         ] : []),
-        ...(!isMentor && !isIncubator ? [
+        ...(!isMentor && !isIncubator && !isAdmin ? [
             { id: 'mentors', label: 'Mentors', icon: Briefcase, path: `/${role}/mentors` },
             { id: 'incubators', label: 'Incubators', icon: Building, path: `/${role}/incubators` },
         ] : []),
-        ...(!isIncubator ? (isMentor ? [
+        ...(!isIncubator && !isAdmin ? (isMentor ? [
             { id: 'activity-feed', label: 'Activity Feed', icon: Activity, path: `/${role}/activity-feed` },
             { id: 'profile', label: 'Profile', icon: User, path: `/${role}/profile` },
         ] : [
