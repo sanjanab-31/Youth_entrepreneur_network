@@ -38,6 +38,7 @@ export const AuthProvider = ({ children }) => {
                 // Redirect based on role
                 if (role === 'admin') navigate('/admin/dashboard');
                 else if (role === 'founder') navigate('/founder/dashboard');
+                else if (role === 'co-founder') navigate('/co-founder/dashboard');
                 else if (role === 'mentor') navigate('/mentor/dashboard');
                 else if (role === 'incubator') navigate('/incubator/dashboard');
 
@@ -58,6 +59,7 @@ export const AuthProvider = ({ children }) => {
                 setUser(userData);
 
                 if (role === 'founder') navigate('/founder/dashboard');
+                else if (role === 'co-founder') navigate('/co-founder/dashboard');
                 else if (role === 'mentor') navigate('/mentor/dashboard');
                 else if (role === 'incubator') navigate('/incubator/dashboard');
 

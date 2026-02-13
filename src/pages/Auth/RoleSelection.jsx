@@ -67,6 +67,12 @@ const RoleSelection = () => {
             icon: User
         },
         {
+            id: 'co-founder',
+            title: 'Technical Co-Founder',
+            description: 'Join high-potential startups. Manage technical debt, collaboration, and milestone execution.',
+            icon: Zap
+        },
+        {
             id: 'mentor',
             title: 'Expert Mentor',
             description: 'Guide the next generation of innovators with operational insights and structured feedback tools.',

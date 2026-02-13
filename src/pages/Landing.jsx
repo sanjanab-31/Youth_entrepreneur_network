@@ -363,11 +363,11 @@ const Landing = () => {
                     ))}
 
                 </div>
-            </section>
+            </section >
 
 
             {/* MENTOR SPOTLIGHT (Accordion) */}
-            <Section className="relative overflow-hidden">
+            < Section className="relative overflow-hidden" >
                 <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-brand-purple/20 to-transparent" />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                     {/* Left Content Section */}
@@ -442,9 +442,9 @@ const Landing = () => {
                         ))}
                     </div>
                 </div>
-            </Section>
+            </Section >
             {/* HOW VANGUARD WORKS */}
-            <Section className="relative overflow-hidden">
+            < Section className="relative overflow-hidden" >
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4">How Vanguard <span className="text-brand-purple">Works</span></h2>
                     <p className="text-brand-muted max-w-2xl mx-auto">A structured path from idea to incubation.</p>
@@ -473,7 +473,7 @@ const Landing = () => {
                         </FadeIn>
                     ))}
                 </div>
-            </Section>
+            </Section >
             {/* SOCIAL PROOF
             <Section className="bg-gradient-to-b from-brand-black to-brand-card/20">
                 <div className="text-center mb-16">
@@ -514,7 +514,7 @@ const Landing = () => {
             </Section> */}
 
             <Footer />
-        </div>
+        </div >
     );
 };
 
