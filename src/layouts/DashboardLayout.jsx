@@ -16,7 +16,11 @@ import {
     Activity,
     Menu,
     X,
-    Briefcase
+    Briefcase,
+    Calendar,
+    User,
+    FileText,
+    ClipboardList,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
@@ -30,6 +34,8 @@ const DashboardLayout = ({ children, role }) => {
     const isFounder = role === 'founder';
     const isCoFounder = role === 'co-founder';
 
+    const isMentor = role === 'mentor';
+
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: `/${role}/dashboard` },
         ...(isFounder ? [
@@ -40,10 +46,21 @@ const DashboardLayout = ({ children, role }) => {
             { id: 'startup-overview', label: 'Startup Overview', icon: Rocket, path: `/${role}/startup-overview` },
             { id: 'team-collaboration', label: 'Team Collaboration', icon: Users, path: `/${role}/team-collaboration` }
         ] : []),
-        { id: 'mentors', label: 'Mentors', icon: Briefcase, path: `/${role}/mentors` },
-        { id: 'incubators', label: 'Incubators', icon: Building, path: `/${role}/incubators` },
-        { id: 'messages', label: 'Messages', icon: MessageSquare, path: `/${role}/messages` },
-        { id: 'activity-feed', label: 'Activity Feed', icon: Activity, path: `/${role}/activity-feed` },
+        ...(isMentor ? [
+            { id: 'founder-requests', label: 'Founder Requests', icon: Briefcase, path: `/${role}/founder-requests` },
+            { id: 'my-mentees', label: 'My Mentees', icon: Users, path: `/${role}/my-mentees` },
+            { id: 'sessions', label: 'Sessions', icon: Calendar, path: `/${role}/sessions` },
+        ] : [
+            { id: 'mentors', label: 'Mentors', icon: Briefcase, path: `/${role}/mentors` },
+            { id: 'incubators', label: 'Incubators', icon: Building, path: `/${role}/incubators` },
+        ]),
+        ...(isMentor ? [
+            { id: 'activity-feed', label: 'Activity Feed', icon: Activity, path: `/${role}/activity-feed` },
+            { id: 'profile', label: 'Profile', icon: User, path: `/${role}/profile` },
+        ] : [
+            { id: 'messages', label: 'Messages', icon: MessageSquare, path: `/${role}/messages` },
+            { id: 'activity-feed', label: 'Activity Feed', icon: Activity, path: `/${role}/activity-feed` },
+        ]),
         { id: 'settings', label: 'Settings', icon: Settings, path: `/${role}/settings` },
     ];
 

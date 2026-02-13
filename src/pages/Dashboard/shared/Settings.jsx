@@ -108,7 +108,54 @@ const Settings = ({ role }) => {
                         </div>
                     )}
 
-                    {!isFounder && (
+                    {role === 'mentor' && (
+                        <div className="bg-[#1E1E2F] p-8 rounded-3xl border border-white/5 space-y-8">
+                            <h2 className="text-xl font-black text-white mb-6 flex items-center gap-3">
+                                <Zap className="text-[#8B5CF6]" size={20} /> Mentor Expertise & Preferences
+                            </h2>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Preferred Startup Stage</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['Idea', 'MVP', 'Revenue', 'Scaling'].map(stage => (
+                                            <button key={stage} className="px-4 py-2 bg-[#0F0F14] border border-white/5 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:border-[#8B5CF6]/30 transition-all">
+                                                {stage}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Preferred Sectors</label>
+                                    <input type="text" placeholder="e.g. FinTech, SaaS, HealthTech" className="w-full bg-[#0F0F14] border border-white/5 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 font-medium" />
+                                </div>
+                            </div>
+
+                            <div className="pt-8 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Session Pricing</label>
+                                    <select className="w-full bg-[#0F0F14] border border-white/5 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 font-medium appearance-none">
+                                        <option>Free (Pro-bono)</option>
+                                        <option>Paid (Hourly Rate)</option>
+                                        <option>Equity Based</option>
+                                        <option>Hybrid</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-4">
+                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Availability Status</label>
+                                    <div className="flex items-center justify-between p-4 bg-[#0F0F14] rounded-2xl border border-white/5">
+                                        <span className="text-sm font-bold text-gray-400 uppercase">Accepting New Mentees</span>
+                                        <div className="w-12 h-6 bg-[#8B5CF6]/20 border border-[#8B5CF6]/30 rounded-full relative p-1 cursor-pointer">
+                                            <div className="absolute right-1 top-1 w-4 h-4 bg-[#8B5CF6] rounded-full shadow-lg shadow-[#8B5CF6]/40" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {!isFounder && role !== 'mentor' && (
                         <div className="bg-[#1E1E2F]/50 p-8 rounded-3xl border border-dashed border-white/10 flex flex-col items-center justify-center text-center">
                             <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4 text-gray-600">
                                 <Shield size={24} />

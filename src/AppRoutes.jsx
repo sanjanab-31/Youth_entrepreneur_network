@@ -19,6 +19,14 @@ import Settings from './pages/Dashboard/shared/Settings';
 import StartupOverview from './pages/Dashboard/co-founder/StartupOverview';
 import TeamCollaboration from './pages/Dashboard/co-founder/TeamCollaboration';
 
+// Mentor Dashboard Sub-page Imports
+import MentorDashboard from './pages/Dashboard/mentor/MentorDashboard';
+import FounderRequests from './pages/Dashboard/mentor/FounderRequests';
+import MyMentees from './pages/Dashboard/mentor/MyMentees';
+import Sessions from './pages/Dashboard/mentor/Sessions';
+import MentorProfile from './pages/Dashboard/mentor/MentorProfile';
+import MentorActivityFeed from './pages/Dashboard/mentor/MentorActivityFeed';
+
 
 const AppRoutes = () => {
     return (
@@ -61,10 +69,12 @@ const AppRoutes = () => {
             {/* Mentor Dashboard Routes */}
             <Route element={<ProtectedRoute allowedRoles={['mentor']} />}>
                 <Route path="/mentor" element={<Dashboard role="mentor" />}>
-                    <Route path="dashboard" element={<DashboardHome role="mentor" />} />
-                    <Route path="mentors" element={<Mentors />} />
-                    <Route path="messages" element={<Messages />} />
-                    <Route path="activity-feed" element={<ActivityFeed />} />
+                    <Route path="dashboard" element={<MentorDashboard />} />
+                    <Route path="founder-requests" element={<FounderRequests />} />
+                    <Route path="my-mentees" element={<MyMentees />} />
+                    <Route path="sessions" element={<Sessions />} />
+                    <Route path="activity-feed" element={<MentorActivityFeed />} />
+                    <Route path="profile" element={<MentorProfile />} />
                     <Route path="settings" element={<Settings role="mentor" />} />
                 </Route>
             </Route>
