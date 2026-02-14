@@ -56,9 +56,9 @@ const Navbar = () => {
                             <div className="relative">
                                 <motion.div
                                     whileHover={{ rotate: 15, scale: 1.1 }}
-                                    className="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-brand-purple/20 to-brand-purple/5 p-[1px] transition-all duration-500 border border-brand-purple/30 group-hover:border-brand-purple/60 shadow-lg shadow-purple-500/10"
+                                    className="w-10 h-10 md:w-12 md:h-12 rounded-[0.9rem] md:rounded-2xl overflow-hidden bg-gradient-to-br from-brand-purple/20 to-brand-purple/5 p-[1px] transition-all duration-500 border border-brand-purple/30 group-hover:border-brand-purple/60 shadow-lg shadow-purple-500/10"
                                 >
-                                    <div className="w-full h-full rounded-[0.9rem] overflow-hidden bg-brand-black">
+                                    <div className="w-full h-full rounded-[0.8rem] md:rounded-[0.9rem] overflow-hidden bg-brand-black">
                                         <img
                                             src={logo}
                                             alt="Vanguard Logo"
@@ -70,7 +70,7 @@ const Navbar = () => {
                                 <div className="absolute -inset-3 bg-brand-purple/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-all duration-700" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-2xl font-black tracking-tighter text-white group-hover:text-brand-purple transition-all duration-300 leading-none">
+                                <span className="text-lg md:text-2xl font-black tracking-tighter text-white group-hover:text-brand-purple transition-all duration-300 leading-none">
                                     VANGUARD
                                 </span>
                                 <div className="flex items-center gap-2 mt-1.5 overflow-hidden">
@@ -79,7 +79,7 @@ const Navbar = () => {
                                         whileHover={{ width: 32 }}
                                         className="h-[1px] bg-brand-purple/50 transition-all duration-500"
                                     />
-                                    <span className="text-[10px] font-bold text-brand-purple tracking-[0.4em] uppercase leading-none opacity-80 group-hover:opacity-100">
+                                    <span className="text-[8px] md:text-[10px] font-bold text-brand-purple tracking-[0.4em] uppercase leading-none opacity-80 group-hover:opacity-100">
                                         Ecosystem
                                     </span>
                                 </div>

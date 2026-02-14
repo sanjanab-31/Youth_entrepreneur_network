@@ -7,7 +7,7 @@ import Footer from '../components/Footer';
 import logo from '../assets/logo.jpg';
 
 const Section = ({ children, className = "" }) => (
-    <section className={`py-20 px-6 ${className}`}>
+    <section className={`py-12 md:py-20 px-4 md:px-6 ${className}`}>
         <div className="max-w-7xl mx-auto">
             {children}
         </div>
@@ -87,7 +87,7 @@ const HeroCarousel = () => {
             </AnimatePresence>
 
             {/* Content Container */}
-            <div className="relative z-10 h-full  px-6 flex flex-col justify-center items-center text-center">
+            <div className="relative z-10 h-full px-4 md:px-6 flex flex-col justify-center items-center text-center">
                 <AnimatePresence mode='wait'>
                     <motion.div
                         key={currentSlide}
@@ -95,20 +95,20 @@ const HeroCarousel = () => {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 50, transition: { duration: 0.5 } }}
                         transition={{ duration: 0.8, delay: 0.3 }}
-                        className="max-w-7xl"
+                        className="max-w-7xl w-full"
                     >
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.5 }}
-                            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-purple/20 border border-brand-purple/30 text-brand-purple text-xs font-bold uppercase tracking-widest mb-6 backdrop-blur-sm"
+                            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-purple/20 border border-brand-purple/30 text-brand-purple text-[10px] md:text-xs font-bold uppercase tracking-widest mb-6 backdrop-blur-sm"
                         >
-                            <Zap size={12} fill="currentColor" />
+                            <Zap size={10} md:size={12} fill="currentColor" />
                             {slides[currentSlide].badge}
                         </motion.div>
 
                         <motion.h1
-                            className="text-5xl md:text-7xl font-bold leading-tight mb-6 text-white drop-shadow-lg"
+                            className="text-4xl sm:text-5xl md:text-7xl font-bold leading-[1.1] mb-6 text-white drop-shadow-lg"
                         >
                             {slides[currentSlide].title.split(" ").map((word, i) => (
                                 i > 2 ? <span key={i} className="text-transparent bg-clip-text bg-gradient-to-r from-brand-purple to-purple-400"> {word}</span> : " " + word
@@ -116,19 +116,19 @@ const HeroCarousel = () => {
                         </motion.h1>
 
                         <motion.p
-                            className="text-xl text-gray-200 mb-10 leading-relaxed max-w-7xl mx-auto shadow-black drop-shadow-md"
+                            className="text-base md:text-xl text-gray-200 mb-10 leading-relaxed max-w-4xl mx-auto shadow-black drop-shadow-md"
                         >
                             {slides[currentSlide].subtitle}
                         </motion.p>
 
-                        <div className="flex gap-4 justify-center">
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                             <button
                                 onClick={() => navigate('/auth/role-selection')}
-                                className="px-8 py-4 rounded-full bg-brand-purple hover:bg-brand-purple-hover text-white font-bold text-lg shadow-[0_0_30px_rgba(139,92,246,0.3)] hover:shadow-[0_0_50px_rgba(139,92,246,0.5)] transition-all flex items-center gap-2"
+                                className="w-full sm:w-auto px-8 py-4 rounded-full bg-brand-purple hover:bg-brand-purple-hover text-white font-bold text-base md:text-lg shadow-[0_0_30px_rgba(139,92,246,0.3)] hover:shadow-[0_0_50px_rgba(139,92,246,0.5)] transition-all flex items-center justify-center gap-2"
                             >
                                 Get Started <ArrowRight size={20} />
                             </button>
-                            <button className="px-8 py-4 rounded-full border border-white/20 hover:bg-white/10 text-white font-semibold text-lg backdrop-blur-md transition-all">
+                            <button className="w-full sm:w-auto px-8 py-4 rounded-full border border-white/20 hover:bg-white/10 text-white font-semibold text-base md:text-lg backdrop-blur-md transition-all">
                                 View Demo
                             </button>
                         </div>
@@ -136,14 +136,14 @@ const HeroCarousel = () => {
                 </AnimatePresence>
 
                 {/* Progress Indicators */}
-                <div className="absolute bottom-12 left-6 md:left-20 flex gap-3">
+                <div className="absolute bottom-12 left-0 right-0 flex justify-center md:justify-start md:left-20 flex gap-3 px-6">
                     {slides.map((_, index) => (
                         <div
                             key={index}
                             onClick={() => setCurrentSlide(index)}
                             className="group cursor-pointer py-2"
                         >
-                            <div className={`h-1.5 rounded-full transition-all duration-500 ${index === currentSlide ? 'w-12 bg-brand-purple' : 'w-6 bg-white/20 group-hover:bg-white/40'}`} />
+                            <div className={`h-1 rounded-full transition-all duration-500 ${index === currentSlide ? 'w-10 md:w-12 bg-brand-purple' : 'w-4 md:w-6 bg-white/20 group-hover:bg-white/40'}`} />
                         </div>
                     ))}
                 </div>
@@ -207,11 +207,11 @@ const Landing = () => {
 
             {/* ROLE SELECTION SECTION (Redesigned Premium Cards) */}
             {/* ROLE SELECTION SECTION (Redesigned Premium Cards) */}
-            <section className="py-20 relative overflow-hidden">
-                <div className="max-w-7xl mx-auto px-6 mb-12 flex items-end justify-between">
+            <section className="py-12 md:py-20 relative overflow-hidden">
+                <div className="max-w-7xl mx-auto px-6 mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-purple/10 border border-brand-purple/20 text-brand-purple text-xs font-bold uppercase tracking-wider mb-4">
-                            <Zap size={12} fill="currentColor" />
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-purple/10 border border-brand-purple/20 text-brand-purple text-[10px] md:text-xs font-bold uppercase tracking-wider mb-4">
+                            <Zap size={10} md:size={12} fill="currentColor" />
                             Get Started
                         </div>
 
@@ -219,15 +219,13 @@ const Landing = () => {
                             Explore All Programs
                         </h2>
 
-                        <p className="text-brand-muted max-w-2xl">
+                        <p className="text-brand-muted max-w-2xl text-sm md:text-base">
                             Choose your role and access a structured startup ecosystem.
                         </p>
                     </div>
-
-
                 </div>
 
-                <div className="flex gap-6 overflow-x-auto pb-12 snap-x px-6 md:px-20 scrollbar-hide">
+                <div className="flex gap-4 md:gap-6 overflow-x-auto pb-12 snap-x px-6 md:px-20 scrollbar-hide">
 
                     {[
                         {
@@ -282,10 +280,9 @@ const Landing = () => {
 
                         <div
                             key={i}
-                            className="group relative min-w-[500px]  rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20 border border-brand-purple/20"
-
+                            className="group relative min-w-[280px] sm:min-w-[400px] md:min-w-[500px] snap-center rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20 border border-brand-purple/20"
                         >
-                            <div className="relative h-[500px]">
+                            <div className="relative h-[450px] md:h-[500px]">
 
                                 {/* Image */}
                                 <img
@@ -340,17 +337,17 @@ const Landing = () => {
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-3 w-full max-w-md">
+                                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
                                         <button
                                             onClick={() => navigate(`/auth/login?role=${card.role.toLowerCase().includes('founder') ? 'founder' : card.role.toLowerCase().includes('mentor') ? 'mentor' : 'incubator'}`)}
-                                            className="flex-1 border border-gray-600 rounded-full py-3 hover:bg-gray-800"
+                                            className="flex-1 border border-gray-600 rounded-full py-2.5 md:py-3 hover:bg-gray-800 text-sm md:text-base transition-colors"
                                         >
                                             Login
                                         </button>
 
                                         <button
                                             onClick={() => navigate(`/auth/signup?role=${card.role.toLowerCase().includes('founder') ? 'founder' : card.role.toLowerCase().includes('mentor') ? 'mentor' : 'incubator'}`)}
-                                            className="flex-1 bg-gradient-to-r from-purple-600 to-purple-500 rounded-full py-3 shadow-lg shadow-purple-500/40"
+                                            className="flex-1 bg-gradient-to-r from-purple-600 to-purple-500 rounded-full py-2.5 md:py-3 shadow-lg shadow-purple-500/40 text-sm md:text-base font-bold transition-all hover:scale-105"
                                         >
                                             {card.btnMain}
                                         </button>
@@ -372,10 +369,10 @@ const Landing = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                     {/* Left Content Section */}
                     <div>
-                        <h2 className="text-5xl font-bold mb-4 leading-tight">
+                        <h2 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
                             Learn From <span className="text-brand-purple">Builders.</span> <span className="text-gray-500">Not Theorists.</span>
                         </h2>
-                        <p className="text-gray-400 text-lg mb-8 leading-relaxed max-w-lg">
+                        <p className="text-gray-400 text-base md:text-lg mb-8 leading-relaxed max-w-lg">
                             Connect with mentors who have actually walked the path. Get operational advice, not just high-level theory.
                         </p>
 
@@ -399,7 +396,7 @@ const Landing = () => {
                     </div>
 
                     {/* Right Mentor Cards Accordion */}
-                    <div className="flex gap-4 h-[500px] w-full">
+                    <div className="flex flex-col sm:flex-row gap-4 h-auto sm:h-[500px] w-full">
                         {[
                             { name: "Gabriella Hersham", company: "HUCKLETREE", role: "Founder of Huckletree", quote: "Building communities that inspire innovation.", img: "photo-1573496359142-b8d87734a5a2" },
                             { name: "Caen Contee", company: "LIME", role: "Co-Founder", quote: "Fall in love with the problem, not the solution.", img: "photo-1507003211169-0a1dd7228f2d" },
@@ -409,7 +406,8 @@ const Landing = () => {
                             <div
                                 key={i}
                                 onMouseEnter={() => setActiveMentor(i)}
-                                className={`relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 ease-out bg-cover bg-center ${activeMentor === i ? 'flex-[3]' : 'flex-[1]'}`}
+                                onClick={() => setActiveMentor(i)}
+                                className={`relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 ease-out bg-cover bg-center ${activeMentor === i ? 'flex-[10] h-[300px] sm:h-full sm:flex-[3]' : 'flex-[1] h-[100px] sm:h-full sm:flex-[1]'}`}
                                 style={{
                                     backgroundImage: `url('https://images.unsplash.com/${mentor.img}?w=600&h=800&fit=crop')`
                                 }}
@@ -418,21 +416,21 @@ const Landing = () => {
 
                                 <div className="absolute bottom-0 left-0 right-0 p-6 whitespace-nowrap overflow-hidden">
                                     <div className={`transition-all duration-500 transform ${activeMentor === i ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-                                        <div className="text-brand-purple text-xs font-bold tracking-widest uppercase mb-1">{mentor.company}</div>
-                                        <div className="text-gray-300 text-xs mb-2">{mentor.role}</div>
+                                        <div className="text-brand-purple text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-1">{mentor.company}</div>
+                                        <div className="text-gray-300 text-[10px] sm:text-xs mb-2">{mentor.role}</div>
                                     </div>
 
                                     <h3
                                         className={`text-white font-bold transition-all duration-300 origin-bottom-left whitespace-nowrap
                                         ${activeMentor === i
-                                                ? 'text-2xl mb-2 translate-x-0 translate-y-0 rotate-0 relative'
-                                                : 'text-3xl absolute bottom-8 left-8 -rotate-90 translate-x-0 translate-y-0'
+                                                ? 'text-xl sm:text-2xl mb-2 translate-x-0 translate-y-0 rotate-0 relative'
+                                                : 'text-2xl sm:text-3xl absolute bottom-8 left-8 -rotate-90 translate-x-0 translate-y-0'
                                             }`}
                                     >
                                         {mentor.name}
                                     </h3>
 
-                                    <p className={`text-gray-400 text-xs leading-relaxed max-w-xs whitespace-normal transition-all duration-500 delay-100 ${activeMentor === i ? 'opacity-100 h-auto' : 'opacity-0 h-0 pointer-events-none'}`}>
+                                    <p className={`text-gray-400 text-[10px] sm:text-xs leading-relaxed max-w-xs whitespace-normal transition-all duration-500 delay-100 ${activeMentor === i ? 'opacity-100 h-auto' : 'opacity-0 h-0 pointer-events-none'}`}>
                                         "{mentor.quote}"
                                     </p>
                                 </div>
@@ -459,13 +457,13 @@ const Landing = () => {
                     ].map((item, i) => (
                         <FadeIn key={i} delay={i * 0.1}>
                             <div className="relative group pt-8 px-8 rounded-3xl bg-brand-card/20 border border-white/5 hover:border-brand-purple/30 transition-all duration-300 hover:bg-brand-card/40 h-full overflow-hidden">
-                                <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-100 transition-opacity duration-300">
-                                    <span className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-brand-purple to-transparent">{item.step}</span>
+                                <div className="absolute top-0 right-0 p-4 md:p-6 opacity-10 md:opacity-20 group-hover:opacity-100 transition-opacity duration-300">
+                                    <span className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-brand-purple to-transparent">{item.step}</span>
                                 </div>
 
-                                <div className="relative z-10 pt-30">
-                                    <h3 className="text-xl font-bold text-white mb-3 ">{item.title}</h3>
-                                    <p className="text-brand-muted text-sm leading-relaxed mb-4">{item.desc}</p>
+                                <div className="relative z-10 pt-16 md:pt-24">
+                                    <h3 className="text-lg md:text-xl font-bold text-white mb-3 ">{item.title}</h3>
+                                    <p className="text-brand-muted text-[13px] md:text-sm leading-relaxed mb-6">{item.desc}</p>
                                 </div>
 
                                 <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-brand-purple to-transparent w-0 group-hover:w-full transition-all duration-500" />
