@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import AuthLayout from '../../layouts/AuthLayout';
 import { useAuth } from '../../context/AuthContext';
+import logo from '../../assets/logo.jpg';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -39,13 +40,24 @@ const Login = () => {
     return (
         <AuthLayout>
             <div className="w-full max-w-md mx-auto">
-                <div className="bg-[#1E1E2F]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-                    {/* Subtle top accent */}
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500" />
-
-                    <div className="text-center mb-8">
-                        <h2 className="text-3xl font-bold text-white mb-2">Welcome Back</h2>
-                        <p className="text-gray-400 capitalize">Login as {role}</p>
+                <div className="bg-[#1E1E2F]/90 backdrop-blur-xl border border-white/10 rounded-3xl p-10 shadow-3xl relative overflow-hidden">
+                    <div className="flex items-center gap-5 mb-10 pb-6 border-b border-white/5">
+                        <div className="relative shrink-0">
+                            <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-br from-brand-purple/30 to-brand-purple/5 p-3 border border-brand-purple/30 flex items-center justify-center shadow-lg shadow-purple-500/10">
+                                <img
+                                    src={logo}
+                                    alt="Vanguard Logo"
+                                    className="w-full h-full object-contain mix-blend-screen"
+                                />
+                            </div>
+                            <div className="absolute -inset-2 bg-brand-purple/20 blur-xl rounded-full opacity-50" />
+                        </div>
+                        <div className="flex flex-col">
+                            <h2 className="text-2xl font-black text-white tracking-tight leading-none mb-2">Welcome Back</h2>
+                            <p className="text-brand-purple/80 text-[10px] font-bold tracking-[0.3em] uppercase leading-none">
+                                {role} Portal
+                            </p>
+                        </div>
                     </div>
 
 
