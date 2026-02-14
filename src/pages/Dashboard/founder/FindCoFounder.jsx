@@ -12,8 +12,19 @@ import {
     Briefcase,
     Zap
 } from 'lucide-react';
+import { useStartup } from '../../../context/StartupContext';
 
 const FindCoFounder = () => {
+    const { startup, updateStartup, addActivity } = useStartup();
+
+    const handleMatch = (candidate) => {
+        if (confirm(`Do you want to send a co-founder request to ${candidate.n}?`)) {
+            // For now, let's simulate that they accepted or we just "saved" the request
+            addActivity(`Co-founder request sent to ${candidate.n}`, 'session');
+            alert(`Request sent to ${candidate.n}! They will review your startup details.`);
+        }
+    };
+
     return (
         <div className="space-y-10 animate-in fade-in duration-500">
             {/* Header */}
@@ -102,9 +113,9 @@ const FindCoFounder = () => {
                 {/* Candidate List */}
                 <div className="lg:col-span-3 space-y-6">
                     {[
-                        { n: 'Rahul Malhotra', s: 'Marketing / Growth', l: 'Indore', e: '15-20%', ex: 'Ex-Zomato Growth Lead', sk: ['GTM Strat', 'SEO', 'AdOps'] },
-                        { n: 'Anjali Deshmukh', s: 'UI/UX Design', l: 'Pune', e: 'Negotiable', ex: 'Freelance Design Lead', sk: ['Figma', 'Prototyping', 'User Research'] },
-                        { n: 'Vikram Singh', s: 'Sales / Ops', l: 'New Delhi', e: '10-15%', ex: 'Startup Operations (YC W21)', sk: ['B2B Sales', 'Strategy', 'CRM'] }
+                        { id: 101, n: 'Rahul Malhotra', s: 'Marketing / Growth', l: 'Indore', e: '15-20%', ex: 'Ex-Zomato Growth Lead', sk: ['GTM Strat', 'SEO', 'AdOps'] },
+                        { id: 102, n: 'Anjali Deshmukh', s: 'UI/UX Design', l: 'Pune', e: 'Negotiable', ex: 'Freelance Design Lead', sk: ['Figma', 'Prototyping', 'User Research'] },
+                        { id: 103, n: 'Vikram Singh', s: 'Sales / Ops', l: 'New Delhi', e: '10-15%', ex: 'Startup Operations (YC W21)', sk: ['B2B Sales', 'Strategy', 'CRM'] }
                     ].map((c, i) => (
                         <div key={i} className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 group hover:border-[#8B5CF6]/30 transition-all cursor-pointer relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-24 h-24 bg-[#8B5CF6]/2 hover:bg-[#8B5CF6]/5 transition-all rounded-bl-[100px] flex items-start justify-end p-6">
@@ -120,9 +131,20 @@ const FindCoFounder = () => {
                                     </div>
                                 </div>
                                 <div className="flex-1">
-                                    <div className="flex flex-wrap items-center gap-3 mb-2">
-                                        <h3 className="text-2xl font-black text-white">{c.n}</h3>
-                                        <div className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[8px] font-black uppercase tracking-widest rounded border border-green-500/20">Verified Hero</div>
+                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="text-2xl font-black text-white">{c.n}</h3>
+                                            <div className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[8px] font-black uppercase tracking-widest rounded border border-green-500/20">Verified Hero</div>
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleMatch(c);
+                                            }}
+                                            className="px-4 py-2 bg-[#8B5CF6]/10 text-[#8B5CF6] hover:bg-[#8B5CF6] hover:text-white transition-all text-xs font-black rounded-xl border border-[#8B5CF6]/30"
+                                        >
+                                            Connect
+                                        </button>
                                     </div>
                                     <p className="text-[#8B5CF6] font-bold text-sm mb-4">{c.s} • <span className="text-gray-400">{c.ex}</span></p>
 

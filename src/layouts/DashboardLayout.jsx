@@ -27,10 +27,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
+import { useStartup } from '../context/StartupContext';
 import logo from '../assets/logo.jpg';
 
 const DashboardLayout = ({ children, role }) => {
     const { user, logout } = useAuth();
+    const { startup } = useStartup();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -111,8 +113,12 @@ const DashboardLayout = ({ children, role }) => {
                         </div>
                         {isSidebarOpen && (
                             <div className="flex flex-col">
-                                <span className="text-lg font-bold tracking-tight text-white group-hover:text-brand-purple transition-colors leading-none">Vanguard</span>
-                                <span className="text-[8px] font-bold text-brand-purple tracking-[0.2em] uppercase leading-none mt-1">Ecosystem</span>
+                                <span className="text-lg font-bold tracking-tight text-white group-hover:text-brand-purple transition-colors leading-none">
+                                    {isFounder && startup ? startup.name : 'Vanguard'}
+                                </span>
+                                <span className="text-[8px] font-bold text-brand-purple tracking-[0.2em] uppercase leading-none mt-1">
+                                    {isFounder ? 'Startup OS' : 'Ecosystem'}
+                                </span>
                             </div>
                         )}
                     </Link>
