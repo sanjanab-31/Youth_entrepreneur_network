@@ -1,216 +1,315 @@
 
-import React from 'react';
-import {
-    User,
-    Shield,
-    Bell,
-    Zap,
-    ArrowRight,
-    Lock,
-    Globe,
-    Smartphone,
-    Eye,
-    Settings as SettingsIcon,
-    Users
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Bell, Eye, Shield, CheckCircle2, ChevronRight, Lock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const Settings = ({ role }) => {
-    const isFounder = role === 'founder';
+const Settings = ({ role: initialRole }) => {
+    const [user, setUser] = useState(null);
+    const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState("");
+
+    // Initialization Logic
+    useEffect(() => {
+        const savedUser = localStorage.getItem('vanguardUser');
+        if (savedUser) {
+            const parsedUser = JSON.parse(savedUser);
+            // Ensure structure is maintained if some fields are missing
+            const mergedUser = {
+                fullName: parsedUser.fullName || "User Name",
+                email: parsedUser.email || "user@vanguard.io",
+                role: parsedUser.role || initialRole || 'Founder',
+                commitmentLevel: parsedUser.commitmentLevel || "Full-time",
+                bio: parsedUser.bio || "",
+                preferences: {
+                    emailNotifications: true,
+                    mentorAlerts: true,
+                    ...(parsedUser.preferences || {})
+                },
+                visibility: {
+                    profile: "public",
+                    startup: "visible",
+                    ...(parsedUser.visibility || {})
+                }
+            };
+            setUser(mergedUser);
+        } else {
+            const defaultUser = {
+                fullName: "Siddharth Sharma",
+                email: "sid@nebulaai.io",
+                role: initialRole || 'Founder',
+                commitmentLevel: "Full-time",
+                bio: "Building the next generation of neural networks for startup workflows.",
+                preferences: {
+                    emailNotifications: true,
+                    mentorAlerts: true
+                },
+                visibility: {
+                    profile: "public",
+                    startup: "visible"
+                }
+            };
+            localStorage.setItem('vanguardUser', JSON.stringify(defaultUser));
+            setUser(defaultUser);
+        }
+    }, [initialRole]);
+
+    const triggerToast = (msg) => {
+        setToastMessage(msg);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+    };
+
+    const updateField = (field, value) => {
+        const newUser = { ...user, [field]: value };
+        setUser(newUser);
+        localStorage.setItem('vanguardUser', JSON.stringify(newUser));
+        triggerToast("Changes Saved");
+    };
+
+    const updateNestedField = (section, field, value) => {
+        const newUser = {
+            ...user,
+            [section]: {
+                ...user[section],
+                [field]: value
+            }
+        };
+        setUser(newUser);
+        localStorage.setItem('vanguardUser', JSON.stringify(newUser));
+        triggerToast("Changes Saved");
+    };
+
+    const handleSaveAll = () => {
+        triggerToast("All settings updated");
+    };
+
+    if (!user) return (
+        <div className="flex items-center justify-center min-h-[400px]">
+            <div className="w-8 h-8 border-4 border-[#8B5CF6] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    );
+
+    const isCoFounder = user.role.toLowerCase() === 'co-founder';
 
     return (
-        <div className="space-y-10 animate-in fade-in duration-500">
+        <div className="max-w-4xl mx-auto space-y-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
-                        Platform <span className="text-[#8B5CF6]">Settings</span>
+                    <h1 className="text-3xl font-black text-white tracking-tight">
+                        Settings
                     </h1>
-                    <p className="text-gray-500 mt-2 font-medium">Manage your command identity and notification protocols.</p>
+                    <p className="text-gray-500 mt-1 font-medium">Manage your profile and platform preferences.</p>
                 </div>
-                <button className="px-8 py-3 bg-[#8B5CF6] text-white text-sm font-black rounded-xl shadow-lg shadow-[#8B5CF6]/20 hover:bg-[#7C3AED] transition-all">Save All Changes</button>
+                <button
+                    onClick={handleSaveAll}
+                    className="px-6 py-3 bg-[#8B5CF6] text-white text-sm font-bold rounded-xl shadow-lg shadow-[#8B5CF6]/20 hover:bg-[#7C3AED] hover:scale-105 active:scale-95 transition-all"
+                >
+                    Save All Changes
+                </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                {/* Internal Nav */}
-                <aside className="lg:col-span-1 space-y-2">
-                    {[
-                        { l: 'Personal Profile', i: User, a: true },
-                        { l: 'Command Security', i: Lock, a: false },
-                        { l: 'Notification Pulse', i: Bell, a: false },
-                        { l: 'Ecosystem Visibility', i: Eye, a: false },
-                        { l: 'Advanced Labs', i: Zap, a: false }
-                    ].map((item, i) => (
-                        <button key={i} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all font-bold text-sm ${item.a ? 'bg-white/5 text-white border border-white/10' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-                            <item.i size={18} className={item.a ? 'text-[#8B5CF6]' : ''} />
-                            {item.l}
-                        </button>
-                    ))}
-                </aside>
-
-                {/* Main Settings Panel */}
-                <div className="lg:col-span-3 space-y-8">
-                    {/* Personal Info */}
-                    <div className="bg-[#1E1E2F] p-8 rounded-3xl border border-white/5 space-y-8">
-                        <div>
-                            <h2 className="text-xl font-black text-white mb-6 flex items-center gap-3">
-                                <User className="text-[#8B5CF6]" size={20} /> Personal Command Info
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1">Full Identity Name</label>
-                                    <input type="text" defaultValue="Siddharth Sharma" className="w-full bg-[#0F0F14] border border-white/5 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 font-medium" />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1">Verified Email</label>
-                                    <input type="email" defaultValue="sid@nebulaai.io" className="w-full bg-[#0F0F14] border border-white/5 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 font-medium opacity-70 cursor-not-allowed" disabled />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="pt-8 border-t border-white/5">
-                            <h3 className="text-sm font-black text-white mb-6 uppercase tracking-wider">Commitment Level</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {['Full-time', 'Part-time', 'Consulting'].map((lv, i) => (
-                                    <button key={i} className={`py-4 px-6 rounded-2xl border transition-all text-xs font-black uppercase tracking-widest ${i === 0 ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30 text-[#8B5CF6]' : 'bg-[#0F0F14] border-white/5 text-gray-600 hover:text-white'}`}>
-                                        {lv}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Role Specific Settings */}
-                    {isFounder && (
-                        <div className="bg-[#1E1E2F] p-8 rounded-3xl border border-white/5">
-                            <h2 className="text-xl font-black text-white mb-6 flex items-center gap-3">
-                                <Users className="text-[#8B5CF6]" size={20} /> Team Role Management
-                            </h2>
-                            <p className="text-sm text-gray-500 mb-8 font-medium">As a Founder, you have authorization to manage internal team access and responsibility tiers.</p>
-
-                            <div className="space-y-4">
-                                {[
-                                    { n: 'Technical Co-Founder', e: 'Full Authorization', s: true },
-                                    { n: 'Product Mentor', e: 'Advisory Access', s: true },
-                                    { n: 'Platform Auditor', e: 'Read-only Access', s: false }
-                                ].map((role_item, i) => (
-                                    <div key={i} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <div>
-                                            <p className="text-sm font-bold text-white">{role_item.n}</p>
-                                            <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest">{role_item.e}</p>
-                                        </div>
-                                        <div className={`w-12 h-6 rounded-full relative cursor-pointer border transition-all ${role_item.s ? 'bg-[#8B5CF6]/20 border-[#8B5CF6]/30' : 'bg-white/5 border-white/10'}`}>
-                                            <div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${role_item.s ? 'right-1 bg-[#8B5CF6]' : 'left-1 bg-gray-600'}`} />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <button className="w-full mt-6 py-4 border border-dashed border-white/10 rounded-2xl text-xs font-black text-gray-600 uppercase tracking-widest hover:text-white transition-all">Invite New Command Member</button>
-                        </div>
-                    )}
-
-                    {role === 'mentor' && (
-                        <div className="bg-[#1E1E2F] p-8 rounded-3xl border border-white/5 space-y-8">
-                            <h2 className="text-xl font-black text-white mb-6 flex items-center gap-3">
-                                <Zap className="text-[#8B5CF6]" size={20} /> Mentor Expertise & Preferences
-                            </h2>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Preferred Startup Stage</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {['Idea', 'MVP', 'Revenue', 'Scaling'].map(stage => (
-                                            <button key={stage} className="px-4 py-2 bg-[#0F0F14] border border-white/5 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:border-[#8B5CF6]/30 transition-all">
-                                                {stage}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Preferred Sectors</label>
-                                    <input type="text" placeholder="e.g. FinTech, SaaS, HealthTech" className="w-full bg-[#0F0F14] border border-white/5 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 font-medium" />
-                                </div>
-                            </div>
-
-                            <div className="pt-8 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Session Pricing</label>
-                                    <select className="w-full bg-[#0F0F14] border border-white/5 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 font-medium appearance-none">
-                                        <option>Free (Pro-bono)</option>
-                                        <option>Paid (Hourly Rate)</option>
-                                        <option>Equity Based</option>
-                                        <option>Hybrid</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-4">
-                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Availability Status</label>
-                                    <div className="flex items-center justify-between p-4 bg-[#0F0F14] rounded-2xl border border-white/5">
-                                        <span className="text-sm font-bold text-gray-400 uppercase">Accepting New Mentees</span>
-                                        <div className="w-12 h-6 bg-[#8B5CF6]/20 border border-[#8B5CF6]/30 rounded-full relative p-1 cursor-pointer">
-                                            <div className="absolute right-1 top-1 w-4 h-4 bg-[#8B5CF6] rounded-full shadow-lg shadow-[#8B5CF6]/40" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {!isFounder && role !== 'mentor' && (
-                        <div className="bg-[#1E1E2F]/50 p-8 rounded-3xl border border-dashed border-white/10 flex flex-col items-center justify-center text-center">
-                            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4 text-gray-600">
-                                <Shield size={24} />
-                            </div>
-                            <h4 className="text-gray-400 font-bold mb-1">Administrative Lockdown</h4>
-                            <p className="text-xs text-gray-600 max-w-[300px]">Team role management is restricted to the Lead Founder. Contact your administrator for permission updates.</p>
-                        </div>
-                    )}
-
-                    {/* Visibility & Notifications */}
+            {/* 1️⃣ PERSONAL PROFILE */}
+            <section className="bg-[#1E1E2F] rounded-[16px] border border-white/5 overflow-hidden shadow-xl">
+                <div className="p-6 md:p-8 border-b border-white/5 bg-white/[0.02]">
+                    <h2 className="text-lg font-bold text-white flex items-center gap-3">
+                        <User className="text-[#8B5CF6]" size={20} /> Personal Profile
+                    </h2>
+                </div>
+                <div className="p-6 md:p-8 space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="bg-[#1E1E2F] p-8 rounded-3xl border border-white/5">
-                            <h3 className="text-sm font-black text-white mb-6 uppercase tracking-wider flex items-center gap-2">
-                                <Eye size={16} className="text-blue-500" /> Visibility Control
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-400">Public Profile</span>
-                                    <div className="w-10 h-5 bg-green-500/20 border border-green-500/30 rounded-full relative"><div className="absolute right-0.5 top-0.5 w-3.5 h-3.5 bg-green-500 rounded-full" /></div>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-400">Expert Matching</span>
-                                    <div className="w-10 h-5 bg-green-500/20 border border-green-500/30 rounded-full relative"><div className="absolute right-0.5 top-0.5 w-3.5 h-3.5 bg-green-500 rounded-full" /></div>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-500">Show Traction</span>
-                                    <div className="w-10 h-5 bg-white/5 border border-white/10 rounded-full relative"><div className="absolute left-0.5 top-0.5 w-3.5 h-3.5 bg-gray-600 rounded-full" /></div>
-                                </div>
-                            </div>
+                        {/* Full Name */}
+                        <div className="space-y-3">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Full Name</label>
+                            <input
+                                type="text"
+                                value={user.fullName}
+                                onChange={(e) => updateField('fullName', e.target.value)}
+                                className="w-full bg-[#0F0F14] border border-white/5 rounded-xl p-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 focus:ring-1 focus:ring-[#8B5CF6]/20 transition-all font-medium placeholder:text-gray-700"
+                                placeholder="Enter your full name"
+                            />
                         </div>
-
-                        <div className="bg-[#1E1E2F] p-8 rounded-3xl border border-white/5">
-                            <h3 className="text-sm font-black text-white mb-6 uppercase tracking-wider flex items-center gap-2">
-                                <Bell size={16} className="text-orange-400" /> Notification Pulse
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-400">Email Alerts</span>
-                                    <div className="w-10 h-5 bg-green-500/20 border border-green-500/30 rounded-full relative"><div className="absolute right-0.5 top-0.5 w-3.5 h-3.5 bg-green-500 rounded-full" /></div>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-400">Mobile Push</span>
-                                    <div className="w-10 h-5 bg-white/5 border border-white/10 rounded-full relative"><div className="absolute left-0.5 top-0.5 w-3.5 h-3.5 bg-gray-600 rounded-full" /></div>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-400">Team Mentions</span>
-                                    <div className="w-10 h-5 bg-green-500/20 border border-green-500/30 rounded-full relative"><div className="absolute right-0.5 top-0.5 w-3.5 h-3.5 bg-green-500 rounded-full" /></div>
-                                </div>
+                        {/* Email */}
+                        <div className="space-y-3">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Email Address</label>
+                            <div className="relative">
+                                <input
+                                    type="email"
+                                    value={user.email}
+                                    disabled
+                                    className="w-full bg-[#0F0F14]/50 border border-white/5 rounded-xl p-4 text-sm text-gray-500 font-medium cursor-not-allowed italic"
+                                />
+                                <Lock size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600" />
                             </div>
                         </div>
                     </div>
+
+                    {/* Commitment Level */}
+                    <div className="space-y-4">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Commitment Level</label>
+                        <div className="flex flex-wrap gap-2">
+                            {['Full-time', 'Part-time', 'Consulting'].map((level) => (
+                                <button
+                                    key={level}
+                                    onClick={() => updateField('commitmentLevel', level)}
+                                    className={`px-6 py-3 rounded-xl text-xs font-bold transition-all border ${user.commitmentLevel === level
+                                        ? 'bg-[#8B5CF6] border-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20'
+                                        : 'bg-[#0F0F14] border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
+                                        }`}
+                                >
+                                    {level}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Bio */}
+                    <div className="space-y-3">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Short Bio</label>
+                        <textarea
+                            value={user.bio}
+                            onChange={(e) => updateField('bio', e.target.value)}
+                            rows={4}
+                            className="w-full bg-[#0F0F14] border border-white/5 rounded-xl p-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 focus:ring-1 focus:ring-[#8B5CF6]/20 transition-all font-medium resize-none placeholder:text-gray-700"
+                            placeholder="Tell us about yourself..."
+                        />
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            {/* 2️⃣ ACCOUNT PREFERENCES */}
+            <section className="bg-[#1E1E2F] rounded-[16px] border border-white/5 overflow-hidden shadow-xl">
+                <div className="p-6 md:p-8 border-b border-white/5 bg-white/[0.02]">
+                    <h2 className="text-lg font-bold text-white flex items-center gap-3">
+                        <Bell className="text-[#8B5CF6]" size={20} /> Account Preferences
+                    </h2>
+                </div>
+                <div className="p-6 md:p-8 space-y-4">
+                    {/* Email Notifications */}
+                    <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-xl border border-white/5 transition-all hover:bg-white/[0.04]">
+                        <div className="space-y-1">
+                            <p className="text-sm font-bold text-white">Email Notifications</p>
+                            <p className="text-xs text-gray-500">Receive updates and activity logs via email.</p>
+                        </div>
+                        <button
+                            onClick={() => updateNestedField('preferences', 'emailNotifications', !user.preferences.emailNotifications)}
+                            className={`w-12 h-6 rounded-full relative transition-all duration-300 focus:outline-none ${user.preferences.emailNotifications ? 'bg-[#8B5CF6]' : 'bg-gray-700'
+                                }`}
+                        >
+                            <motion.div
+                                animate={{ x: user.preferences.emailNotifications ? 24 : 4 }}
+                                className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-md"
+                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                            />
+                        </button>
+                    </div>
+
+                    {/* Mentor Request Alerts */}
+                    <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-xl border border-white/5 transition-all hover:bg-white/[0.04]">
+                        <div className="space-y-1">
+                            <p className="text-sm font-bold text-white">Mentor Request Alerts</p>
+                            <p className="text-xs text-gray-500">Instant notification when a mentor responds or requests a session.</p>
+                        </div>
+                        <button
+                            onClick={() => updateNestedField('preferences', 'mentorAlerts', !user.preferences.mentorAlerts)}
+                            className={`w-12 h-6 rounded-full relative transition-all duration-300 focus:outline-none ${user.preferences.mentorAlerts ? 'bg-[#8B5CF6]' : 'bg-gray-700'
+                                }`}
+                        >
+                            <motion.div
+                                animate={{ x: user.preferences.mentorAlerts ? 24 : 4 }}
+                                className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-md"
+                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                            />
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            {/* 3️⃣ PRIVACY & VISIBILITY */}
+            <section className="bg-[#1E1E2F] rounded-[16px] border border-white/5 overflow-hidden shadow-xl">
+                <div className="p-6 md:p-8 border-b border-white/5 bg-white/[0.02]">
+                    <h2 className="text-lg font-bold text-white flex items-center gap-3">
+                        <Eye className="text-[#8B5CF6]" size={20} /> Privacy & Visibility
+                    </h2>
+                </div>
+                <div className="p-6 md:p-8 space-y-6">
+                    {/* Profile Visibility */}
+                    <div className="space-y-4">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Profile Visibility</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button
+                                onClick={() => updateNestedField('visibility', 'profile', 'public')}
+                                className={`flex items-center justify-between p-4 rounded-xl border transition-all ${user.visibility.profile === 'public'
+                                    ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30 text-white'
+                                    : 'bg-[#0F0F14] border-white/5 text-gray-500'
+                                    }`}
+                            >
+                                <span className="text-sm font-bold">Public within Vanguard</span>
+                                {user.visibility.profile === 'public' && <CheckCircle2 size={16} className="text-[#8B5CF6]" />}
+                            </button>
+                            <button
+                                onClick={() => updateNestedField('visibility', 'profile', 'private')}
+                                className={`flex items-center justify-between p-4 rounded-xl border transition-all ${user.visibility.profile === 'private'
+                                    ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30 text-white'
+                                    : 'bg-[#0F0F14] border-white/5 text-gray-500'
+                                    }`}
+                            >
+                                <span className="text-sm font-bold">Private</span>
+                                {user.visibility.profile === 'private' && <CheckCircle2 size={16} className="text-[#8B5CF6]" />}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Startup Visibility - Conditional Role Logic */}
+                    {user.role.toLowerCase() === 'founder' && (
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Startup Visibility</label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => updateNestedField('visibility', 'startup', 'visible')}
+                                    className={`flex items-center justify-between p-4 rounded-xl border transition-all ${user.visibility.startup === 'visible'
+                                        ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30 text-white'
+                                        : 'bg-[#0F0F14] border-white/5 text-gray-500'
+                                        }`}
+                                >
+                                    <span className="text-sm font-bold">Visible to Mentors & Incubators</span>
+                                    {user.visibility.startup === 'visible' && <CheckCircle2 size={16} className="text-[#8B5CF6]" />}
+                                </button>
+                                <button
+                                    onClick={() => updateNestedField('visibility', 'startup', 'hidden')}
+                                    className={`flex items-center justify-between p-4 rounded-xl border transition-all ${user.visibility.startup === 'hidden'
+                                        ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30 text-white'
+                                        : 'bg-[#0F0F14] border-white/5 text-gray-500'
+                                        }`}
+                                >
+                                    <span className="text-sm font-bold">Hidden</span>
+                                    {user.visibility.startup === 'hidden' && <CheckCircle2 size={16} className="text-[#8B5CF6]" />}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            {/* Toast Notification */}
+            <AnimatePresence>
+                {showToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        className="fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-3 bg-[#1E1E2F] border border-[#8B5CF6]/30 rounded-2xl shadow-2xl shadow-[#8B5CF6]/10"
+                    >
+                        <div className="w-6 h-6 rounded-full bg-[#8B5CF6]/20 flex items-center justify-center">
+                            <CheckCircle2 size={14} className="text-[#8B5CF6]" />
+                        </div>
+                        <span className="text-sm font-bold text-white">{toastMessage}</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
 
 export default Settings;
+

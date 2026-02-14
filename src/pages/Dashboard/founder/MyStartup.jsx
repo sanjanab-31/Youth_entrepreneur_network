@@ -69,7 +69,7 @@ const MyStartup = () => {
         startup,
         updateStartup,
         addMilestone,
-        toggleMilestoneStatus,
+        updateMilestone,
         deleteMilestone,
         addDocument,
         deleteDocument,
@@ -391,15 +391,15 @@ const MyStartup = () => {
                                         layout
                                         key={i}
                                         className={`group flex items-center justify-between p-4 rounded-xl border transition-all ${item.status === 'completed' ? 'bg-green-500/5 border-green-500/20' :
-                                                item.status === 'in-progress' ? 'bg-[#8B5CF6]/5 border-[#8B5CF6]/20' :
-                                                    'bg-white/5 border-white/5 hover:border-white/10'
+                                            item.status === 'in-progress' ? 'bg-[#8B5CF6]/5 border-[#8B5CF6]/20' :
+                                                'bg-white/5 border-white/5 hover:border-white/10'
                                             }`}
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="relative">
                                                 <select
                                                     value={item.status}
-                                                    onChange={(e) => toggleMilestoneStatus(i, e.target.value)}
+                                                    onChange={(e) => updateMilestone(item.id, { status: e.target.value })}
                                                     className="opacity-0 absolute inset-0 cursor-pointer w-full z-10"
                                                 >
                                                     <option value="pending">Pending</option>
@@ -407,8 +407,8 @@ const MyStartup = () => {
                                                     <option value="completed">Completed</option>
                                                 </select>
                                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${item.status === 'completed' ? 'bg-green-500 border-green-500 text-white' :
-                                                        item.status === 'in-progress' ? 'bg-[#8B5CF6] border-[#8B5CF6] text-white' :
-                                                            'border-gray-700 hover:border-[#8B5CF6]'
+                                                    item.status === 'in-progress' ? 'bg-[#8B5CF6] border-[#8B5CF6] text-white' :
+                                                        'border-gray-700 hover:border-[#8B5CF6]'
                                                     }`}>
                                                     {item.status === 'completed' && <Check size={14} />}
                                                     {item.status === 'in-progress' && <Clock size={14} />}
@@ -424,7 +424,7 @@ const MyStartup = () => {
                                             </div>
                                         </div>
                                         <button
-                                            onClick={() => deleteMilestone(i)}
+                                            onClick={() => deleteMilestone(item.id)}
                                             className="opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-red-500 transition-all"
                                         >
                                             <Trash2 size={16} />
@@ -564,8 +564,8 @@ const MyStartup = () => {
                                                         <option value="High">High</option>
                                                     </select>
                                                     <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${startup.skillGapPriority === 'High' ? 'bg-red-500/20 text-red-500' :
-                                                            startup.skillGapPriority === 'Medium' ? 'bg-yellow-500/20 text-yellow-500' :
-                                                                'bg-blue-500/20 text-blue-500'
+                                                        startup.skillGapPriority === 'Medium' ? 'bg-yellow-500/20 text-yellow-500' :
+                                                            'bg-blue-500/20 text-blue-500'
                                                         }`}>
                                                         {startup.skillGapPriority} Priority
                                                     </span>
