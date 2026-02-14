@@ -137,7 +137,7 @@ const DashboardLayout = ({ children, role }) => {
                         {isSidebarOpen && (
                             <div className="flex flex-col">
                                 <span className="text-lg font-bold tracking-tight text-white group-hover:text-brand-purple transition-colors leading-none">
-                                    {isFounder && startup ? startup.name : 'Vanguard'}
+                                    Vanguard
                                 </span>
                                 <span className="text-[8px] font-bold text-brand-purple tracking-[0.2em] uppercase leading-none mt-1">
                                     {isFounder ? 'Startup OS' : 'Ecosystem'}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ArrowRight, Zap, ChevronDown, Sparkles } from 'lucide-react';
+import { Menu, X, ArrowRight, Zap, ChevronDown, Sparkles, ArrowUpRight } from 'lucide-react';
 import logo from '../assets/logo.jpg';
 
 const Navbar = () => {
@@ -28,11 +28,9 @@ const Navbar = () => {
     }, []);
 
     const navLinks = [
-        { name: 'About', href: '#about' },
-        { name: 'Features', href: '#features' },
-        { name: 'For Founders', href: '#founders' },
-        { name: 'For Mentors', href: '#mentors' },
-        { name: 'For Incubators', href: '#incubators' },
+        { name: 'Programs', href: '#programs' },
+        { name: 'Mentors', href: '#mentors' },
+        { name: 'How It Works', href: '#how-it-works' },
     ];
 
     return (
@@ -40,19 +38,19 @@ const Navbar = () => {
             <nav
                 className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-700 ease-in-out ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
                     } ${isScrolled
-                        ? 'py-4'
-                        : 'py-8'
+                        ? 'py-2'
+                        : 'py-4'
                     }`}
             >
                 <div className="max-w-7xl mx-auto px-6">
                     <div
                         className={`transition-all duration-700 ease-in-out flex items-center justify-between px-6 px-8 rounded-[2rem] border transition-all duration-500 ${isScrolled
-                            ? 'bg-brand-black/40 backdrop-blur-2xl border-white/10 py-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)]'
-                            : 'bg-transparent border-transparent py-4'
+                            ? 'bg-brand-black/40 backdrop-blur-2xl border-white/10 py-1 shadow-[0_20px_50px_rgba(0,0,0,0.5)]'
+                            : 'bg-transparent border-transparent py-2.5'
                             }`}
                     >
                         {/* Logo Section */}
-                        <Link to="/" className="flex items-center gap-4 group relative">
+                        <a href="#home" className="flex items-center gap-4 group relative">
                             <div className="relative">
                                 <motion.div
                                     whileHover={{ rotate: 15, scale: 1.1 }}
@@ -84,7 +82,7 @@ const Navbar = () => {
                                     </span>
                                 </div>
                             </div>
-                        </Link>
+                        </a>
 
                         {/* Desktop Navigation */}
                         <div className="hidden lg:flex items-center gap-2 bg-white/[0.03] backdrop-blur-md rounded-full px-2 py-1.5 border border-white/5 ring-1 ring-white/5">
@@ -92,43 +90,36 @@ const Navbar = () => {
                                 <a
                                     key={link.name}
                                     href={link.href}
-                                    className="relative px-5 py-2 text-sm font-bold text-brand-muted hover:text-white transition-all duration-300 rounded-full group overflow-hidden"
+                                    className="relative px-5 py-2 text-sm font-bold text-brand-muted hover:text-white transition-all duration-300 group"
                                 >
-                                    <span className="relative z-10 transition-transform duration-300 group-hover:-translate-y-1 block">
+                                    <span className="relative z-10 block">
                                         {link.name}
                                     </span>
-                                    <span className="absolute left-1/2 -translate-x-1/2 top-full group-hover:top-2 text-brand-purple opacity-0 group-hover:opacity-100 transition-all duration-300 text-[10px]">
-                                        <Sparkles size={8} className="animate-pulse" />
-                                    </span>
-                                    <div className="absolute inset-0 bg-white/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out rounded-full" />
+                                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-brand-purple transition-all duration-300 group-hover:w-full rounded-full shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
                                 </a>
                             ))}
                         </div>
 
-                        {/* Desktop CTA Buttons */}
-                        <div className="hidden md:flex items-center gap-8">
-                            <Link
-                                to="/auth/role-selection"
-                                className="text-sm font-bold text-white/60 hover:text-white transition-all duration-300 flex items-center gap-2 group"
-                            >
-                                <span className="relative py-1">
-                                    Sign In
-                                    <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-brand-purple rounded-full transition-all duration-300 group-hover:w-full shadow-[0_0_10px_rgba(139,92,246,0.8)]" />
-                                </span>
-                            </Link>
-                            <Link
-                                to="/auth/role-selection"
-                                className="group relative px-8 py-4 rounded-full bg-brand-purple text-white text-[13px] font-black tracking-wider overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_40px_rgba(139,92,246,0.6)]"
-                            >
-                                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out" />
-                                <span className="relative flex items-center gap-2.5">
+                        {/* Desktop CTA Buttons (Pill within a Pill) */}
+                        <div className="hidden md:flex items-center">
+                            <div className="flex items-center bg-white/5 border border-white/10 rounded-full p-1 pl-4 hover:border-brand-purple/40 transition-all duration-500 group/nav">
+                                <Link
+                                    to="/auth/role-selection"
+                                    className="text-white text-[11px] font-black tracking-[0.2em] mr-2 hover:text-brand-purple transition-colors"
+                                >
                                     JOIN NETWORK
-                                    <div className="relative">
-                                        <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform duration-300" />
-                                        <div className="absolute inset-0 blur-sm bg-white/50 opacity-0 group-hover:opacity-100 animate-pulse" />
+                                </Link>
+
+                                <Link
+                                    to="/auth/role-selection"
+                                    className="flex items-center gap-3 bg-brand-purple text-white pl-3 pr-1.5 py-1 rounded-full text-[11px] font-black tracking-wider shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] hover:scale-[1.03] transition-all duration-300 group/signin"
+                                >
+                                    SIGN IN
+                                    <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center transition-all duration-500 group-hover/signin:rotate-[360deg] group-hover/signin:bg-white/30">
+                                        <ArrowUpRight size={16} />
                                     </div>
-                                </span>
-                            </Link>
+                                </Link>
+                            </div>
                         </div>
 
                         {/* Mobile Menu Toggle */}

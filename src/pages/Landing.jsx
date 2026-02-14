@@ -6,8 +6,8 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import logo from '../assets/logo.jpg';
 
-const Section = ({ children, className = "" }) => (
-    <section className={`py-12 md:py-20 px-4 md:px-6 ${className}`}>
+const Section = ({ children, className = "", id }) => (
+    <section id={id} className={`py-12 md:py-20 px-4 md:px-6 scroll-mt-20 ${className}`}>
         <div className="max-w-7xl mx-auto">
             {children}
         </div>
@@ -32,21 +32,21 @@ const HeroCarousel = () => {
     const slides = [
         {
             id: 1,
-            image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=2070&auto=format&fit=crop", // Modern Workspace/Structure
-            title: "Build Your Startup With Structure.",
-            subtitle: "Vanguard is the first execution platform that replaces chaos with a structured path to incubation.",
+            image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=2070&auto=format&fit=crop",
+            title: "Build Your Startup With Real Structure.",
+            subtitle: "Vanguard replaces startup chaos with a structured execution path — from idea to incubator readiness.",
             badge: "STRUCTURED EXECUTION"
         },
         {
             id: 2,
-            image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop", // Team/Co-founders
+            image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop",
             title: "Connect With Vetted Co-Founders.",
             subtitle: "Stop searching in random groups. Find skill-matched partners who are as serious as you are.",
             badge: "SKILL MATCHING"
         },
         {
             id: 3,
-            image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?q=80&w=2070&auto=format&fit=crop", // Growth/Incubator
+            image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?q=80&w=2070&auto=format&fit=crop",
             title: "Get Incubator Ready.",
             subtitle: "Track your traction, build your data room, and get direct access to our partner incubators.",
             badge: "INCUBATOR ACCESS"
@@ -80,11 +80,15 @@ const HeroCarousel = () => {
                         }}
                     />
 
-                    {/* Dark Overlay Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-transparent" />
+                    {/* Overlays */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/95 via-black/85 to-black/70" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-transparent to-transparent" />
                 </motion.div>
             </AnimatePresence>
+
+            {/* Subtle Pulse Radial Glow behind content */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-purple/20 rounded-full blur-[120px] opacity-20 animate-slow-pulse pointer-events-none z-0" />
 
             {/* Content Container */}
             <div className="relative z-10 h-full px-4 md:px-6 flex flex-col justify-center items-center text-center">
@@ -101,36 +105,56 @@ const HeroCarousel = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.5 }}
-                            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-purple/20 border border-brand-purple/30 text-brand-purple text-[10px] md:text-xs font-bold uppercase tracking-widest mb-6 backdrop-blur-sm"
+                            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[rgba(139,92,246,0.15)] border border-brand-purple/30 text-brand-purple text-[9px] md:text-[11px] font-bold uppercase tracking-widest mb-8 backdrop-blur-sm"
                         >
                             <Zap size={10} md:size={12} fill="currentColor" />
                             {slides[currentSlide].badge}
                         </motion.div>
 
                         <motion.h1
-                            className="text-4xl sm:text-5xl md:text-7xl font-bold leading-[1.1] mb-6 text-white drop-shadow-lg"
+                            className="text-4xl sm:text-5xl lg:text-7xl w-full font-bold leading-[1.1] mb-8 text-white drop-shadow-lg"
                         >
-                            {slides[currentSlide].title.split(" ").map((word, i) => (
-                                i > 2 ? <span key={i} className="text-transparent bg-clip-text bg-gradient-to-r from-brand-purple to-purple-400"> {word}</span> : " " + word
-                            ))}
+                            {slides[currentSlide].title.split(" ").map((word, i) => {
+                                // Logic for gradient highlighting:
+                                // Slide 1: Highlight from 4th word onwards ("With Real Structure.")
+                                // Slide 2: Highlight last word ("Co-Founders.")
+                                // Slide 3: Highlight last two words ("Incubator Ready.")
+                                const isSlide1Highlight = currentSlide === 0 && i > 2;
+                                const isSlide2Highlight = currentSlide === 1 && i > 2;
+                                const isSlide3Highlight = currentSlide === 2 && i > 0;
+
+                                if (isSlide1Highlight || isSlide2Highlight || isSlide3Highlight) {
+                                    return (
+                                        <span key={i} className="text-transparent bg-clip-text bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA]">
+                                            {" "}{word}
+                                        </span>
+                                    );
+                                }
+                                return i === 0 ? word : " " + word;
+                            })}
                         </motion.h1>
 
                         <motion.p
-                            className="text-base md:text-xl text-gray-200 mb-10 leading-relaxed max-w-4xl mx-auto shadow-black drop-shadow-md"
+                            className="text-sm md:text-lg text-[#E5E7EB] mb-12 leading-relaxed max-w-[650px] mx-auto drop-shadow-md"
                         >
                             {slides[currentSlide].subtitle}
                         </motion.p>
 
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                        <div className="flex flex-col items-center justify-center">
                             <button
                                 onClick={() => navigate('/auth/role-selection')}
-                                className="w-full sm:w-auto px-8 py-4 rounded-full bg-brand-purple hover:bg-brand-purple-hover text-white font-bold text-base md:text-lg shadow-[0_0_30px_rgba(139,92,246,0.3)] hover:shadow-[0_0_50px_rgba(139,92,246,0.5)] transition-all flex items-center justify-center gap-2"
+                                className="w-full sm:w-auto px-12 py-4 rounded-full bg-brand-purple hover:bg-brand-purple-hover text-white font-bold text-base md:text-lg shadow-[0_0_20px_rgba(139,92,246,0.35)] hover:shadow-[0_0_40px_rgba(139,92,246,0.5)] transition-all flex items-center justify-center gap-2"
                             >
                                 Get Started <ArrowRight size={20} />
                             </button>
-                            <button className="w-full sm:w-auto px-8 py-4 rounded-full border border-white/20 hover:bg-white/10 text-white font-semibold text-base md:text-lg backdrop-blur-md transition-all">
-                                View Demo
-                            </button>
+                            {/* <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 1 }}
+                                className="text-xs text-gray-400 mt-6 font-normal"
+                            >
+                                Built for serious early-stage founders.
+                            </motion.p> */}
                         </div>
                     </motion.div>
                 </AnimatePresence>
@@ -160,7 +184,7 @@ const Landing = () => {
             <Navbar />
 
             {/* HERO SECTION - DYNAMIC CAROUSEL */}
-            <section className="relative h-screen min-h-[800px] overflow-hidden">
+            <section id="home" className="relative h-screen min-h-[800px] overflow-hidden scroll-mt-20">
                 <HeroCarousel />
             </section>
 
@@ -207,7 +231,7 @@ const Landing = () => {
 
             {/* ROLE SELECTION SECTION (Redesigned Premium Cards) */}
             {/* ROLE SELECTION SECTION (Redesigned Premium Cards) */}
-            <section className="py-12 md:py-20 relative overflow-hidden">
+            <section id="programs" className="py-12 md:py-20 relative scroll-mt-20">
                 <div className="max-w-7xl mx-auto px-6 mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-purple/10 border border-brand-purple/20 text-brand-purple text-[10px] md:text-xs font-bold uppercase tracking-wider mb-4">
@@ -225,7 +249,7 @@ const Landing = () => {
                     </div>
                 </div>
 
-                <div className="flex gap-4 md:gap-6 overflow-x-auto pb-12 snap-x px-6 md:px-20 scrollbar-hide">
+                <div className="flex gap-4 md:gap-6 overflow-x-auto pt-10 pb-12 snap-x px-6 md:px-20 scrollbar-hide">
 
                     {[
                         {
@@ -280,7 +304,7 @@ const Landing = () => {
 
                         <div
                             key={i}
-                            className="group relative min-w-[280px] sm:min-w-[400px] md:min-w-[500px] snap-center rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20 border border-brand-purple/20"
+                            className="group relative min-w-[280px] sm:min-w-[400px] md:min-w-[500px] snap-center rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.01] border border-purple-500 shadow-2xl shadow-black/50 hover:z-2"
                         >
                             <div className="relative h-[450px] md:h-[500px]">
 
@@ -300,12 +324,6 @@ const Landing = () => {
                                     }}
                                 />
 
-                                {/* Badge */}
-                                <div className="absolute top-6 left-0 right-0 flex justify-center z-10">
-                                    <span className="bg-gray-800/90 backdrop-blur text-purple-300 px-4 py-1.5 rounded-full text-xs font-semibold">
-                                        {card.tag}
-                                    </span>
-                                </div>
 
                                 {/* Content */}
                                 <div className="absolute bottom-0 left-0 right-0 p-8 z-10 flex flex-col items-center text-center">
@@ -347,7 +365,7 @@ const Landing = () => {
 
                                         <button
                                             onClick={() => navigate(`/auth/signup?role=${card.role.toLowerCase().includes('founder') ? 'founder' : card.role.toLowerCase().includes('mentor') ? 'mentor' : 'incubator'}`)}
-                                            className="flex-1 bg-gradient-to-r from-purple-600 to-purple-500 rounded-full py-2.5 md:py-3 shadow-lg shadow-purple-500/40 text-sm md:text-base font-bold transition-all hover:scale-105"
+                                            className="flex-1 bg-gradient-to-r from-brand-purple to-purple-600 text-white hover:opacity-90 rounded-full py-2.5 md:py-3 text-sm md:text-base font-black transition-all hover:scale-105 shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)]"
                                         >
                                             {card.btnMain}
                                         </button>
@@ -364,7 +382,7 @@ const Landing = () => {
 
 
             {/* MENTOR SPOTLIGHT (Accordion) */}
-            < Section className="relative overflow-hidden" >
+            <Section id="mentors" className="relative overflow-hidden">
                 <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-brand-purple/20 to-transparent" />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                     {/* Left Content Section */}
@@ -442,7 +460,7 @@ const Landing = () => {
                 </div>
             </Section >
             {/* HOW VANGUARD WORKS */}
-            < Section className="relative overflow-hidden" >
+            <Section id="how-it-works" className="relative overflow-hidden">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4">How Vanguard <span className="text-brand-purple">Works</span></h2>
                     <p className="text-brand-muted max-w-2xl mx-auto">A structured path from idea to incubation.</p>

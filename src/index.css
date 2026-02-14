@@ -11,6 +11,10 @@
   --font-sans: "Mazzard", "Outfit", "Inter", system-ui, -apple-system, sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 @layer base {
   body {
     @apply bg-brand-black text-brand-text antialiased;
@@ -50,6 +54,24 @@
     50% {
       transform: translateY(-10px);
     }
+  }
+
+  @keyframes slow-pulse {
+
+    0%,
+    100% {
+      opacity: 0.1;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.3;
+      transform: scale(1.1);
+    }
+  }
+
+  .animate-slow-pulse {
+    animation: slow-pulse 10s ease-in-out infinite;
   }
 
   .animate-float {
