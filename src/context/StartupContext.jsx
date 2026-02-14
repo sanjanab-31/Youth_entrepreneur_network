@@ -38,7 +38,8 @@ export const StartupProvider = ({ children }) => {
         ],
         lastUpdated: new Date().toISOString(),
         profileCompletion: 0,
-        mentor: null
+        mentor: null,
+        expertiseSector: "Fintech"
     };
 
     const calculateProfileCompletion = (data) => {

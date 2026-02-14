@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Building,
     MapPin,
@@ -12,39 +12,254 @@ import {
     ArrowRight,
     Globe,
     Zap,
-    Plus
+    Plus,
+    X,
+    Shield,
+    CheckCircle2,
+    RefreshCw,
+    Target,
+    Users
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../../context/AuthContext';
+import { useStartup } from '../../../context/StartupContext';
 
 const Incubators = () => {
-    const incubators = [
-        {
-            n: 'NSRCEL IIMB',
-            l: 'Bangalore / Remote',
-            s: 'Early Stage / Revenue',
-            f: 'Tech / Sustainability',
-            b: 'Jan 2026 - June 2026',
-            m: '92% Survival Rate • $10M+ Funding Raised',
-            img: 'II'
-        },
-        {
-            n: 'Antler India',
-            l: 'New Delhi / Hybrid',
-            s: 'Pre-Seed / Idea',
-            f: 'SaaS / Deep Tech',
-            b: 'Cycles every 3 months',
-            m: 'Global Network • High-Value Mentorship',
-            img: 'AN'
-        },
-        {
-            n: 'Venture Catalysts',
-            l: 'Mumbai',
-            s: 'Seed / Scale-up',
-            f: 'Multi-sector',
-            b: 'Rolling Admissions',
-            m: 'Angel Network • $25M+ Exit Value',
-            img: 'VC'
+    const { user } = useAuth();
+    const { startup } = useStartup();
+
+    // --- State Management ---
+    const [incubators, setIncubators] = useState([]);
+    const [applications, setApplications] = useState([]);
+    const [selectedIncubator, setSelectedIncubator] = useState(null);
+    const [applyingIncubator, setApplyingIncubator] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    // Filter State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filters, setFilters] = useState({
+        sector: 'All',
+        stages: [],
+        verifiedOnly: false
+    });
+
+    // Application Form State
+    const [appForm, setAppForm] = useState({
+        problem: '',
+        traction: '',
+        reason: '',
+        funding: ''
+    });
+
+    // --- Initialization ---
+    useEffect(() => {
+        const initializeData = () => {
+            const storedIncubators = localStorage.getItem('vanguardIncubators');
+            const storedApplications = localStorage.getItem('vanguardIncubatorApplications');
+
+            if (!storedIncubators) {
+                const demoIncubators = [
+                    {
+                        id: 'inc1',
+                        name: 'NSRCEL IIMB',
+                        location: 'Bangalore / Remote',
+                        supportedStages: ['MVP', 'Revenue'],
+                        focus: 'Fintech',
+                        timeline: 'Jan 2026 - June 2026',
+                        metrics: '92% Survival Rate • $10M+ Funding Raised',
+                        initials: 'II',
+                        verified: true,
+                        shortBio: 'Indias premier startup hub at IIM Bangalore, offering equity-free incubation for high-impact startups.',
+                        totalStartups: 1540,
+                        fundingCap: '$500K'
+                    },
+                    {
+                        id: 'inc2',
+                        name: 'Antler India',
+                        location: 'New Delhi / Hybrid',
+                        supportedStages: ['Idea', 'MVP'],
+                        focus: 'SaaS',
+                        timeline: 'Cycles every 3 months',
+                        metrics: 'Global Network • High-Value Mentorship',
+                        initials: 'AN',
+                        verified: true,
+                        shortBio: 'The day-zero investor that helps founders find co-founders and build global businesses from scratch.',
+                        totalStartups: 280,
+                        fundingCap: '$250K+'
+                    },
+                    {
+                        id: 'inc3',
+                        name: 'Venture Catalysts',
+                        location: 'Mumbai',
+                        supportedStages: ['Revenue'],
+                        focus: 'Deep Tech',
+                        timeline: 'Rolling Admissions',
+                        metrics: 'Angel Network • $25M+ Exit Value',
+                        initials: 'VC',
+                        verified: false,
+                        shortBio: 'Indias first and largest integrated incubator and angel network.',
+                        totalStartups: 850,
+                        fundingCap: '$1M'
+                    },
+                    {
+                        id: 'inc4',
+                        name: 'CIIE.CO',
+                        location: 'Ahmedabad',
+                        supportedStages: ['Idea', 'MVP'],
+                        focus: 'Sustainability',
+                        timeline: 'Summer Cohort 2026',
+                        metrics: '600+ Startups Mentored • IIM Ahmedabad Backed',
+                        initials: 'CI',
+                        verified: true,
+                        shortBio: 'Supporting fearless entrepreneurs since 2002. Built at IIM Ahmedabad.',
+                        totalStartups: 620,
+                        fundingCap: '$100K'
+                    },
+                    {
+                        id: 'inc5',
+                        name: 'T-Hub',
+                        location: 'Hyderabad',
+                        supportedStages: ['MVP', 'Revenue'],
+                        focus: 'AI',
+                        timeline: 'Lab32 Program 2026',
+                        metrics: 'Largest Incubation Center in India',
+                        initials: 'TH',
+                        verified: true,
+                        shortBio: 'Creating the world largest innovation ecosystem for tech startups.',
+                        totalStartups: 2100,
+                        fundingCap: '$50K - $2M'
+                    }
+                ];
+                localStorage.setItem('vanguardIncubators', JSON.stringify(demoIncubators));
+                setIncubators(demoIncubators);
+            } else {
+                setIncubators(JSON.parse(storedIncubators));
+            }
+
+            if (storedApplications) {
+                setApplications(JSON.parse(storedApplications));
+            } else {
+                localStorage.setItem('vanguardIncubatorApplications', JSON.stringify([]));
+            }
+            setLoading(false);
+        };
+
+        initializeData();
+    }, []);
+
+    // --- Logic: Premium Matching & Filtering ---
+    const filteredIncubators = useMemo(() => {
+        let result = [...incubators];
+
+        // 1. Search Query
+        if (searchQuery) {
+            result = result.filter(inc =>
+                inc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                inc.focus.toLowerCase().includes(searchQuery.toLowerCase())
+            );
         }
-    ];
+
+        // 2. Sector Filter
+        if (filters.sector !== 'All') {
+            result = result.filter(inc => inc.focus === filters.sector);
+        }
+
+        // 3. Stage Filter
+        if (filters.stages.length > 0) {
+            result = result.filter(inc =>
+                inc.supportedStages.some(stage => filters.stages.includes(stage))
+            );
+        }
+
+        // 4. Verified institutions
+        if (filters.verifiedOnly) {
+            result = result.filter(inc => inc.verified);
+        }
+
+        // 5. Premium Matching (Ranking based on Startup Context)
+        const founderSector = startup?.expertiseSector || 'Fintech';
+        const founderStage = startup?.stage || 'Idea';
+
+        result = result.map(inc => {
+            const sectorMatch = inc.focus === founderSector;
+            const stageMatch = inc.supportedStages.includes(founderStage);
+            const matchScore = (sectorMatch ? 2 : 0) + (stageMatch ? 1 : 0);
+            return { ...inc, matchScore, isBestMatch: matchScore >= 2 };
+        });
+
+        // Sort by match score then verified status
+        result.sort((a, b) => {
+            if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+            return (b.verified ? 1 : 0) - (a.verified ? 1 : 0);
+        });
+
+        return result;
+    }, [incubators, filters, searchQuery, startup]);
+
+    // --- Helpers ---
+    const toggleStageFilter = (stage) => {
+        setFilters(prev => ({
+            ...prev,
+            stages: prev.stages.includes(stage)
+                ? prev.stages.filter(s => s !== stage)
+                : [...prev.stages, stage]
+        }));
+    };
+
+    const resetFilters = () => {
+        setFilters({
+            sector: 'All',
+            stages: [],
+            verifiedOnly: false
+        });
+        setSearchQuery('');
+    };
+
+    const handleApplicationSubmit = (e) => {
+        e.preventDefault();
+
+        const newApplication = {
+            id: `app_${Date.now()}`,
+            incubatorId: applyingIncubator.id,
+            founderId: user?.email,
+            startupName: startup?.startupName || 'Default Startup',
+            problemSummary: appForm.problem,
+            traction: appForm.traction,
+            reason: appForm.reason,
+            funding: appForm.funding,
+            status: 'pending',
+            timestamp: new Date().toISOString()
+        };
+
+        const updatedApps = [...applications, newApplication];
+        setApplications(updatedApps);
+        localStorage.setItem('vanguardIncubatorApplications', JSON.stringify(updatedApps));
+
+        // Reset and close
+        setAppForm({ problem: '', traction: '', reason: '', funding: '' });
+        setApplyingIncubator(null);
+    };
+
+    const hasApplied = (incubatorId) => {
+        return applications.some(app => app.incubatorId === incubatorId && app.founderId === user?.email);
+    };
+
+    const isAccessRestricted = !['founder', 'co-founder'].includes(user?.role);
+    const canApply = user?.role === 'founder' || (user?.role === 'co-founder' && startup?.coFounderPermissions?.applications);
+
+    if (loading) return <div className="p-20 text-center text-gray-400">Loading Incubators...</div>;
+
+    if (isAccessRestricted) {
+        return (
+            <div className="flex flex-col items-center justify-center p-20 bg-[#1E1E2F] rounded-3xl border border-white/5 mx-6">
+                <Shield size={48} className="text-red-400 mb-6" />
+                <h2 className="text-2xl font-black text-white mb-2">Access Restricted</h2>
+                <p className="text-gray-400 text-center max-w-md">
+                    Incubator applications are reserved for Founders and Co-Founders.
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-10 animate-in fade-in duration-500">
@@ -62,125 +277,466 @@ const Incubators = () => {
                         Startup <span className="text-blue-500">Incubators</span>
                     </h1>
                 </div>
+
+                {applications.length > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-[#1E1E2F] rounded-xl border border-white/5">
+                        <Target size={16} className="text-blue-500" />
+                        <span className="text-sm font-bold text-white">{applications.length} Active Applications</span>
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 {/* Search & Filter */}
                 <aside className="lg:col-span-1 space-y-6">
-                    <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5">
-                        <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2 uppercase tracking-widest text-[10px]">
-                            <Filter size={14} className="text-blue-500" /> Refine Focus
-                        </h3>
+                    <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 shadow-xl">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-black text-white flex items-center gap-2 uppercase tracking-widest text-[10px]">
+                                <Filter size={14} className="text-blue-500" /> Filters
+                            </h3>
+                            <button
+                                onClick={resetFilters}
+                                className="text-[10px] font-black text-blue-500 uppercase hover:underline"
+                            >
+                                Reset
+                            </button>
+                        </div>
 
                         <div className="space-y-6">
+                            {/* Search */}
                             <div className="relative group">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-blue-500 transition-colors" size={16} />
                                 <input
                                     type="text"
-                                    placeholder="Search incubators..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search institutions..."
                                     className="w-full bg-[#0F0F14] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-blue-500/30 font-bold"
                                 />
                             </div>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block">Sector Focus</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {['All', 'Agri', 'Health', 'SaaS', 'AI'].map((s, i) => (
-                                            <button key={i} className={`px-3 py-1.5 rounded-lg text-[10px] font-black border transition-all ${i === 0 ? 'bg-blue-500/20 border-blue-500/40 text-white' : 'bg-white/5 border-white/5 text-gray-600 hover:text-white'}`}>{s}</button>
-                                        ))}
-                                    </div>
+                            {/* Sector Filter */}
+                            <div>
+                                <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block">Sector Focus</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['All', 'SaaS', 'Fintech', 'Deep Tech', 'AI', 'Sustainability'].map((s) => (
+                                        <button
+                                            key={s}
+                                            onClick={() => setFilters({ ...filters, sector: s })}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black border transition-all ${filters.sector === s
+                                                    ? 'bg-blue-500/20 border-blue-500/40 text-white'
+                                                    : 'bg-white/5 border-white/5 text-gray-600 hover:text-white'
+                                                }`}
+                                        >
+                                            {s}
+                                        </button>
+                                    ))}
                                 </div>
-                                <div>
-                                    <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block">Preferred Stage</label>
-                                    <div className="space-y-2">
-                                        {['Pre-Seed', 'Seed', 'Growth'].map((st, i) => (
-                                            <div key={i} className="flex items-center gap-3 group cursor-pointer">
-                                                <div className="w-4 h-4 rounded border border-white/10 group-hover:border-blue-500/50 transition-colors" />
-                                                <span className="text-sm font-medium text-gray-500 group-hover:text-white transition-colors">{st}</span>
+                            </div>
+
+                            {/* Preferred Stage */}
+                            <div>
+                                <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block">Startup Stage</label>
+                                <div className="space-y-3">
+                                    {['Idea', 'MVP', 'Revenue'].map((st) => (
+                                        <div
+                                            key={st}
+                                            className="flex items-center gap-3 group cursor-pointer"
+                                            onClick={() => toggleStageFilter(st)}
+                                        >
+                                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filters.stages.includes(st)
+                                                    ? 'bg-blue-500 border-blue-500'
+                                                    : 'border-white/10 group-hover:border-blue-500/50'
+                                                }`}>
+                                                {filters.stages.includes(st) && <CheckCircle2 size={12} className="text-white" />}
                                             </div>
-                                        ))}
-                                    </div>
+                                            <span className={`text-sm font-medium transition-colors ${filters.stages.includes(st) ? 'text-white' : 'text-gray-400 group-hover:text-white'
+                                                }`}>{st} Stage</span>
+                                        </div>
+                                    ))}
                                 </div>
+                            </div>
+
+                            {/* Verified institution Toggle */}
+                            <div className="pt-4 border-t border-white/5">
+                                <label className="flex items-center justify-between cursor-pointer group">
+                                    <span className="text-[10px] text-gray-500 font-black uppercase">Verified Only</span>
+                                    <div
+                                        onClick={() => setFilters({ ...filters, verifiedOnly: !filters.verifiedOnly })}
+                                        className={`w-10 h-5 rounded-full relative transition-all ${filters.verifiedOnly ? 'bg-blue-500' : 'bg-[#0F0F14] border border-white/10'}`}
+                                    >
+                                        <div className={`absolute top-1 w-3 h-3 rounded-full transition-all ${filters.verifiedOnly ? 'right-1 bg-white' : 'left-1 bg-gray-600'}`} />
+                                    </div>
+                                </label>
                             </div>
                         </div>
                     </div>
 
-                    <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1E1E2F] to-[#0F0F14] border border-blue-500/10 relative overflow-hidden group">
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1E1E2F] to-[#0F0F14] border border-blue-500/10 relative overflow-hidden group shadow-lg">
                         <div className="absolute top-0 right-0 p-4 opacity-5"><Globe size={64} /></div>
-                        <h4 className="text-white font-bold text-sm mb-2">Auto-Fill Ready</h4>
-                        <p className="text-xs text-gray-500 font-medium mb-4">Vanguard automatically syncs your startup data with incubator application forms.</p>
+                        <h4 className="text-white font-bold text-sm mb-2">Auto-Fill Active</h4>
+                        <p className="text-xs text-gray-500 font-medium mb-4">Vanguard has synced your system profiles with external portal requirements.</p>
                         <div className="flex items-center gap-2 text-blue-400 font-black text-[10px] uppercase tracking-widest">
-                            <Zap size={10} fill="currentColor" /> Feature Active
+                            <Zap size={10} fill="currentColor" /> Ready to Apply
                         </div>
                     </div>
                 </aside>
 
                 {/* Incubator Cards */}
                 <div className="lg:col-span-3 space-y-6">
-                    {incubators.map((inc, i) => (
-                        <div key={i} className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 group hover:border-blue-500/30 transition-all cursor-pointer relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/2 blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2 group-hover:bg-blue-500/5 transition-all" />
+                    {filteredIncubators.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-20 bg-[#1E1E2F] rounded-3xl border border-dashed border-white/10 text-center">
+                            <RefreshCw size={40} className="text-gray-600 mb-4 animate-spin-slow" />
+                            <h3 className="text-xl font-bold text-white mb-2">No institutions match your refined criteria</h3>
+                            <p className="text-gray-400 max-w-sm">Adjust your filters or startup stage to discover growth opportunities.</p>
+                            <button
+                                onClick={resetFilters}
+                                className="mt-8 px-8 py-3 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
+                            >
+                                Reset All Filters
+                            </button>
+                        </div>
+                    ) : (
+                        filteredIncubators.map((inc) => (
+                            <motion.div
+                                layout
+                                key={inc.id}
+                                className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 group hover:border-blue-500/30 transition-all cursor-pointer relative overflow-hidden shadow-xl"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/2 blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2 group-hover:bg-blue-500/5 transition-all" />
 
-                            <div className="flex flex-col md:flex-row gap-8">
-                                <div className="flex-shrink-0">
-                                    <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-2xl text-gray-400 group-hover:text-blue-400 group-hover:bg-blue-500/10 group-hover:border-blue-500/30 transition-all">
-                                        {inc.img}
+                                {inc.isBestMatch && (
+                                    <div className="absolute top-4 left-4 z-10">
+                                        <span className="px-2 py-1 bg-blue-600 text-white text-[8px] font-black uppercase rounded-md shadow-lg shadow-blue-600/20">
+                                            Best Match
+                                        </span>
                                     </div>
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <h3 className="text-2xl font-black text-white group-hover:text-blue-400 transition-colors mb-2">{inc.n}</h3>
-                                            <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                                <span className="flex items-center gap-1.5"><MapPin size={12} className="text-blue-500" /> {inc.l}</span>
-                                                <span className="flex items-center gap-1.5"><TrendingUp size={12} className="text-green-500" /> {inc.s}</span>
+                                )}
+
+                                <div className="flex flex-col md:flex-row gap-8">
+                                    <div className="flex-shrink-0">
+                                        <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-2xl text-gray-400 group-hover:text-blue-400 group-hover:bg-blue-500/10 group-hover:border-blue-500/30 transition-all">
+                                            {inc.initials}
+                                        </div>
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <h3 className="text-2xl font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{inc.name}</h3>
+                                                    {inc.verified && <Shield size={16} className="text-blue-400" />}
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                                    <span className="flex items-center gap-1.5"><MapPin size={12} className="text-blue-500" /> {inc.location}</span>
+                                                    <span className="flex items-center gap-1.5"><TrendingUp size={12} className="text-green-500" /> {inc.focus} Focus</span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                disabled={hasApplied(inc.id) || !canApply}
+                                                onClick={() => setApplyingIncubator(inc)}
+                                                className={`hidden md:flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black border transition-all shadow-xl ${hasApplied(inc.id)
+                                                        ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                                        : !canApply
+                                                            ? 'bg-gray-800 text-gray-500 cursor-not-allowed border-transparent'
+                                                            : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-blue-500/20'
+                                                    }`}
+                                            >
+                                                {hasApplied(inc.id) ? (
+                                                    <>Applied <CheckCircle2 size={18} /></>
+                                                ) : !canApply ? (
+                                                    'Access Locked'
+                                                ) : (
+                                                    <>Apply Now <ArrowRight size={18} /></>
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-white/5">
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <p className="text-[10px] text-gray-600 font-black uppercase mb-1 flex items-center gap-2 tracking-widest">
+                                                        <Calendar size={10} /> Batch Timeline
+                                                    </p>
+                                                    <p className="text-xs font-bold text-gray-300">{inc.timeline}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] text-gray-600 font-black uppercase mb-1 flex items-center gap-2 tracking-widest">
+                                                        <Award size={10} /> Success Metrics
+                                                    </p>
+                                                    <p className="text-xs font-bold text-gray-300">{inc.metrics}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col justify-end space-y-4">
+                                                <div>
+                                                    <p className="text-[10px] text-gray-600 font-black uppercase mb-2 tracking-widest">Target Stages</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {inc.supportedStages.map(stage => (
+                                                            <span key={stage} className="px-3 py-1 bg-white/5 text-[10px] font-bold text-blue-400 rounded-lg border border-blue-500/10 transition-all">{stage}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => setSelectedIncubator(inc)}
+                                                    className="text-[10px] font-black text-blue-500 uppercase flex items-center gap-2 hover:translate-x-1 transition-transform"
+                                                >
+                                                    View Full Details <ChevronRight size={14} />
+                                                </button>
                                             </div>
                                         </div>
-                                        <button className="hidden md:flex items-center gap-2 bg-[#1E1E2F] text-white px-5 py-2.5 rounded-xl text-sm font-black border border-white/10 group-hover:bg-blue-600 group-hover:border-blue-600 transition-all shadow-xl">
-                                            Apply Now <ArrowRight size={18} />
+
+                                        <button
+                                            disabled={hasApplied(inc.id) || !canApply}
+                                            onClick={() => setApplyingIncubator(inc)}
+                                            className={`md:hidden mt-8 w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-black transition-all ${hasApplied(inc.id)
+                                                    ? 'bg-green-500/20 text-green-400'
+                                                    : !canApply
+                                                        ? 'bg-gray-800 text-gray-500'
+                                                        : 'bg-blue-600 text-white shadow-lg'
+                                                }`}
+                                        >
+                                            {hasApplied(inc.id) ? 'Applied' : 'Apply Now'} <ArrowRight size={18} />
                                         </button>
                                     </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-white/5">
-                                        <div className="space-y-4">
-                                            <div>
-                                                <p className="text-[10px] text-gray-600 font-black uppercase mb-1 flex items-center gap-2 tracking-widest">
-                                                    <Calendar size={10} /> Batch Timeline
-                                                </p>
-                                                <p className="text-xs font-bold text-gray-300">{inc.b}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] text-gray-600 font-black uppercase mb-1 flex items-center gap-2 tracking-widest">
-                                                    <Award size={10} /> Success Metrics
-                                                </p>
-                                                <p className="text-xs font-bold text-gray-300">{inc.m}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col justify-end">
-                                            <p className="text-[10px] text-gray-600 font-black uppercase mb-2 tracking-widest">Sector Focus</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                <span className="px-3 py-1 bg-white/5 text-[10px] font-bold text-gray-400 rounded-lg group-hover:border-white/10 border border-transparent transition-all">{inc.f}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <button className="md:hidden mt-8 w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-4 rounded-xl text-sm font-black transition-all">
-                                        Apply Now <ArrowRight size={18} />
-                                    </button>
                                 </div>
-                            </div>
-                        </div>
-                    ))}
+                            </motion.div>
+                        ))
+                    )}
 
                     <div className="p-8 border border-dashed border-white/10 rounded-2xl flex items-center justify-center text-center group hover:bg-white/5 transition-all">
                         <div>
-                            <p className="text-xs font-bold text-gray-600">Showing 3 of 124 Incubators</p>
-                            <button className="mt-4 text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-2 mx-auto">Load More <Plus size={12} /></button>
+                            <p className="text-xs font-bold text-gray-600">Showing {filteredIncubators.length} of 124 Growth Hubs</p>
+                            <button className="mt-4 text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-2 mx-auto">Discover More <Plus size={12} /></button>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Profile Modal */}
+            <AnimatePresence>
+                {selectedIncubator && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-6"
+                    >
+                        <motion.div
+                            initial={{ y: 50, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 50, opacity: 0 }}
+                            className="bg-[#1E1E2F] w-full max-w-3xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-y-auto max-h-[90vh]"
+                        >
+                            <div className="relative">
+                                <div className="h-40 bg-gradient-to-r from-blue-600 to-indigo-700" />
+                                <button
+                                    onClick={() => setSelectedIncubator(null)}
+                                    className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white transition-all"
+                                >
+                                    <X size={20} />
+                                </button>
+                                <div className="px-10 -mt-16 mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                                    <div className="flex items-end gap-6">
+                                        <div className="w-32 h-32 rounded-3xl bg-[#1E1E2F] border-8 border-[#1E1E2F] overflow-hidden shadow-2xl">
+                                            <div className="w-full h-full bg-white/5 flex items-center justify-center text-4xl font-black text-blue-500">
+                                                {selectedIncubator.initials}
+                                            </div>
+                                        </div>
+                                        <div className="pb-4">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <h2 className="text-3xl font-black text-white uppercase tracking-tight">{selectedIncubator.name}</h2>
+                                                {selectedIncubator.verified && <CheckCircle2 size={24} className="text-blue-400" />}
+                                            </div>
+                                            <p className="text-gray-400 font-bold flex items-center gap-2"><MapPin size={16} className="text-blue-500" /> {selectedIncubator.location}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="px-10 pb-10 grid grid-cols-1 md:grid-cols-2 gap-12">
+                                <div className="space-y-10">
+                                    <section>
+                                        <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">About Institution</h4>
+                                        <p className="text-gray-300 text-sm leading-relaxed">{selectedIncubator.shortBio}</p>
+                                    </section>
+
+                                    <section>
+                                        <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">Program Statistics</h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-[#0F0F14] p-4 rounded-2xl border border-white/5">
+                                                <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Startups</p>
+                                                <p className="text-xl font-black text-white">{selectedIncubator.totalStartups}+</p>
+                                            </div>
+                                            <div className="bg-[#0F0F14] p-4 rounded-2xl border border-white/5">
+                                                <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Max Funding</p>
+                                                <p className="text-xl font-black text-blue-400">{selectedIncubator.fundingCap}</p>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+
+                                <div className="space-y-10">
+                                    <section>
+                                        <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">Sector Focus</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            <span className="px-4 py-2 bg-blue-500/10 text-white text-xs font-bold rounded-xl border border-blue-500/20">
+                                                {selectedIncubator.focus}
+                                            </span>
+                                        </div>
+                                    </section>
+
+                                    <section>
+                                        <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">Eligibility</h4>
+                                        <div className="space-y-3">
+                                            {selectedIncubator.supportedStages.map(stage => (
+                                                <div key={stage} className="flex items-center gap-3 text-sm font-bold text-gray-300">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                                    {stage} Stage Startups
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </section>
+
+                                    <div className="pt-6">
+                                        <button
+                                            disabled={hasApplied(selectedIncubator.id) || !canApply}
+                                            onClick={() => {
+                                                setApplyingIncubator(selectedIncubator);
+                                                setSelectedIncubator(null);
+                                            }}
+                                            className={`w-full py-5 rounded-2xl font-black text-white transition-all shadow-xl flex items-center justify-center gap-3 ${hasApplied(selectedIncubator.id)
+                                                    ? 'bg-green-600/20 text-green-400 border border-green-500/20'
+                                                    : !canApply
+                                                        ? 'bg-gray-800 text-gray-500'
+                                                        : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30'
+                                                }`}
+                                        >
+                                            {hasApplied(selectedIncubator.id) ? (
+                                                <>Application Sent <CheckCircle2 size={20} /></>
+                                            ) : !canApply ? (
+                                                'Founder Access Only'
+                                            ) : (
+                                                <>Start Application <ArrowRight size={20} /></>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Application Modal */}
+            <AnimatePresence>
+                {applyingIncubator && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-6"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-[#1E1E2F] w-full max-w-2xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-10">
+                                <div className="flex justify-between items-start mb-10">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-20 h-20 rounded-2xl bg-blue-500/10 flex items-center justify-center font-black text-blue-500 text-2xl border border-blue-500/20">
+                                            {applyingIncubator.initials}
+                                        </div>
+                                        <div>
+                                            <h2 className="text-3xl font-black text-white mb-2">Program Application</h2>
+                                            <p className="text-blue-400 font-bold text-sm tracking-wide">Applying to {applyingIncubator.name}</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setApplyingIncubator(null)}
+                                        className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+
+                                <form className="space-y-8" onSubmit={handleApplicationSubmit}>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-6">
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-3 block">Startup Snapshot</label>
+                                                <div className="bg-[#0F0F14] rounded-2xl p-4 border border-white/5">
+                                                    <p className="text-sm font-black text-white mb-1">{startup?.startupName || 'Default Startup'}</p>
+                                                    <p className="text-[10px] font-bold text-blue-500 uppercase">{startup?.stage || 'Idea'} Stage</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-3 block">Market Gap / Problem</label>
+                                                <textarea
+                                                    required
+                                                    value={appForm.problem}
+                                                    onChange={(e) => setAppForm({ ...appForm, problem: e.target.value })}
+                                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 min-h-[140px]"
+                                                    placeholder="Briefly describe the core problem you are solving..."
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-6">
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-3 block">Current Traction</label>
+                                                <textarea
+                                                    required
+                                                    value={appForm.traction}
+                                                    onChange={(e) => setAppForm({ ...appForm, traction: e.target.value })}
+                                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 min-h-[100px]"
+                                                    placeholder="Users, revenue, Pilot project status..."
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-3 block">Why this Incubator?</label>
+                                                <textarea
+                                                    required
+                                                    value={appForm.reason}
+                                                    onChange={(e) => setAppForm({ ...appForm, reason: e.target.value })}
+                                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 min-h-[100px]"
+                                                    placeholder="How does this program fit your growth path?"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-3 block">Anticipated Funding Needs</label>
+                                                <input
+                                                    required
+                                                    type="text"
+                                                    value={appForm.funding}
+                                                    onChange={(e) => setAppForm({ ...appForm, funding: e.target.value })}
+                                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50"
+                                                    placeholder="e.g. $50k for MVP development"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col md:flex-row gap-5 pt-6 border-t border-white/5">
+                                        <button
+                                            type="submit"
+                                            className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-600/20 hover:shadow-blue-600/40 transition-all flex items-center justify-center gap-3"
+                                        >
+                                            Submit Application <Globe size={20} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setApplyingIncubator(null)}
+                                            className="px-10 bg-white/5 text-gray-400 font-bold py-5 rounded-2xl hover:text-white transition-all border border-white/10"
+                                        >
+                                            Discard Draft
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

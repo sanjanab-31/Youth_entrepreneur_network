@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Briefcase,
     Search,
@@ -13,18 +13,281 @@ import {
     ArrowRight,
     MapPin,
     Target,
-    Plus
+    Plus,
+    RefreshCw,
+    User,
+    CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../../context/AuthContext';
+import { useStartup } from '../../../context/StartupContext';
 
 const Mentors = () => {
-    const [selectedMentor, setSelectedMentor] = useState(null);
+    const { user } = useAuth();
+    const { startup } = useStartup();
 
-    const mentors = [
-        { id: 1, n: 'Anant Goenka', s: 'Fintech / Scalability', ex: 'Founder @ NeoPay (Ex-Paytm)', r: '98%', p: 'Solving infra bottlenecks & regulation.', t: 'One-on-One', img: 'AG' },
-        { id: 2, n: 'Meera Iyer', s: 'D2C / Branding', ex: 'Marketing Head @ Urban Co', r: '92%', p: 'Brand positioning & customer acquisition.', t: 'Group Workshop', img: 'MI' },
-        { id: 3, n: 'Varun Aggarwal', s: 'AI / Deep Tech', ex: 'Core Dev @ DeepMind', r: '85%', p: 'Model deployment & edge optimization.', t: 'Deep Dive Session', img: 'VA' }
-    ];
+    // --- State Management ---
+    const [mentors, setMentors] = useState([]);
+    const [requests, setRequests] = useState([]);
+    const [selectedMentor, setSelectedMentor] = useState(null);
+    const [requestingMentor, setRequestingMentor] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    // Filter State
+    const [filters, setFilters] = useState({
+        sector: 'All',
+        stages: [],
+        sessionType: 'All',
+        verifiedOnly: false
+    });
+
+    // Request Form State
+    const [requestForm, setRequestForm] = useState({
+        problem: '',
+        tried: '',
+        outcome: ''
+    });
+
+    // --- Initialization ---
+    useEffect(() => {
+        const initializeData = () => {
+            const storedMentors = localStorage.getItem('vanguardMentors');
+            const storedRequests = localStorage.getItem('vanguardMentorRequests');
+
+            if (!storedMentors) {
+                const demoMentors = [
+                    {
+                        id: 'm1',
+                        name: 'Anant Goenka',
+                        initials: 'AG',
+                        title: 'Founder @ NeoPay (Ex-Paytm)',
+                        expertiseSector: 'Fintech',
+                        mentorshipFocus: 'Solving infra bottlenecks & regulation.',
+                        supportedStages: ['MVP', 'Revenue'],
+                        responseRate: 98,
+                        verified: true,
+                        sessionType: 'one-on-one',
+                        availabilityStatus: 'available',
+                        shortBio: 'Serial entrepreneur with 15+ years in Fintech. Scaled NeoPay to 5M+ users.',
+                        totalMentees: 154,
+                        rating: 4.9
+                    },
+                    {
+                        id: 'm2',
+                        name: 'Meera Iyer',
+                        initials: 'MI',
+                        title: 'Marketing Head @ Urban Co',
+                        expertiseSector: 'D2C',
+                        mentorshipFocus: 'Brand positioning & customer acquisition.',
+                        supportedStages: ['Idea', 'MVP'],
+                        responseRate: 92,
+                        verified: true,
+                        sessionType: 'group',
+                        availabilityStatus: 'limited',
+                        shortBio: 'Award-winning marketer helping early-stage startups find their voice.',
+                        totalMentees: 89,
+                        rating: 4.8
+                    },
+                    {
+                        id: 'm3',
+                        name: 'Varun Aggarwal',
+                        initials: 'VA',
+                        title: 'Core Dev @ DeepMind',
+                        expertiseSector: 'Deep Tech',
+                        mentorshipFocus: 'Model deployment & edge optimization.',
+                        supportedStages: ['MVP', 'Revenue'],
+                        responseRate: 85,
+                        verified: false,
+                        sessionType: 'both',
+                        availabilityStatus: 'available',
+                        shortBio: 'AI researcher and systems architect focused on scalable machine learning.',
+                        totalMentees: 42,
+                        rating: 4.7
+                    },
+                    {
+                        id: 'm4',
+                        name: 'Sarah Chen',
+                        initials: 'SC',
+                        title: 'CTO @ CloudSync',
+                        expertiseSector: 'SaaS',
+                        mentorshipFocus: 'Infrastructure scaling and technical hiring.',
+                        supportedStages: ['Idea', 'MVP', 'Revenue'],
+                        responseRate: 95,
+                        verified: true,
+                        sessionType: 'one-on-one',
+                        availabilityStatus: 'available',
+                        shortBio: 'Building robust cloud infrastructure for enterprise-level applications.',
+                        totalMentees: 67,
+                        rating: 4.9
+                    },
+                    {
+                        id: 'm5',
+                        name: 'Rajiv Malhotra',
+                        initials: 'RM',
+                        title: 'Head of Growth @ Eduspark',
+                        expertiseSector: 'Edtech',
+                        mentorshipFocus: 'Go-to-market strategy and user retention.',
+                        supportedStages: ['Idea', 'MVP'],
+                        responseRate: 78,
+                        verified: true,
+                        sessionType: 'group',
+                        availabilityStatus: 'unavailable',
+                        shortBio: 'Growth specialist who transformed Eduspark into a unicorn.',
+                        totalMentees: 210,
+                        rating: 4.6
+                    }
+                ];
+                localStorage.setItem('vanguardMentors', JSON.stringify(demoMentors));
+                setMentors(demoMentors);
+            } else {
+                setMentors(JSON.parse(storedMentors));
+            }
+
+            if (storedRequests) {
+                setRequests(JSON.parse(storedRequests));
+            } else {
+                localStorage.setItem('vanguardMentorRequests', JSON.stringify([]));
+            }
+            setLoading(false);
+        };
+
+        initializeData();
+    }, []);
+
+    // --- Logic: Dynamic Response Rate ---
+    // Update response rates based on activity (simulated: ratio of requests in local storage)
+    const processedMentors = useMemo(() => {
+        return mentors.map(m => {
+            const mentorRequests = requests.filter(r => r.mentorId === m.id);
+            const acceptedRequests = mentorRequests.filter(r => r.status === 'accepted').length;
+
+            // Simulation logic
+            let calculatedRate = m.responseRate;
+            if (mentorRequests.length > 5) {
+                const ratio = acceptedRequests / mentorRequests.length;
+                calculatedRate = Math.floor(60 + (ratio * 38)); // Range 60-98%
+            } else if (mentorRequests.length > 0) {
+                calculatedRate = Math.min(98, m.responseRate + (acceptedRequests * 2));
+            }
+
+            return { ...m, dynamicResponseRate: calculatedRate };
+        });
+    }, [mentors, requests]);
+
+    // --- Logic: Premium Matching & Filtering ---
+    const filteredMentors = useMemo(() => {
+        let result = [...processedMentors];
+
+        // 1. Sector Filter
+        if (filters.sector !== 'All') {
+            result = result.filter(m => m.expertiseSector === filters.sector);
+        }
+
+        // 2. Stage Filter
+        if (filters.stages.length > 0) {
+            result = result.filter(m =>
+                m.supportedStages.some(stage => filters.stages.includes(stage))
+            );
+        }
+
+        // 3. Session Type Filter
+        if (filters.sessionType !== 'All') {
+            result = result.filter(m =>
+                m.sessionType === filters.sessionType.toLowerCase() || m.sessionType === 'both'
+            );
+        }
+
+        // 4. Verified Toggle
+        if (filters.verifiedOnly) {
+            result = result.filter(m => m.verified);
+        }
+
+        // 5. Premium Matching (Ranking)
+        // Match sector and stage first
+        const founderSector = startup?.expertiseSector || ''; // Hypothetical if startup has sector
+        const founderStage = startup?.stage || 'Idea';
+
+        // Add matching flags
+        result = result.map(m => {
+            const sectorMatch = m.expertiseSector === founderSector;
+            const stageMatch = m.supportedStages.includes(founderStage);
+            const matchScore = (sectorMatch ? 2 : 0) + (stageMatch ? 1 : 0);
+            return { ...m, matchScore, isBestMatch: matchScore >= 2 };
+        });
+
+        // Sort by match score then response rate
+        result.sort((a, b) => {
+            if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+            return b.dynamicResponseRate - a.dynamicResponseRate;
+        });
+
+        return result;
+    }, [processedMentors, filters, startup]);
+
+    // --- Helpers ---
+    const toggleStageFilter = (stage) => {
+        setFilters(prev => ({
+            ...prev,
+            stages: prev.stages.includes(stage)
+                ? prev.stages.filter(s => s !== stage)
+                : [...prev.stages, stage]
+        }));
+    };
+
+    const resetFilters = () => {
+        setFilters({
+            sector: 'All',
+            stages: [],
+            sessionType: 'All',
+            verifiedOnly: false
+        });
+    };
+
+    const handleRequestSubmit = (e) => {
+        e.preventDefault();
+
+        const newRequest = {
+            id: `req_${Date.now()}`,
+            mentorId: requestingMentor.id,
+            founderId: user?.email, // Using email as ID for simple demo
+            startupName: startup?.startupName || 'Default Startup',
+            problemSummary: requestForm.problem,
+            tried: requestForm.tried,
+            outcome: requestForm.outcome,
+            founderStage: startup?.stage || 'Idea',
+            status: 'pending',
+            timestamp: new Date().toISOString()
+        };
+
+        const updatedRequests = [...requests, newRequest];
+        setRequests(updatedRequests);
+        localStorage.setItem('vanguardMentorRequests', JSON.stringify(updatedRequests));
+
+        // Reset form and close
+        setRequestForm({ problem: '', tried: '', outcome: '' });
+        setRequestingMentor(null);
+    };
+
+    const hasRequested = (mentorId) => {
+        return requests.some(r => r.mentorId === mentorId && r.founderId === user?.email);
+    };
+
+    const isAccessRestricted = !['founder', 'co-founder'].includes(user?.role);
+    const canRequest = user?.role === 'founder' || (user?.role === 'co-founder' && startup?.coFounderPermissions?.mentorship);
+
+    if (loading) return <div className="p-20 text-center text-gray-400">Loading Mentors...</div>;
+
+    if (isAccessRestricted) {
+        return (
+            <div className="flex flex-col items-center justify-center p-20 bg-[#1E1E2F] rounded-3xl border border-white/5 mx-6">
+                <Shield size={48} className="text-red-400 mb-6" />
+                <h2 className="text-2xl font-black text-white mb-2">Access Restricted</h2>
+                <p className="text-gray-400 text-center max-w-md">
+                    The Vanguard Mentorship system is exclusive to Founders and authorized Co-Founders.
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-10 animate-in fade-in duration-500">
@@ -32,116 +295,221 @@ const Mentors = () => {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                     <div className="flex items-center gap-3 mb-3">
-                        <span className="px-3 py-1 bg-orange-500/20 text-orange-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-orange-500/30">
+                        <span className="px-3 py-1 bg-[#8B5CF6]/20 text-[#8B5CF6] text-[10px] font-black uppercase tracking-widest rounded-full border border-[#8B5CF6]/30">
                             Expert Guidance
                         </span>
                         <span className="w-1 h-1 bg-gray-700 rounded-full" />
                         <span className="text-gray-400 text-sm font-medium">Verified Mentors</span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
-                        Vanguard <span className="text-orange-400">Mentors</span>
+                        Vanguard <span className="text-[#8B5CF6]">Mentors</span>
                     </h1>
                 </div>
+
+                {requests.length > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-[#1E1E2F] rounded-xl border border-white/5">
+                        <MessageSquare size={16} className="text-[#8B5CF6]" />
+                        <span className="text-sm font-bold text-white">{requests.length} Requests Sent</span>
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 {/* Global Filters */}
                 <aside className="lg:col-span-1 space-y-6">
-                    <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5">
-                        <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2 font-black uppercase tracking-widest text-xs">
-                            <Filter size={16} className="text-orange-400" /> Filter Expertise
-                        </h3>
+                    <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 shadow-xl">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-black text-white flex items-center gap-2 font-black uppercase tracking-widest text-xs">
+                                <Filter size={16} className="text-[#8B5CF6]" /> Filters
+                            </h3>
+                            <button
+                                onClick={resetFilters}
+                                className="text-[10px] font-black text-[#8B5CF6] uppercase hover:underline"
+                            >
+                                Reset
+                            </button>
+                        </div>
+
                         <div className="space-y-6">
+                            {/* Sector Filter */}
                             <div>
                                 <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block">Sector Focus</label>
-                                <select className="w-full bg-[#0F0F14] border border-white/10 rounded-xl p-3 text-sm text-gray-300 focus:outline-none">
-                                    <option>SaaS / Enterprise</option>
-                                    <option>Fintech</option>
-                                    <option>Edtech</option>
-                                    <option>Deep Tech</option>
+                                <select
+                                    value={filters.sector}
+                                    onChange={(e) => setFilters({ ...filters, sector: e.target.value })}
+                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-xl p-3 text-sm text-gray-300 focus:outline-none focus:border-[#8B5CF6]/50"
+                                >
+                                    <option value="All">All Sectors</option>
+                                    <option value="Fintech">Fintech</option>
+                                    <option value="D2C">D2C / Branding</option>
+                                    <option value="Deep Tech">Deep Tech</option>
+                                    <option value="SaaS">SaaS / Enterprise</option>
+                                    <option value="Edtech">Edtech</option>
                                 </select>
                             </div>
+
+                            {/* Session Type Filter */}
+                            <div>
+                                <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block">Session Type</label>
+                                <select
+                                    value={filters.sessionType}
+                                    onChange={(e) => setFilters({ ...filters, sessionType: e.target.value })}
+                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-xl p-3 text-sm text-gray-300 focus:outline-none focus:border-[#8B5CF6]/50"
+                                >
+                                    <option value="All">All Types</option>
+                                    <option value="One-on-One">One-on-One</option>
+                                    <option value="Group">Group Workshop</option>
+                                </select>
+                            </div>
+
+                            {/* Stage Filter */}
                             <div>
                                 <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block">Startup Stage</label>
-                                <div className="space-y-2">
-                                    {['Idea Stage', 'MVP / Validation', 'Revenue / Growth'].map((st, i) => (
-                                        <div key={i} className="flex items-center gap-3 group cursor-pointer">
-                                            <div className="w-4 h-4 rounded border border-white/10 group-hover:border-orange-400/50 transition-colors" />
-                                            <span className="text-sm font-medium text-gray-400 group-hover:text-white transition-colors">{st}</span>
+                                <div className="space-y-3">
+                                    {['Idea', 'MVP', 'Revenue'].map((st) => (
+                                        <div
+                                            key={st}
+                                            className="flex items-center gap-3 group cursor-pointer"
+                                            onClick={() => toggleStageFilter(st)}
+                                        >
+                                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filters.stages.includes(st)
+                                                    ? 'bg-[#8B5CF6] border-[#8B5CF6]'
+                                                    : 'border-white/10 group-hover:border-[#8B5CF6]/50'
+                                                }`}>
+                                                {filters.stages.includes(st) && <CheckCircle2 size={12} className="text-white" />}
+                                            </div>
+                                            <span className={`text-sm font-medium transition-colors ${filters.stages.includes(st) ? 'text-white' : 'text-gray-400 group-hover:text-white'
+                                                }`}>{st} Stage</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Verified Toggle */}
+                            <div className="pt-4 border-t border-white/5">
+                                <label className="flex items-center justify-between cursor-pointer group">
+                                    <span className="text-[10px] text-gray-500 font-black uppercase">Verified Only</span>
+                                    <div
+                                        onClick={() => setFilters({ ...filters, verifiedOnly: !filters.verifiedOnly })}
+                                        className={`w-10 h-5 rounded-full relative transition-all ${filters.verifiedOnly ? 'bg-[#8B5CF6]' : 'bg-[#0F0F14] border border-white/10'}`}
+                                    >
+                                        <div className={`absolute top-1 w-3 h-3 rounded-full transition-all ${filters.verifiedOnly ? 'right-1 bg-white' : 'left-1 bg-gray-600'}`} />
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="bg-orange-500/10 p-6 rounded-2xl border border-orange-500/20">
+                    <div className="bg-[#8B5CF6]/10 p-6 rounded-2xl border border-[#8B5CF6]/20">
                         <h4 className="font-bold text-white text-sm mb-2 flex items-center gap-2">
-                            <Star size={14} className="text-orange-400" /> Premium Matching
+                            <Star size={14} className="text-[#8B5CF6]" /> Premium Matching
                         </h4>
-                        <p className="text-xs text-gray-500 font-medium">Get matched with mentors based on your execution path milestones.</p>
+                        <p className="text-xs text-gray-500 font-medium">We've ranked mentors based on your current {startup?.stage || 'Idea'} stage and sector expertise.</p>
                     </div>
                 </aside>
 
                 {/* Mentor Cards */}
-                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {mentors.map((mentor) => (
-                        <div
-                            key={mentor.id}
-                            className="bg-[#1E1E2F] rounded-2xl border border-white/5 overflow-hidden group hover:border-orange-500/30 transition-all cursor-pointer flex flex-col"
-                            onClick={() => setSelectedMentor(mentor)}
-                        >
-                            <div className="p-8 pb-4">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-red-500 p-0.5 shadow-lg shadow-orange-500/10">
-                                        <div className="w-full h-full bg-[#1E1E2F] rounded-[14px] flex items-center justify-center font-black text-xl text-white">
-                                            {mentor.img}
+                <div className="lg:col-span-3">
+                    {filteredMentors.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-20 bg-[#1E1E2F] rounded-3xl border border-dashed border-white/10">
+                            <RefreshCw size={40} className="text-gray-600 mb-4 animate-spin-slow" />
+                            <h3 className="text-xl font-bold text-white mb-2">No mentors match your filters</h3>
+                            <p className="text-gray-400">Try adjusting your criteria or resetting filters.</p>
+                            <button
+                                onClick={resetFilters}
+                                className="mt-6 px-6 py-2 bg-[#8B5CF6] text-white font-bold rounded-xl hover:bg-[#7C3AED] transition-all"
+                            >
+                                Reset Filters
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {filteredMentors.map((mentor) => (
+                                <motion.div
+                                    layout
+                                    key={mentor.id}
+                                    className="bg-[#1E1E2F] rounded-2xl border border-white/5 overflow-hidden group hover:border-[#8B5CF6]/30 hover:shadow-[0_0_20px_rgba(139,92,246,0.1)] transition-all flex flex-col relative"
+                                >
+                                    {mentor.isBestMatch && (
+                                        <div className="absolute top-4 left-4 z-10">
+                                            <span className="px-2 py-1 bg-[#8B5CF6] text-white text-[8px] font-black uppercase rounded-md shadow-lg shadow-[#8B5CF6]/20">
+                                                Best Match
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className="p-8 pb-4">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] p-0.5 shadow-lg shadow-[#8B5CF6]/10">
+                                                <div className="w-full h-full bg-[#1E1E2F] rounded-[14px] flex items-center justify-center font-black text-xl text-white">
+                                                    {mentor.initials}
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                {mentor.verified && (
+                                                    <div className="flex items-center gap-1 text-green-400 font-black text-xs uppercase mb-1">
+                                                        <Shield size={10} /> Verified
+                                                    </div>
+                                                )}
+                                                <div className="text-xs text-green-400 font-bold">{mentor.dynamicResponseRate}% Response Rate</div>
+                                            </div>
+                                        </div>
+                                        <h3 className="text-xl font-black text-white group-hover:text-[#8B5CF6] transition-colors mb-1">{mentor.name}</h3>
+                                        <p className="text-sm font-bold text-gray-500 mb-4">{mentor.title}</p>
+
+                                        <div className="space-y-4 pt-4 border-t border-white/5">
+                                            <div className="flex flex-wrap gap-2">
+                                                <span className="px-2 py-1 bg-white/5 text-gray-300 text-[10px] font-bold rounded-md border border-white/5">
+                                                    {mentor.expertiseSector}
+                                                </span>
+                                                {mentor.supportedStages.map(s => (
+                                                    <span key={s} className="px-2 py-1 bg-[#8B5CF6]/10 text-[#8B5CF6] text-[10px] font-bold rounded-md border border-[#8B5CF6]/10">
+                                                        {s} Stage
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-gray-600 font-black uppercase mb-1">Focus</p>
+                                                <p className="text-xs font-bold text-gray-400 line-clamp-2">{mentor.mentorshipFocus}</p>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="flex items-center gap-1 text-orange-400 font-black text-xs uppercase mb-1">
-                                            <Shield size={10} /> Verified
+
+                                    <div className="mt-auto border-t border-white/5 p-4 flex items-center justify-between group-hover:bg-white/5 transition-colors">
+                                        <div className="flex gap-2">
+                                            {mentor.sessionType === 'one-on-one' || mentor.sessionType === 'both' ? (
+                                                <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-[8px] font-black uppercase rounded border border-blue-500/20">1-on-1</span>
+                                            ) : null}
+                                            {mentor.sessionType === 'group' || mentor.sessionType === 'both' ? (
+                                                <span className="px-2 py-1 bg-yellow-500/10 text-yellow-400 text-[8px] font-black uppercase rounded border border-yellow-500/20">Workshop</span>
+                                            ) : null}
                                         </div>
-                                        <div className="text-xs text-green-400 font-bold">{mentor.r} Response Rate</div>
+                                        <button
+                                            onClick={() => setSelectedMentor(mentor)}
+                                            className="text-xs font-black text-white flex items-center gap-2 group-hover:translate-x-1 transition-transform"
+                                        >
+                                            View Profile <ChevronRight size={14} className="text-[#8B5CF6]" />
+                                        </button>
                                     </div>
-                                </div>
-                                <h3 className="text-xl font-black text-white group-hover:text-orange-400 transition-colors mb-1">{mentor.n}</h3>
-                                <p className="text-sm font-bold text-gray-500 mb-4">{mentor.ex}</p>
+                                </motion.div>
+                            ))}
 
-                                <div className="space-y-4 pt-4 border-t border-white/5">
-                                    <div>
-                                        <p className="text-[10px] text-gray-600 font-black uppercase mb-1">Expertise</p>
-                                        <p className="text-xs font-bold text-gray-300">{mentor.s}</p>
+                            {/* Empty Slot */}
+                            <div className="border border-dashed border-white/5 rounded-2xl flex items-center justify-center p-8 group hover:border-[#8B5CF6]/20 transition-all cursor-pointer">
+                                <div className="text-center">
+                                    <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                                        <Plus size={24} className="text-gray-600 group-hover:text-[#8B5CF6]" />
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] text-gray-600 font-black uppercase mb-1">Mentorship Focus</p>
-                                        <p className="text-xs font-bold text-gray-400 line-clamp-2">{mentor.p}</p>
-                                    </div>
+                                    <p className="text-xs font-bold text-gray-600 mb-1">Request New Sector</p>
+                                    <p className="text-[10px] text-gray-700 uppercase font-black">Coming Soon</p>
                                 </div>
-                            </div>
-                            <div className="mt-auto border-t border-white/5 p-4 flex items-center justify-between group-hover:bg-white/5 transition-colors">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-[#8B5CF6]">{mentor.t}</span>
-                                <button className="text-xs font-black text-white flex items-center gap-2 group-hover:translate-x-1 transition-transform">
-                                    View Profile <ChevronRight size={14} className="text-orange-400" />
-                                </button>
                             </div>
                         </div>
-                    ))}
-
-                    {/* Empty Slot */}
-                    <div className="border border-dashed border-white/5 rounded-2xl flex items-center justify-center p-8 group hover:border-orange-500/20 transition-all">
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                                <Plus size={24} className="text-gray-600 group-hover:text-orange-400" />
-                            </div>
-                            <p className="text-xs font-bold text-gray-600 mb-1">Request New Sector</p>
-                            <p className="text-[10px] text-gray-700 uppercase font-black">Coming Soon</p>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
-            {/* Request Form Modal */}
+            {/* Profile Modal */}
             <AnimatePresence>
                 {selectedMentor && (
                     <motion.div
@@ -149,6 +517,132 @@ const Mentors = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-6"
+                    >
+                        <motion.div
+                            initial={{ y: 50, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 50, opacity: 0 }}
+                            className="bg-[#1E1E2F] w-full max-w-3xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-y-auto max-h-[90vh]"
+                        >
+                            <div className="relative">
+                                <div className="h-32 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
+                                <button
+                                    onClick={() => setSelectedMentor(null)}
+                                    className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white transition-all"
+                                >
+                                    <X size={20} />
+                                </button>
+                                <div className="px-8 -mt-12 mb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                                    <div className="flex items-end gap-6">
+                                        <div className="w-24 h-24 rounded-3xl bg-[#1E1E2F] border-4 border-[#1E1E2F] overflow-hidden shadow-2xl">
+                                            <div className="w-full h-full bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] flex items-center justify-center text-4xl font-black text-white">
+                                                {selectedMentor.initials}
+                                            </div>
+                                        </div>
+                                        <div className="pb-2">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h2 className="text-3xl font-black text-white">{selectedMentor.name}</h2>
+                                                {selectedMentor.verified && <CheckCircle2 size={24} className="text-green-400" />}
+                                            </div>
+                                            <p className="text-gray-400 font-bold">{selectedMentor.title}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 pb-2">
+                                        <div className="bg-[#0F0F14] px-4 py-2 rounded-xl border border-white/5 text-center">
+                                            <p className="text-[10px] text-gray-500 font-black uppercase">Rating</p>
+                                            <p className="text-lg font-black text-white">{selectedMentor.rating}</p>
+                                        </div>
+                                        <div className="bg-[#0F0F14] px-4 py-2 rounded-xl border border-white/5 text-center">
+                                            <p className="text-[10px] text-gray-500 font-black uppercase">Mentees</p>
+                                            <p className="text-lg font-black text-white">{selectedMentor.totalMentees}+</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-10">
+                                <div className="space-y-8">
+                                    <section>
+                                        <h4 className="text-[10px] text-[#8B5CF6] font-black uppercase tracking-widest mb-3">Professional Bio</h4>
+                                        <p className="text-gray-300 text-sm leading-relaxed">{selectedMentor.shortBio}</p>
+                                    </section>
+
+                                    <section>
+                                        <h4 className="text-[10px] text-[#8B5CF6] font-black uppercase tracking-widest mb-3">Industry Experience</h4>
+                                        <p className="text-white font-bold">{selectedMentor.expertiseSector}</p>
+                                    </section>
+
+                                    <section>
+                                        <h4 className="text-[10px] text-[#8B5CF6] font-black uppercase tracking-widest mb-3">Availability</h4>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${selectedMentor.availabilityStatus === 'available' ? 'bg-green-500' :
+                                                    selectedMentor.availabilityStatus === 'limited' ? 'bg-yellow-500' : 'bg-red-500'
+                                                }`} />
+                                            <p className="text-sm font-bold text-gray-300 capitalize">{selectedMentor.availabilityStatus}</p>
+                                        </div>
+                                    </section>
+                                </div>
+
+                                <div className="space-y-8">
+                                    <section>
+                                        <h4 className="text-[10px] text-[#8B5CF6] font-black uppercase tracking-widest mb-3">Mentorship Focus</h4>
+                                        <p className="text-gray-300 text-sm leading-relaxed">{selectedMentor.mentorshipFocus}</p>
+                                    </section>
+
+                                    <section>
+                                        <h4 className="text-[10px] text-[#8B5CF6] font-black uppercase tracking-widest mb-3">Supported Stages</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedMentor.supportedStages.map(stage => (
+                                                <span key={stage} className="px-3 py-1 bg-white/5 text-white text-xs font-bold rounded-full border border-white/10">
+                                                    {stage} Stage
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </section>
+
+                                    <div className="pt-6">
+                                        <button
+                                            disabled={hasRequested(selectedMentor.id) || selectedMentor.availabilityStatus === 'unavailable' || !canRequest}
+                                            onClick={() => {
+                                                setRequestingMentor(selectedMentor);
+                                                setSelectedMentor(null);
+                                            }}
+                                            className={`w-full py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-xl ${hasRequested(selectedMentor.id)
+                                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                                    : selectedMentor.availabilityStatus === 'unavailable' || !canRequest
+                                                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                                                        : 'bg-[#8B5CF6] text-white hover:bg-[#7C3AED] hover:shadow-[#8B5CF6]/20'
+                                                }`}
+                                        >
+                                            {hasRequested(selectedMentor.id) ? (
+                                                <>Request Sent <CheckCircle2 size={18} /></>
+                                            ) : selectedMentor.availabilityStatus === 'unavailable' ? (
+                                                'Unavailable'
+                                            ) : !canRequest ? (
+                                                'Permissions Required'
+                                            ) : (
+                                                <>Request Mentorship <ArrowRight size={18} /></>
+                                            )}
+                                        </button>
+                                        {!canRequest && user?.role === 'co-founder' && (
+                                            <p className="text-[8px] text-gray-600 text-center mt-2 uppercase font-black">Only Founders or authorized Co-Founders can send mentorship requests</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Request Form Modal */}
+            <AnimatePresence>
+                {requestingMentor && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-6"
                     >
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
@@ -159,59 +653,77 @@ const Mentors = () => {
                             <div className="p-8 md:p-10">
                                 <div className="flex justify-between items-start mb-8">
                                     <div className="flex items-center gap-6">
-                                        <div className="w-16 h-16 rounded-2xl bg-orange-400/20 flex items-center justify-center font-black text-orange-400 text-2xl border border-orange-400/30">
-                                            {selectedMentor.img}
+                                        <div className="w-16 h-16 rounded-2xl bg-[#8B5CF6]/20 flex items-center justify-center font-black text-[#8B5CF6] text-2xl border border-[#8B5CF6]/30">
+                                            {requestingMentor.initials}
                                         </div>
                                         <div>
                                             <h2 className="text-3xl font-black text-white mb-1">Request Mentorship</h2>
-                                            <p className="text-orange-400 font-bold text-sm">with {selectedMentor.n}</p>
+                                            <p className="text-[#8B5CF6] font-bold text-sm">with {requestingMentor.name}</p>
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => setSelectedMentor(null)}
+                                        onClick={() => setRequestingMentor(null)}
                                         className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"
                                     >
                                         <X size={20} />
                                     </button>
                                 </div>
 
-                                <form className="space-y-8" onSubmit={(e) => { e.preventDefault(); setSelectedMentor(null); }}>
+                                <form className="space-y-8" onSubmit={handleRequestSubmit}>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1">Exact Problem</label>
-                                            <textarea
-                                                className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 min-h-[120px]"
-                                                placeholder="Describe the technical or business blocker you are facing..."
-                                            />
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-2 block">Startup Stage</label>
+                                                <div className="w-full bg-[#0F0F14] border border-white/5 rounded-2xl p-4 text-sm text-gray-400 font-bold">
+                                                    {startup?.stage || 'Idea'} Stage (Auto-filled)
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-2 block">Exact Problem</label>
+                                                <textarea
+                                                    required
+                                                    value={requestForm.problem}
+                                                    onChange={(e) => setRequestForm({ ...requestForm, problem: e.target.value })}
+                                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#8B5CF6]/50 min-h-[120px]"
+                                                    placeholder="Describe the technical or business blocker you are facing..."
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1">What has been tried?</label>
-                                            <textarea
-                                                className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 min-h-[120px]"
-                                                placeholder="List your attempts to solve this blocker so far..."
-                                            />
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-2 block">What has been tried?</label>
+                                                <textarea
+                                                    required
+                                                    value={requestForm.tried}
+                                                    onChange={(e) => setRequestForm({ ...requestForm, tried: e.target.value })}
+                                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#8B5CF6]/50 min-h-[120px]"
+                                                    placeholder="List your attempts to solve this blocker so far..."
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-2 block">Expected Outcome</label>
+                                                <input
+                                                    required
+                                                    type="text"
+                                                    value={requestForm.outcome}
+                                                    onChange={(e) => setRequestForm({ ...requestForm, outcome: e.target.value })}
+                                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#8B5CF6]/50"
+                                                    placeholder="What would a successful session look like?"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1">Expected Outcome</label>
-                                        <input
-                                            type="text"
-                                            className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50"
-                                            placeholder="What would a successful session look like for you?"
-                                        />
                                     </div>
 
                                     <div className="flex flex-col md:flex-row gap-4 pt-4">
                                         <button
                                             type="submit"
-                                            className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white font-black py-4 rounded-2xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all flex items-center justify-center gap-3"
+                                            className="flex-1 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white font-black py-4 rounded-2xl shadow-lg shadow-[#8B5CF6]/20 hover:shadow-[#8B5CF6]/40 transition-all flex items-center justify-center gap-3"
                                         >
                                             Confirm Request <ArrowRight size={20} />
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => setSelectedMentor(null)}
+                                            onClick={() => setRequestingMentor(null)}
                                             className="px-8 bg-white/5 text-gray-400 font-bold py-4 rounded-2xl hover:text-white transition-all border border-white/5"
                                         >
                                             Cancel
