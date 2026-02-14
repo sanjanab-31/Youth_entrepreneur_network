@@ -94,7 +94,7 @@ const Settings = ({ role: initialRole }) => {
     return (
         <div className="max-w-4xl mx-auto space-y-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-2 md:px-0">
                 <div>
                     <h1 className="text-3xl font-black text-white tracking-tight">
                         Settings
@@ -103,7 +103,7 @@ const Settings = ({ role: initialRole }) => {
                 </div>
                 <button
                     onClick={handleSaveAll}
-                    className="px-6 py-3 bg-[#8B5CF6] text-white text-sm font-bold rounded-xl shadow-lg shadow-[#8B5CF6]/20 hover:bg-[#7C3AED] hover:scale-105 active:scale-95 transition-all"
+                    className="w-full sm:w-auto px-6 py-4 sm:py-3 bg-[#8B5CF6] text-white text-sm font-bold rounded-xl shadow-lg shadow-[#8B5CF6]/20 hover:bg-[#7C3AED] hover:scale-105 active:scale-95 transition-all"
                 >
                     Save All Changes
                 </button>
@@ -147,12 +147,12 @@ const Settings = ({ role: initialRole }) => {
                     {/* Commitment Level */}
                     <div className="space-y-4">
                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Commitment Level</label>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                             {['Full-time', 'Part-time', 'Consulting'].map((level) => (
                                 <button
                                     key={level}
                                     onClick={() => updateField('commitmentLevel', level)}
-                                    className={`px-6 py-3 rounded-xl text-xs font-bold transition-all border ${user.commitmentLevel === level
+                                    className={`w-full sm:w-auto px-6 py-4 sm:py-3 rounded-xl text-xs font-bold transition-all border ${user.commitmentLevel === level
                                         ? 'bg-[#8B5CF6] border-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20'
                                         : 'bg-[#0F0F14] border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
                                         }`}
@@ -239,7 +239,7 @@ const Settings = ({ role: initialRole }) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <button
                                 onClick={() => updateNestedField('visibility', 'profile', 'public')}
-                                className={`flex items-center justify-between p-4 rounded-xl border transition-all ${user.visibility.profile === 'public'
+                                className={`flex items-center justify-between p-5 md:p-4 rounded-xl border transition-all ${user.visibility.profile === 'public'
                                     ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30 text-white'
                                     : 'bg-[#0F0F14] border-white/5 text-gray-500'
                                     }`}
@@ -249,7 +249,7 @@ const Settings = ({ role: initialRole }) => {
                             </button>
                             <button
                                 onClick={() => updateNestedField('visibility', 'profile', 'private')}
-                                className={`flex items-center justify-between p-4 rounded-xl border transition-all ${user.visibility.profile === 'private'
+                                className={`flex items-center justify-between p-5 md:p-4 rounded-xl border transition-all ${user.visibility.profile === 'private'
                                     ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30 text-white'
                                     : 'bg-[#0F0F14] border-white/5 text-gray-500'
                                     }`}
@@ -267,7 +267,7 @@ const Settings = ({ role: initialRole }) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <button
                                     onClick={() => updateNestedField('visibility', 'startup', 'visible')}
-                                    className={`flex items-center justify-between p-4 rounded-xl border transition-all ${user.visibility.startup === 'visible'
+                                    className={`flex items-center justify-between p-5 md:p-4 rounded-xl border transition-all ${user.visibility.startup === 'visible'
                                         ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30 text-white'
                                         : 'bg-[#0F0F14] border-white/5 text-gray-500'
                                         }`}
@@ -277,7 +277,7 @@ const Settings = ({ role: initialRole }) => {
                                 </button>
                                 <button
                                     onClick={() => updateNestedField('visibility', 'startup', 'hidden')}
-                                    className={`flex items-center justify-between p-4 rounded-xl border transition-all ${user.visibility.startup === 'hidden'
+                                    className={`flex items-center justify-between p-5 md:p-4 rounded-xl border transition-all ${user.visibility.startup === 'hidden'
                                         ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30 text-white'
                                         : 'bg-[#0F0F14] border-white/5 text-gray-500'
                                         }`}

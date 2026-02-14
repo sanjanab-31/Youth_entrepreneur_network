@@ -130,7 +130,7 @@ const MyStartup = () => {
             {/* Modal for Startup Info */}
             <AnimatePresence>
                 {isEditModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center md:p-4">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -142,12 +142,12 @@ const MyStartup = () => {
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-lg bg-[#1E1E2F] border border-white/10 rounded-2xl p-8 shadow-2xl"
+                            className="relative w-full h-full md:h-auto md:max-w-lg bg-[#1E1E2F] border border-white/10 md:rounded-2xl p-6 md:p-8 shadow-2xl overflow-y-auto"
                         >
                             <div className="flex items-center justify-between mb-8">
                                 <h2 className="text-2xl font-black text-white">Edit Startup Info</h2>
-                                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-500 hover:text-white transition-colors">
-                                    <X size={24} />
+                                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-500 hover:text-white transition-colors p-2">
+                                    <X size={28} />
                                 </button>
                             </div>
 
@@ -178,7 +178,7 @@ const MyStartup = () => {
                                         <option value="Scaling">Scaling</option>
                                     </select>
                                 </div>
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div>
                                         <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Users</label>
                                         <input type="number" name="activeUsers" defaultValue={startup.activeUsers} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
@@ -202,26 +202,25 @@ const MyStartup = () => {
             </AnimatePresence>
 
             {/* Page Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
                 <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                        <span className="px-3 py-1 bg-[#8B5CF6]/20 text-[#8B5CF6] text-[10px] font-black uppercase tracking-widest rounded-full border border-[#8B5CF6]/30">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+                        <span className="w-fit px-3 py-1 bg-[#8B5CF6]/20 text-[#8B5CF6] text-[8px] md:text-[10px] font-black uppercase tracking-widest rounded-full border border-[#8B5CF6]/30">
                             Founder View
                         </span>
-                        <span className="w-1 h-1 bg-gray-700 rounded-full" />
                         <div className="flex items-center gap-2">
-                            <div className="w-32 h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
+                            <div className="w-24 sm:w-32 h-1.5 md:h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
                                 <motion.div
                                     className="h-full bg-gradient-to-r from-[#8B5CF6] to-purple-400"
                                     initial={{ width: 0 }}
                                     animate={{ width: `${startup.profileCompletion}%` }}
                                 />
                             </div>
-                            <span className="text-gray-400 text-xs font-bold whitespace-nowrap">Profile Completion: {startup.profileCompletion}%</span>
+                            <span className="text-gray-400 text-[10px] md:text-xs font-bold whitespace-nowrap">Profile Completion: {startup.profileCompletion}%</span>
                         </div>
                     </div>
                     <div className="group relative flex items-center gap-4">
-                        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
                             {startup.startupName} <span className="text-[#8B5CF6]">Platform</span>
                         </h1>
                         <button
@@ -229,19 +228,19 @@ const MyStartup = () => {
                                 const newName = prompt("Rename Startup:", startup.startupName);
                                 if (newName) handleUpdate({ startupName: newName });
                             }}
-                            className="p-2 bg-white/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10"
+                            className="p-2 bg-white/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10 shrink-0"
                         >
                             <Edit3 size={18} className="text-[#8B5CF6]" />
                         </button>
                     </div>
                 </div>
-                <div className="flex gap-3">
-                    <button className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-[#1E1E2F] text-white text-sm font-bold rounded-xl border border-white/5 hover:border-white/10 transition-all">
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <button className="flex items-center justify-center gap-2 px-5 py-3 md:py-2.5 bg-[#1E1E2F] text-white text-xs md:text-sm font-bold rounded-xl border border-white/5 hover:border-white/10 transition-all w-full sm:w-auto">
                         <Download size={18} /> Export Pitch Deck
                     </button>
                     <button
                         onClick={() => setIsEditModalOpen(true)}
-                        className="px-5 py-2.5 bg-[#8B5CF6] text-white text-sm font-bold rounded-xl shadow-lg shadow-[#8B5CF6]/20 hover:bg-[#7C3AED] transition-all flex items-center gap-2"
+                        className="px-5 py-3 md:py-2.5 bg-[#8B5CF6] text-white text-xs md:text-sm font-bold rounded-xl shadow-lg shadow-[#8B5CF6]/20 hover:bg-[#7C3AED] transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
                     >
                         <Edit3 size={18} /> Edit Startup Info
                     </button>
@@ -551,19 +550,19 @@ const MyStartup = () => {
                                 ) : (
                                     <>
                                         <div className="p-4 bg-white/5 rounded-xl border border-white/10 group-hover:border-[#8B5CF6]/30 transition-all">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest font-black">Looking For:</p>
-                                                <div className="relative">
+                                            <div className="flex justify-between items-start mb-2 gap-2">
+                                                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest font-black shrink-0">Looking For:</p>
+                                                <div className="relative shrink-0">
                                                     <select
                                                         value={startup.skillGapPriority}
                                                         onChange={(e) => handleUpdate({ skillGapPriority: e.target.value })}
-                                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                                        className="absolute inset-0 opacity-0 cursor-pointer w-full"
                                                     >
                                                         <option value="Low">Low</option>
                                                         <option value="Medium">Medium</option>
                                                         <option value="High">High</option>
                                                     </select>
-                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${startup.skillGapPriority === 'High' ? 'bg-red-500/20 text-red-500' :
+                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest whitespace-nowrap ${startup.skillGapPriority === 'High' ? 'bg-red-500/20 text-red-500' :
                                                         startup.skillGapPriority === 'Medium' ? 'bg-yellow-500/20 text-yellow-500' :
                                                             'bg-blue-500/20 text-blue-500'
                                                         }`}>
@@ -571,14 +570,14 @@ const MyStartup = () => {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-white font-black text-lg">{startup.skillGap}</p>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <p className="text-white font-black text-lg truncate">{startup.skillGap}</p>
                                                 <button
                                                     onClick={() => {
                                                         const newGap = prompt("Update skill gap:", startup.skillGap);
                                                         if (newGap) handleUpdate({ skillGap: newGap });
                                                     }}
-                                                    className="p-1 hover:bg-white/10 rounded"
+                                                    className="p-1 hover:bg-white/10 rounded shrink-0"
                                                 >
                                                     <Edit3 size={14} className="text-gray-500" />
                                                 </button>

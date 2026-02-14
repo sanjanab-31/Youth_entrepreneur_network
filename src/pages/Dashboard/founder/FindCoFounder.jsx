@@ -35,6 +35,7 @@ const FindCoFounder = () => {
     });
     const [selectedCandidate, setSelectedCandidate] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
     // Initial Data
     const demoCandidates = [
@@ -283,34 +284,43 @@ const FindCoFounder = () => {
     return (
         <div className="space-y-10 animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6">
                 <div>
-                    <div className="flex items-center gap-3 mb-3">
-                        <span className="px-3 py-1 bg-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-purple-500/30">
+                    <div className="flex items-center gap-2 md:gap-3 mb-3">
+                        <span className="px-3 py-1 bg-purple-500/20 text-purple-400 text-[8px] md:text-[10px] font-black uppercase tracking-widest rounded-full border border-purple-500/30">
                             Founder Exclusive
                         </span>
                         <span className="w-1 h-1 bg-gray-700 rounded-full" />
-                        <span className="text-gray-400 text-sm font-medium">Talent Acquisition</span>
+                        <span className="text-gray-400 text-[10px] md:text-sm font-medium">Talent Acquisition</span>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
+                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight">
                         Find <span className="text-[#8B5CF6]">Co-Founder</span>
                     </h1>
                 </div>
-                <div className="relative group max-w-md w-full">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#8B5CF6] transition-colors" size={20} />
-                    <input
-                        type="text"
-                        placeholder="Search by skill, sector or name..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-[#1E1E2F] border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-white placeholder-gray-600 focus:outline-none focus:border-[#8B5CF6]/50 transition-all font-medium"
-                    />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:max-w-2xl">
+                    <div className="relative group flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#8B5CF6] transition-colors" size={20} />
+                        <input
+                            type="text"
+                            placeholder="Search by skill, sector or name..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-[#1E1E2F] border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#8B5CF6]/50 transition-all font-medium"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                        className="lg:hidden flex items-center justify-center gap-2 px-6 py-3.5 bg-[#1E1E2F] border border-white/5 rounded-2xl text-white font-bold transition-all hover:bg-white/5"
+                    >
+                        <Filter size={20} className={isFilterMenuOpen ? "text-[#8B5CF6]" : "text-gray-500"} />
+                        <span>Filters</span>
+                    </button>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 {/* Filter Panel */}
-                <div className="lg:col-span-1 space-y-8">
+                <div className={`${isFilterMenuOpen ? 'block' : 'hidden md:hidden lg:block'} lg:col-span-1 space-y-8 animate-in slide-in-from-top lg:animate-none`}>
                     <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-black text-white flex items-center gap-2">
@@ -434,33 +444,36 @@ const FindCoFounder = () => {
                                             </button>
                                         </div>
                                         <div className="flex-1">
-                                            <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                                                <div className="flex items-center gap-3">
-                                                    <h3 className="text-2xl font-black text-white">{c.name}</h3>
-                                                    {c.verifiedStatus && (
-                                                        <div className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[8px] font-black uppercase tracking-widest rounded border border-green-500/20 flex items-center gap-1">
-                                                            <CheckCircle2 size={8} /> Verified Hero
-                                                        </div>
-                                                    )}
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                                                <div className="space-y-2">
+                                                    <div className="flex flex-wrap items-center gap-3">
+                                                        <h3 className="text-xl md:text-2xl font-black text-white">{c.name}</h3>
+                                                        {c.verifiedStatus && (
+                                                            <div className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[8px] font-black uppercase tracking-widest rounded border border-green-500/20 flex items-center gap-1">
+                                                                <CheckCircle2 size={10} /> Verified hero
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[#8B5CF6] font-bold text-xs md:text-sm">{c.primarySkill} • <span className="text-gray-500">{c.experienceTitle}</span></p>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex flex-col items-end mr-4">
+                                                <div className="flex items-center gap-3 self-end sm:self-center">
+                                                    <div className="flex flex-col items-end mr-2 md:mr-4">
                                                         <span className="text-[10px] text-gray-500 font-black uppercase tracking-[0.1em]">Match</span>
                                                         <span className="text-sm font-black text-[#8B5CF6]">{comp.score}% Score</span>
                                                     </div>
                                                     {c.connectionStatus === 'pending' ? (
                                                         <button
                                                             disabled
-                                                            className="px-4 py-2 bg-gray-500/10 text-gray-500 cursor-not-allowed text-xs font-black rounded-xl border border-white/5"
+                                                            className="px-4 py-2.5 bg-gray-500/10 text-gray-500 cursor-not-allowed text-xs font-black rounded-xl border border-white/5"
                                                         >
-                                                            Request Sent
+                                                            Pending
                                                         </button>
                                                     ) : c.connectionStatus === 'connected' ? (
                                                         <button
                                                             disabled
-                                                            className="px-4 py-2 bg-green-500/10 text-green-500 cursor-not-allowed text-xs font-black rounded-xl border border-green-500/20"
+                                                            className="px-4 py-2.5 bg-green-500/10 text-green-500 cursor-not-allowed text-xs font-black rounded-xl border border-green-500/20"
                                                         >
-                                                            Connected ✅
+                                                            Applied ✅
                                                         </button>
                                                     ) : (
                                                         <button
@@ -468,14 +481,13 @@ const FindCoFounder = () => {
                                                                 e.stopPropagation();
                                                                 handleConnect(c.id);
                                                             }}
-                                                            className="px-6 py-2 bg-[#8B5CF6] text-white shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all text-xs font-black rounded-xl"
+                                                            className="px-6 py-2.5 bg-[#8B5CF6] text-white shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all text-xs font-black rounded-xl"
                                                         >
                                                             Connect
                                                         </button>
                                                     )}
                                                 </div>
                                             </div>
-                                            <p className="text-[#8B5CF6] font-bold text-sm mb-4">{c.primarySkill} • <span className="text-gray-400">{c.experienceTitle}</span></p>
 
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                                 <div className="flex items-center gap-2 text-gray-500">
@@ -508,40 +520,40 @@ const FindCoFounder = () => {
 
             {/* Profile Modal */}
             {isModalOpen && selectedCandidate && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F0F14]/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-[#1E1E2F] border border-white/10 rounded-[32px] w-full max-w-2xl max-h-[90vh] overflow-y-auto relative shadow-2xl">
+                <div className="fixed inset-0 z-[150] flex items-center justify-center md:p-4 bg-[#0F0F14]/80 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-[#1E1E2F] border border-white/10 md:rounded-[32px] w-full h-full md:h-auto md:max-w-2xl md:max-h-[90vh] overflow-y-auto relative shadow-2xl">
                         <button
                             onClick={() => setIsModalOpen(false)}
-                            className="absolute top-6 right-6 p-2 bg-white/5 border border-white/5 rounded-full text-gray-400 hover:text-white transition-all"
+                            className="absolute top-6 right-6 p-2 bg-white/5 border border-white/5 rounded-full text-gray-400 hover:text-white transition-all z-10"
                         >
-                            <X size={20} />
+                            <X size={24} />
                         </button>
 
-                        <div className="p-10">
+                        <div className="p-6 md:p-10">
                             <div className="flex flex-col md:flex-row gap-8 mb-10">
-                                <div className="w-32 h-32 rounded-[40px] bg-gradient-to-tr from-[#8B5CF6] to-indigo-600 p-1 flex-shrink-0 shadow-2xl">
-                                    <div className="w-full h-full bg-[#1E1E2F] rounded-[38px] flex items-center justify-center font-black text-5xl text-white">
+                                <div className="w-24 h-24 md:w-32 md:h-32 rounded-[32px] md:rounded-[40px] bg-gradient-to-tr from-[#8B5CF6] to-indigo-600 p-1 flex-shrink-0 shadow-2xl mx-auto md:mx-0">
+                                    <div className="w-full h-full bg-[#1E1E2F] rounded-[30px] md:rounded-[38px] flex items-center justify-center font-black text-4xl md:text-5xl text-white">
                                         {selectedCandidate.name[0]}
                                     </div>
                                 </div>
-                                <div className="flex-1 space-y-4">
-                                    <div className="flex items-center gap-4">
-                                        <h2 className="text-4xl font-black text-white">{selectedCandidate.name}</h2>
-                                        {selectedCandidate.verifiedStatus && <div className="px-3 py-1 bg-green-500/10 text-green-500 text-[10px] font-black uppercase tracking-widest rounded border border-green-500/20">Verified</div>}
+                                <div className="flex-1 space-y-4 text-center md:text-left">
+                                    <div className="flex flex-col md:flex-row items-center gap-4">
+                                        <h2 className="text-3xl md:text-4xl font-black text-white">{selectedCandidate.name}</h2>
+                                        {selectedCandidate.verifiedStatus && <div className="px-3 py-1 bg-green-500/10 text-green-500 text-[10px] font-black uppercase tracking-widest rounded border border-green-500/20">Verified Hero</div>}
                                     </div>
-                                    <p className="text-xl text-[#8B5CF6] font-bold">{selectedCandidate.primarySkill}</p>
-                                    <div className="flex flex-wrap gap-4">
+                                    <p className="text-lg md:text-xl text-[#8B5CF6] font-bold">{selectedCandidate.primarySkill}</p>
+                                    <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-4">
                                         <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                                            <MapPin size={16} className="text-gray-500" />
-                                            <span className="text-sm font-bold text-gray-300">{selectedCandidate.location}</span>
+                                            <MapPin size={14} className="text-gray-500" />
+                                            <span className="text-xs font-bold text-gray-300">{selectedCandidate.location}</span>
                                         </div>
                                         <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                                            <DollarSign size={16} className="text-gray-500" />
-                                            <span className="text-sm font-bold text-gray-300">{selectedCandidate.equityExpectation} Equity</span>
+                                            <DollarSign size={14} className="text-gray-500" />
+                                            <span className="text-xs font-bold text-gray-300">{selectedCandidate.equityExpectation} Equity</span>
                                         </div>
                                         <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                                            <Clock size={16} className="text-gray-500" />
-                                            <span className="text-sm font-bold text-gray-300">{selectedCandidate.commitmentType}</span>
+                                            <Clock size={14} className="text-gray-500" />
+                                            <span className="text-xs font-bold text-gray-300">{selectedCandidate.commitmentType}</span>
                                         </div>
                                     </div>
                                 </div>

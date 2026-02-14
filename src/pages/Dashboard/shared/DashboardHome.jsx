@@ -187,28 +187,28 @@ const DashboardHome = ({ role: propsRole }) => {
             </AnimatePresence>
 
             {/* Header Section */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 md:gap-8">
                 <div className="flex-1">
                     <div className="flex items-center gap-3 mb-4">
-                        <span className="px-3 py-1 bg-[#8B5CF6]/10 text-[#8B5CF6] text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border border-[#8B5CF6]/20 shadow-sm">
+                        <span className="px-3 py-1 bg-[#8B5CF6]/10 text-[#8B5CF6] text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border border-[#8B5CF6]/20 shadow-sm">
                             {role} Portal
                         </span>
                         <div className="h-4 w-px bg-white/10" />
-                        <span className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Deployment: Active</span>
+                        <span className="text-gray-500 text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em]">Deployment: Active</span>
                     </div>
 
-                    <h1 className="text-4xl font-black text-white tracking-tight mb-2">
+                    <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">
                         Welcome back, <span className="text-[#8B5CF6]">{user?.fullName?.split(' ')[0] || 'Founder'}</span>
                     </h1>
 
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mt-4">
+                    <div className="flex flex-wrap items-center gap-x-4 md:gap-x-6 gap-y-3 mt-4">
                         <div className="flex items-center gap-2">
                             <Rocket size={14} className="text-[#8B5CF6]" />
-                            <span className="text-sm font-bold text-gray-400">Startup: <span className="text-white">{startup.startupName}</span></span>
+                            <span className="text-xs md:text-sm font-bold text-gray-400">Startup: <span className="text-white">{startup.startupName}</span></span>
                         </div>
                         <div className="flex items-center gap-2">
                             <Target size={14} className="text-[#8B5CF6]" />
-                            <span className="text-sm font-bold text-gray-400">Current Stage: <span className="text-white">{startup.stage}</span></span>
+                            <span className="text-xs md:text-sm font-bold text-gray-400">Current Stage: <span className="text-white">{startup.stage}</span></span>
                         </div>
                     </div>
 
@@ -229,17 +229,17 @@ const DashboardHome = ({ role: propsRole }) => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <button
                         onClick={() => setIsPreviewModalOpen(true)}
-                        className="px-5 py-2.5 bg-[#1E1E2F] text-white text-xs font-bold rounded-xl border border-white/5 hover:border-[#8B5CF6]/30 transition-all shadow-xl"
+                        className="px-5 py-3 md:py-2.5 bg-[#1E1E2F] text-white text-xs font-bold rounded-xl border border-white/5 hover:border-[#8B5CF6]/30 transition-all shadow-xl w-full sm:w-auto"
                     >
                         View Public Profile
                     </button>
                     {isFounder && (
                         <button
                             onClick={() => setIsEditModalOpen(true)}
-                            className="px-5 py-2.5 bg-[#8B5CF6] text-white text-xs font-bold rounded-xl shadow-lg shadow-[#8B5CF6]/20 hover:scale-105 active:scale-95 transition-all"
+                            className="px-5 py-3 md:py-2.5 bg-[#8B5CF6] text-white text-xs font-bold rounded-xl shadow-lg shadow-[#8B5CF6]/20 hover:scale-105 active:scale-95 transition-all w-full sm:w-auto"
                         >
                             Edit Startup OS
                         </button>
@@ -276,7 +276,8 @@ const DashboardHome = ({ role: propsRole }) => {
                             </div>
                         </div>
 
-                        <div className="relative py-12 px-2">
+                        {/* Desktop Horizontal View */}
+                        <div className="hidden md:block relative py-12 px-2">
                             {/* Connector Line */}
                             <div className="absolute top-[48px] left-0 right-0 h-[2px] bg-white/5 rounded-full" />
                             <motion.div
@@ -294,15 +295,15 @@ const DashboardHome = ({ role: propsRole }) => {
                                         <div key={stage.id} className="flex flex-col items-center">
                                             <motion.div
                                                 whileHover={{ scale: 1.1 }}
-                                                className={`w-12 h-12 rounded-2xl flex items-center justify-center border-4 border-[#1E1E2F] transition-all duration-500
+                                                className={`w-10 h-10 lg:w-12 lg:h-12 rounded-2xl flex items-center justify-center border-4 border-[#1E1E2F] transition-all duration-500
                                                     ${isCompleted || isCurrent
                                                         ? 'bg-[#8B5CF6] text-white shadow-xl shadow-[#8B5CF6]/20'
                                                         : 'bg-[#0F0F14] text-gray-700 border-[#0F0F14]'}`}
                                             >
-                                                {isCompleted ? <CheckCircle2 size={20} /> : (isCurrent ? <Zap size={20} fill="currentColor" /> : <span className="text-sm font-bold">{idx + 1}</span>)}
+                                                {isCompleted ? <CheckCircle2 size={18} /> : (isCurrent ? <Zap size={18} fill="currentColor" /> : <span className="text-sm font-bold">{idx + 1}</span>)}
                                             </motion.div>
-                                            <div className="absolute mt-16 text-center">
-                                                <p className={`text-[10px] font-black uppercase tracking-tighter ${isCompleted || isCurrent ? 'text-white' : 'text-gray-700'}`}>
+                                            <div className="absolute mt-14 lg:mt-16 text-center">
+                                                <p className={`text-[9px] lg:text-[10px] font-black uppercase tracking-tighter ${isCompleted || isCurrent ? 'text-white' : 'text-gray-700'}`}>
                                                     {stage.label}
                                                 </p>
                                             </div>
@@ -310,6 +311,31 @@ const DashboardHome = ({ role: propsRole }) => {
                                     );
                                 })}
                             </div>
+                        </div>
+
+                        {/* Mobile Vertical Stepper View */}
+                        <div className="md:hidden space-y-4">
+                            {stages.map((stage, idx) => {
+                                const isCompleted = idx < currentStageIndex;
+                                const isCurrent = idx === currentStageIndex;
+                                return (
+                                    <div key={stage.id} className="flex items-center gap-4 relative">
+                                        {idx !== stages.length - 1 && (
+                                            <div className={`absolute left-5 top-10 w-0.5 h-8 ${isCompleted ? 'bg-[#8B5CF6]' : 'bg-white/5'}`} />
+                                        )}
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border-2 border-[#1E1E2F] shrink-0
+                                            ${isCompleted || isCurrent ? 'bg-[#8B5CF6] text-white' : 'bg-[#0F0F14] text-gray-700'}`}>
+                                            {isCompleted ? <CheckCircle2 size={16} /> : (isCurrent ? <Zap size={16} fill="currentColor" /> : <span className="text-xs font-bold">{idx + 1}</span>)}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className={`text-[10px] font-black uppercase tracking-widest ${isCompleted || isCurrent ? 'text-white' : 'text-gray-500'}`}>
+                                                {stage.label}
+                                            </p>
+                                            {isCurrent && <span className="text-[10px] text-[#8B5CF6] font-bold">Currently Active</span>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         {/* Milestone List */}
@@ -490,12 +516,12 @@ const DashboardHome = ({ role: propsRole }) => {
             {/* Dashboard Modals */}
             <AnimatePresence>
                 {isEditModalOpen && (
-                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center md:p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsEditModalOpen(false)} />
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-lg bg-[#1E1E2F] border border-white/10 rounded-2xl p-8 shadow-2xl">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full h-full md:h-auto md:max-w-lg bg-[#1E1E2F] border border-white/10 md:rounded-2xl p-6 md:p-8 shadow-2xl overflow-y-auto">
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-xl font-black text-white">Startup Configuration</h2>
-                                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+                                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-500 hover:text-white p-2"><X size={24} /></button>
                             </div>
                             <form className="space-y-4" onSubmit={(e) => {
                                 e.preventDefault();
@@ -545,12 +571,12 @@ const DashboardHome = ({ role: propsRole }) => {
                 )}
 
                 {isMilestoneModalOpen && (
-                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center md:p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsMilestoneModalOpen(false)} />
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-md bg-[#1E1E2F] border border-white/10 rounded-2xl p-8 shadow-2xl">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full h-full md:h-auto md:max-w-md bg-[#1E1E2F] border border-white/10 md:rounded-2xl p-6 md:p-8 shadow-2xl overflow-y-auto">
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-xl font-black text-white">New Milestone</h2>
-                                <button onClick={() => setIsMilestoneModalOpen(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+                                <button onClick={() => setIsMilestoneModalOpen(false)} className="text-gray-500 hover:text-white p-2"><X size={24} /></button>
                             </div>
                             <form className="space-y-6" onSubmit={handleAddMilestone}>
                                 <div>
@@ -566,22 +592,22 @@ const DashboardHome = ({ role: propsRole }) => {
                 )}
 
                 {isPreviewModalOpen && (
-                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center md:p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsPreviewModalOpen(false)} />
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-2xl bg-[#0F0F14] border border-white/10 rounded-3xl p-1 overflow-hidden shadow-2xl">
-                            <div className="bg-[#1E1E2F] rounded-[22px] p-8">
-                                <div className="flex justify-between items-start mb-12">
-                                    <div>
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full h-full md:h-auto md:max-w-2xl bg-[#0F0F14] border border-white/10 md:rounded-3xl p-1 overflow-hidden shadow-2xl overflow-y-auto">
+                            <div className="bg-[#1E1E2F] md:rounded-[22px] p-6 md:p-8 h-full md:h-auto overflow-y-auto">
+                                <div className="flex justify-between items-start mb-8 md:mb-12">
+                                    <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-4">
                                             <span className="px-2 py-0.5 bg-[#8B5CF6]/20 text-[#8B5CF6] text-[8px] font-black uppercase tracking-widest rounded border border-[#8B5CF6]/30">Vanguard Verified</span>
                                         </div>
-                                        <h2 className="text-4xl font-black text-white mb-2">{startup.startupName}</h2>
-                                        <p className="text-gray-500 font-bold">{startup.stage} Stage • {startup.expertiseSector || 'Tech'}</p>
+                                        <h2 className="text-2xl md:text-4xl font-black text-white mb-2">{startup.startupName}</h2>
+                                        <p className="text-xs md:text-gray-500 font-bold">{startup.stage} Stage • {startup.expertiseSector || 'Tech'}</p>
                                     </div>
-                                    <button onClick={() => setIsPreviewModalOpen(false)} className="p-2 bg-white/5 rounded-xl text-gray-400 hover:text-white transition-colors"><X size={24} /></button>
+                                    <button onClick={() => setIsPreviewModalOpen(false)} className="p-2 bg-white/5 rounded-xl text-gray-400 hover:text-white transition-colors transition-colors"><X size={24} /></button>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-8 mb-12">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
                                     <div className="space-y-6">
                                         <div>
                                             <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">The Problem</h4>

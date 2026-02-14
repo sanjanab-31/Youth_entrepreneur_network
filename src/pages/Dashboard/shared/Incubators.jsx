@@ -42,6 +42,7 @@ const Incubators = () => {
         stages: [],
         verifiedOnly: false
     });
+    const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
     // Application Form State
     const [appForm, setAppForm] = useState({
@@ -264,31 +265,42 @@ const Incubators = () => {
     return (
         <div className="space-y-10 animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div>
-                    <div className="flex items-center gap-3 mb-3">
-                        <span className="px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-500/30">
+            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 px-2 md:px-0">
+                <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+                        <span className="w-fit px-3 py-1 bg-blue-500/20 text-blue-400 text-[8px] md:text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-500/30">
                             Growth Accelerators
                         </span>
-                        <span className="w-1 h-1 bg-gray-700 rounded-full" />
-                        <span className="text-gray-400 text-sm font-medium">Verified Institutions</span>
+                        <div className="flex items-center gap-2">
+                            <span className="w-1 h-1 bg-gray-700 rounded-full" />
+                            <span className="text-gray-400 text-[10px] md:text-sm font-medium">Verified Institutions</span>
+                        </div>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
-                        Startup <span className="text-blue-500">Incubators</span>
-                    </h1>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight">
+                            Startup <span className="text-blue-500">Incubators</span>
+                        </h1>
+                        <button
+                            onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                            className="lg:hidden flex items-center justify-center gap-2 px-6 py-3.5 bg-[#1E1E2F] border border-white/5 rounded-2xl text-white font-bold transition-all hover:bg-white/5"
+                        >
+                            <Filter size={20} className={isFilterMenuOpen ? "text-blue-500" : "text-gray-500"} />
+                            <span className="text-sm">Filters</span>
+                        </button>
+                    </div>
                 </div>
 
                 {applications.length > 0 && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-[#1E1E2F] rounded-xl border border-white/5">
+                    <div className="flex items-center gap-2 px-4 py-3 bg-[#1E1E2F] rounded-xl border border-white/5 self-start sm:self-auto">
                         <Target size={16} className="text-blue-500" />
-                        <span className="text-sm font-bold text-white">{applications.length} Active Applications</span>
+                        <span className="text-xs md:text-sm font-bold text-white">{applications.length} Active Applications</span>
                     </div>
                 )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 {/* Search & Filter */}
-                <aside className="lg:col-span-1 space-y-6">
+                <aside className={`${isFilterMenuOpen ? 'block' : 'hidden lg:block'} lg:col-span-1 space-y-6 animate-in slide-in-from-top lg:animate-none`}>
                     <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 shadow-xl">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-lg font-black text-white flex items-center gap-2 uppercase tracking-widest text-[10px]">
@@ -324,8 +336,8 @@ const Incubators = () => {
                                             key={s}
                                             onClick={() => setFilters({ ...filters, sector: s })}
                                             className={`px-3 py-1.5 rounded-lg text-[10px] font-black border transition-all ${filters.sector === s
-                                                    ? 'bg-blue-500/20 border-blue-500/40 text-white'
-                                                    : 'bg-white/5 border-white/5 text-gray-600 hover:text-white'
+                                                ? 'bg-blue-500/20 border-blue-500/40 text-white'
+                                                : 'bg-white/5 border-white/5 text-gray-600 hover:text-white'
                                                 }`}
                                         >
                                             {s}
@@ -345,8 +357,8 @@ const Incubators = () => {
                                             onClick={() => toggleStageFilter(st)}
                                         >
                                             <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filters.stages.includes(st)
-                                                    ? 'bg-blue-500 border-blue-500'
-                                                    : 'border-white/10 group-hover:border-blue-500/50'
+                                                ? 'bg-blue-500 border-blue-500'
+                                                : 'border-white/10 group-hover:border-blue-500/50'
                                                 }`}>
                                                 {filters.stages.includes(st) && <CheckCircle2 size={12} className="text-white" />}
                                             </div>
@@ -435,10 +447,10 @@ const Incubators = () => {
                                                 disabled={hasApplied(inc.id) || !canApply}
                                                 onClick={() => setApplyingIncubator(inc)}
                                                 className={`hidden md:flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black border transition-all shadow-xl ${hasApplied(inc.id)
-                                                        ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                                                        : !canApply
-                                                            ? 'bg-gray-800 text-gray-500 cursor-not-allowed border-transparent'
-                                                            : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-blue-500/20'
+                                                    ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                                    : !canApply
+                                                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed border-transparent'
+                                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-blue-500/20'
                                                     }`}
                                             >
                                                 {hasApplied(inc.id) ? (
@@ -488,10 +500,10 @@ const Incubators = () => {
                                             disabled={hasApplied(inc.id) || !canApply}
                                             onClick={() => setApplyingIncubator(inc)}
                                             className={`md:hidden mt-8 w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-black transition-all ${hasApplied(inc.id)
-                                                    ? 'bg-green-500/20 text-green-400'
-                                                    : !canApply
-                                                        ? 'bg-gray-800 text-gray-500'
-                                                        : 'bg-blue-600 text-white shadow-lg'
+                                                ? 'bg-green-500/20 text-green-400'
+                                                : !canApply
+                                                    ? 'bg-gray-800 text-gray-500'
+                                                    : 'bg-blue-600 text-white shadow-lg'
                                                 }`}
                                         >
                                             {hasApplied(inc.id) ? 'Applied' : 'Apply Now'} <ArrowRight size={18} />
@@ -518,13 +530,13 @@ const Incubators = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-6"
+                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[150] flex items-center justify-center md:p-6"
                     >
                         <motion.div
                             initial={{ y: 50, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 50, opacity: 0 }}
-                            className="bg-[#1E1E2F] w-full max-w-3xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-y-auto max-h-[90vh]"
+                            className="bg-[#1E1E2F] w-full h-full md:h-auto md:max-w-3xl md:rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-y-auto"
                         >
                             <div className="relative">
                                 <div className="h-40 bg-gradient-to-r from-blue-600 to-indigo-700" />
@@ -604,10 +616,10 @@ const Incubators = () => {
                                                 setSelectedIncubator(null);
                                             }}
                                             className={`w-full py-5 rounded-2xl font-black text-white transition-all shadow-xl flex items-center justify-center gap-3 ${hasApplied(selectedIncubator.id)
-                                                    ? 'bg-green-600/20 text-green-400 border border-green-500/20'
-                                                    : !canApply
-                                                        ? 'bg-gray-800 text-gray-500'
-                                                        : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30'
+                                                ? 'bg-green-600/20 text-green-400 border border-green-500/20'
+                                                : !canApply
+                                                    ? 'bg-gray-800 text-gray-500'
+                                                    : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30'
                                                 }`}
                                         >
                                             {hasApplied(selectedIncubator.id) ? (
@@ -633,28 +645,28 @@ const Incubators = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-6"
+                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[160] flex items-center justify-center md:p-6"
                     >
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#1E1E2F] w-full max-w-2xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl"
+                            className="bg-[#1E1E2F] w-full h-full md:h-auto md:max-w-2xl md:rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-y-auto"
                         >
-                            <div className="p-10">
-                                <div className="flex justify-between items-start mb-10">
+                            <div className="p-6 md:p-10">
+                                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-10">
                                     <div className="flex items-center gap-6">
-                                        <div className="w-20 h-20 rounded-2xl bg-blue-500/10 flex items-center justify-center font-black text-blue-500 text-2xl border border-blue-500/20">
+                                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-blue-500/10 flex items-center justify-center font-black text-blue-500 text-xl md:text-2xl border border-blue-500/20">
                                             {applyingIncubator.initials}
                                         </div>
                                         <div>
-                                            <h2 className="text-3xl font-black text-white mb-2">Program Application</h2>
-                                            <p className="text-blue-400 font-bold text-sm tracking-wide">Applying to {applyingIncubator.name}</p>
+                                            <h2 className="text-2xl md:text-3xl font-black text-white mb-2">Program Application</h2>
+                                            <p className="text-blue-400 font-bold text-xs md:text-sm tracking-wide line-clamp-1">Applying to {applyingIncubator.name}</p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => setApplyingIncubator(null)}
-                                        className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all"
+                                        className="absolute top-4 right-4 md:relative md:top-0 md:right-0 p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all"
                                     >
                                         <X size={20} />
                                     </button>

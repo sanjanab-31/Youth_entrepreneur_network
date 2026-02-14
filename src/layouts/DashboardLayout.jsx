@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard,
@@ -34,8 +34,31 @@ const DashboardLayout = ({ children, role }) => {
     const { user, logout } = useAuth();
     const { startup } = useStartup();
     const location = useLocation();
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+    // Initial state based on screen width
+    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
+
+    useEffect(() => {
+        const handleResize = () => {
+            const width = window.innerWidth;
+            if (width < 768) {
+                setIsSidebarOpen(false);
+                setIsTablet(false);
+            } else if (width < 1024) {
+                setIsSidebarOpen(false); // Collapsed for tablet
+                setIsTablet(true);
+            } else {
+                setIsSidebarOpen(true); // Open for desktop
+                setIsTablet(false);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        handleResize(); // Initial check
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const isFounder = role === 'founder';
     const isCoFounder = role === 'co-founder';
@@ -93,10 +116,10 @@ const DashboardLayout = ({ children, role }) => {
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
     return (
-        <div className="min-h-screen bg-[#0F0F14] text-white flex">
-            {/* Sidebar Desktop */}
+        <div className="min-h-screen bg-[#0F0F14] text-white flex overflow-x-hidden">
+            {/* Sidebar Desktop & Tablet */}
             <aside
-                className={`fixed left-0 top-0 h-full bg-[#15151e] border-r border-white/5 transition-all duration-500 z-50 flex flex-col
+                className={`fixed left-0 top-0 h-full bg-[#15151e] border-r border-white/5 transition-all duration-500 z-50 flex flex-col hidden md:flex
                     ${isSidebarOpen ? 'w-64' : 'w-20'}`}
             >
                 {/* Logo Section */}
@@ -178,17 +201,17 @@ const DashboardLayout = ({ children, role }) => {
                     </button>
                 </div>
 
-                {/* Sidebar Toggle Button */}
+                {/* Sidebar Toggle Button - Visible on Tablet and Desktop */}
                 <button
                     onClick={toggleSidebar}
-                    className="absolute -right-3 top-20 w-6 h-6 bg-brand-purple rounded-full flex items-center justify-center border-4 border-[#0F0F14] hover:scale-110 transition-transform hidden lg:flex shadow-lg shadow-purple-600/40"
+                    className="absolute -right-3 top-20 w-6 h-6 bg-brand-purple rounded-full flex items-center justify-center border-4 border-[#0F0F14] hover:scale-110 transition-transform flex shadow-lg shadow-purple-600/40 z-[60]"
                 >
                     <ChevronRight size={10} className={`text-white transition-transform duration-500 ${isSidebarOpen ? 'rotate-180' : ''}`} />
                 </button>
             </aside>
 
             {/* Mobile Header */}
-            <header className="lg:hidden fixed top-0 w-full bg-[#1E1E2F]/80 backdrop-blur-xl border-b border-white/5 p-4 z-40 flex justify-between items-center shadow-lg">
+            <header className="md:hidden fixed top-0 w-full bg-[#1E1E2F]/80 backdrop-blur-xl border-b border-white/5 p-4 z-40 flex justify-between items-center shadow-lg">
                 <Link to="/" className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg overflow-hidden bg-brand-purple/20 p-1.5 border border-brand-purple/30">
                         <img
@@ -201,7 +224,7 @@ const DashboardLayout = ({ children, role }) => {
                 </Link>
                 <button
                     onClick={() => setIsMobileMenuOpen(true)}
-                    className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                    className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white"
                 >
                     <Menu size={24} />
                 </button>
@@ -216,14 +239,14 @@ const DashboardLayout = ({ children, role }) => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsMobileMenuOpen(false)}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] md:hidden"
                         />
                         <motion.aside
                             initial={{ x: '-100%' }}
                             animate={{ x: 0 }}
                             exit={{ x: '-100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed left-0 top-0 h-full w-72 bg-[#1E1E2F] z-[70] p-6 lg:hidden flex flex-col"
+                            className="fixed left-0 top-0 h-full w-72 bg-[#1E1E2F] z-[70] p-6 md:hidden flex flex-col"
                         >
                             <div className="flex justify-between items-center mb-10">
                                 <Link to="/" className="flex items-center gap-2">
@@ -236,7 +259,7 @@ const DashboardLayout = ({ children, role }) => {
                                     </div>
                                     <span className="font-bold text-xl">Vanguard</span>
                                 </Link>
-                                <button onClick={() => setIsMobileMenuOpen(false)}>
+                                <button onClick={() => setIsMobileMenuOpen(false)} className="text-white">
                                     <X size={24} />
                                 </button>
                             </div>
@@ -268,8 +291,8 @@ const DashboardLayout = ({ children, role }) => {
             </AnimatePresence>
 
             {/* Main Content Area */}
-            <main className={`flex-1 min-h-screen transition-all duration-300 pt-20 lg:pt-0 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
-                <div className="max-w-7xl mx-auto p-4 md:p-8 lg:p-10">
+            <main className={`flex-1 min-h-screen transition-all duration-300 pt-20 md:pt-0 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-20'}`}>
+                <div className="w-full max-w-7xl mx-auto p-4 md:p-8 lg:p-10">
                     {children}
                 </div>
             </main>

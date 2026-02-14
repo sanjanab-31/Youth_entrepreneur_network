@@ -40,6 +40,7 @@ const Mentors = () => {
         sessionType: 'All',
         verifiedOnly: false
     });
+    const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
     // Request Form State
     const [requestForm, setRequestForm] = useState({
@@ -292,31 +293,42 @@ const Mentors = () => {
     return (
         <div className="space-y-10 animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div>
-                    <div className="flex items-center gap-3 mb-3">
-                        <span className="px-3 py-1 bg-[#8B5CF6]/20 text-[#8B5CF6] text-[10px] font-black uppercase tracking-widest rounded-full border border-[#8B5CF6]/30">
+            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 px-2 md:px-0">
+                <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+                        <span className="w-fit px-3 py-1 bg-[#8B5CF6]/20 text-[#8B5CF6] text-[8px] md:text-[10px] font-black uppercase tracking-widest rounded-full border border-[#8B5CF6]/30">
                             Expert Guidance
                         </span>
-                        <span className="w-1 h-1 bg-gray-700 rounded-full" />
-                        <span className="text-gray-400 text-sm font-medium">Verified Mentors</span>
+                        <div className="flex items-center gap-2">
+                            <span className="w-1 h-1 bg-gray-700 rounded-full" />
+                            <span className="text-gray-400 text-[10px] md:text-sm font-medium">Verified Mentors</span>
+                        </div>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
-                        Vanguard <span className="text-[#8B5CF6]">Mentors</span>
-                    </h1>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight">
+                            Vanguard <span className="text-[#8B5CF6]">Mentors</span>
+                        </h1>
+                        <button
+                            onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                            className="lg:hidden flex items-center justify-center gap-2 px-6 py-3.5 bg-[#1E1E2F] border border-white/5 rounded-2xl text-white font-bold transition-all hover:bg-white/5"
+                        >
+                            <Filter size={20} className={isFilterMenuOpen ? "text-[#8B5CF6]" : "text-gray-500"} />
+                            <span className="text-sm">Filters</span>
+                        </button>
+                    </div>
                 </div>
 
                 {requests.length > 0 && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-[#1E1E2F] rounded-xl border border-white/5">
+                    <div className="flex items-center gap-2 px-4 py-3 bg-[#1E1E2F] rounded-xl border border-white/5 self-start sm:self-auto">
                         <MessageSquare size={16} className="text-[#8B5CF6]" />
-                        <span className="text-sm font-bold text-white">{requests.length} Requests Sent</span>
+                        <span className="text-xs md:text-sm font-bold text-white">{requests.length} Requests Sent</span>
                     </div>
                 )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 {/* Global Filters */}
-                <aside className="lg:col-span-1 space-y-6">
+                <aside className={`${isFilterMenuOpen ? 'block' : 'hidden lg:block'} lg:col-span-1 space-y-6 animate-in slide-in-from-top lg:animate-none`}>
                     <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 shadow-xl">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-lg font-black text-white flex items-center gap-2 font-black uppercase tracking-widest text-xs">
@@ -373,8 +385,8 @@ const Mentors = () => {
                                             onClick={() => toggleStageFilter(st)}
                                         >
                                             <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filters.stages.includes(st)
-                                                    ? 'bg-[#8B5CF6] border-[#8B5CF6]'
-                                                    : 'border-white/10 group-hover:border-[#8B5CF6]/50'
+                                                ? 'bg-[#8B5CF6] border-[#8B5CF6]'
+                                                : 'border-white/10 group-hover:border-[#8B5CF6]/50'
                                                 }`}>
                                                 {filters.stages.includes(st) && <CheckCircle2 size={12} className="text-white" />}
                                             </div>
@@ -516,13 +528,13 @@ const Mentors = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-6"
+                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[150] flex items-center justify-center md:p-6"
                     >
                         <motion.div
                             initial={{ y: 50, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 50, opacity: 0 }}
-                            className="bg-[#1E1E2F] w-full max-w-3xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-y-auto max-h-[90vh]"
+                            className="bg-[#1E1E2F] w-full h-full md:h-auto md:max-w-3xl md:rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-y-auto"
                         >
                             <div className="relative">
                                 <div className="h-32 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
@@ -576,7 +588,7 @@ const Mentors = () => {
                                         <h4 className="text-[10px] text-[#8B5CF6] font-black uppercase tracking-widest mb-3">Availability</h4>
                                         <div className="flex items-center gap-2">
                                             <div className={`w-2 h-2 rounded-full ${selectedMentor.availabilityStatus === 'available' ? 'bg-green-500' :
-                                                    selectedMentor.availabilityStatus === 'limited' ? 'bg-yellow-500' : 'bg-red-500'
+                                                selectedMentor.availabilityStatus === 'limited' ? 'bg-yellow-500' : 'bg-red-500'
                                                 }`} />
                                             <p className="text-sm font-bold text-gray-300 capitalize">{selectedMentor.availabilityStatus}</p>
                                         </div>
@@ -608,10 +620,10 @@ const Mentors = () => {
                                                 setSelectedMentor(null);
                                             }}
                                             className={`w-full py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-xl ${hasRequested(selectedMentor.id)
-                                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                                    : selectedMentor.availabilityStatus === 'unavailable' || !canRequest
-                                                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                                                        : 'bg-[#8B5CF6] text-white hover:bg-[#7C3AED] hover:shadow-[#8B5CF6]/20'
+                                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                                : selectedMentor.availabilityStatus === 'unavailable' || !canRequest
+                                                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-[#8B5CF6] text-white hover:bg-[#7C3AED] hover:shadow-[#8B5CF6]/20'
                                                 }`}
                                         >
                                             {hasRequested(selectedMentor.id) ? (
@@ -642,13 +654,13 @@ const Mentors = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-6"
+                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[160] flex items-center justify-center md:p-6"
                     >
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#1E1E2F] w-full max-w-2xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl"
+                            className="bg-[#1E1E2F] w-full h-full md:h-auto md:max-w-2xl md:rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-y-auto"
                         >
                             <div className="p-8 md:p-10">
                                 <div className="flex justify-between items-start mb-8">
