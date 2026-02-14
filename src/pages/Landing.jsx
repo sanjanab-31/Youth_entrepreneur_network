@@ -178,6 +178,7 @@ const HeroCarousel = () => {
 
 const Landing = () => {
     const [activeMentor, setActiveMentor] = React.useState(0);
+    const navigate = useNavigate();
 
     return (
         <div className="min-h-screen bg-brand-black selection:bg-brand-purple selection:text-white overflow-x-hidden">
@@ -384,111 +385,227 @@ const Landing = () => {
             {/* MENTOR SPOTLIGHT (Accordion) */}
             <Section id="mentors" className="relative overflow-hidden">
                 <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-brand-purple/20 to-transparent" />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
+                {/* Background Depth Gradient */}
+                <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[500px] h-[500px] bg-brand-purple/15 rounded-full blur-[120px] pointer-events-none animate-pulse z-0" />
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
                     {/* Left Content Section */}
-                    <div>
-                        <h2 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-                            Learn From <span className="text-brand-purple">Builders.</span> <span className="text-gray-500">Not Theorists.</span>
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                    >
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-purple/10 border border-brand-purple/20 text-brand-purple text-[10px] md:text-xs font-bold uppercase tracking-widest mb-6">
+                            EXECUTION MENTOR NETWORK
+                        </div>
+
+                        <h2 className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-[1.1] text-white">
+                            Learn From Builders — <span className="text-gray-500">Not Theorists.</span>
                         </h2>
-                        <p className="text-gray-400 text-base md:text-lg mb-8 leading-relaxed max-w-lg">
-                            Connect with mentors who have actually walked the path. Get operational advice, not just high-level theory.
+
+                        <p className="text-gray-400 text-base md:text-lg mb-10 leading-relaxed max-w-lg">
+                            Connect with founders who’ve raised, scaled, failed, and rebuilt.
+                            <br className="hidden md:block" />
+                            Get operational execution support — not classroom theory.
                         </p>
 
-                        {/* Feature Tags */}
-                        <div className="flex flex-wrap items-center gap-6 text-sm text-gray-400">
+                        {/* CTAs */}
+                        <div className="flex flex-wrap gap-4 mb-12">
+                            <button
+                                onClick={() => navigate('/auth/role-selection')}
+                                className="px-8 py-3.5 rounded-full bg-brand-purple hover:bg-brand-purple-hover text-white font-bold text-sm md:text-base shadow-xl shadow-brand-purple/25 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+                            >
+                                Explore Mentors <ArrowRight size={18} />
+                            </button>
+                            <button className="px-8 py-3.5 rounded-full border border-gray-700 hover:border-brand-purple text-gray-300 hover:text-white font-bold text-sm md:text-base transition-all hover:bg-white/5">
+                                Request a Mentor
+                            </button>
+                        </div>
+
+                        {/* Feature Badges */}
+                        <div className="flex flex-wrap items-center gap-3">
                             {[
-                                { label: "ONLINE", dot: true },
-                                { label: "SELF-PACED", dot: true },
-                                { label: "CERTIFICATE", dot: true }
-                            ].map((tag, i) => (
-                                <div key={i} className="flex items-center gap-2">
-                                    {tag.dot && (
-                                        <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center">
-                                            <div className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-brand-purple' : 'bg-white/50'}`}></div>
-                                        </div>
-                                    )}
-                                    <span className="tracking-wider text-xs font-bold">{tag.label}</span>
+                                "Founder-Led Mentorship",
+                                "Stage-Specific Advice",
+                                "Direct Application Support"
+                            ].map((badge, i) => (
+                                <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm shadow-sm">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-brand-purple shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
+                                    <span className="text-[10px] md:text-[11px] font-bold tracking-tight text-gray-300 uppercase">{badge}</span>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* Right Mentor Cards Accordion */}
-                    <div className="flex flex-col sm:flex-row gap-4 h-auto sm:h-[500px] w-full">
+                    <div className="flex flex-col sm:flex-row gap-3 h-auto sm:h-[600px] w-full [perspective:1000px]">
                         {[
                             { name: "Gabriella Hersham", company: "HUCKLETREE", role: "Founder of Huckletree", quote: "Building communities that inspire innovation.", img: "photo-1573496359142-b8d87734a5a2" },
                             { name: "Caen Contee", company: "LIME", role: "Co-Founder", quote: "Fall in love with the problem, not the solution.", img: "photo-1507003211169-0a1dd7228f2d" },
                             { name: "Uri Levine", company: "WAZE", role: "Co-Founder", quote: "Disrupting industries through innovation.", img: "photo-1472099645785-5658abf4ff4e" },
                             { name: "Alex Rivera", company: "PAYFAST", role: "Founder & CEO", quote: "Scaling fintech from zero to $10M ARR.", img: "photo-1500648767791-00dcc994a43e" }
                         ].map((mentor, i) => (
-                            <div
+                            <motion.div
                                 key={i}
                                 onMouseEnter={() => setActiveMentor(i)}
                                 onClick={() => setActiveMentor(i)}
-                                className={`relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 ease-out bg-cover bg-center ${activeMentor === i ? 'flex-[10] h-[300px] sm:h-full sm:flex-[3]' : 'flex-[1] h-[100px] sm:h-full sm:flex-[1]'}`}
+                                whileHover={{
+                                    rotateY: activeMentor === i ? 0 : 5,
+                                    z: 10
+                                }}
+                                className={`relative rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] bg-cover bg-center 
+                                    ${activeMentor === i
+                                        ? 'flex-[12] h-[400px] sm:h-full shadow-[0_20px_50px_rgba(139,92,246,0.35)]'
+                                        : 'flex-[1.5] h-[100px] sm:h-full opacity-60 grayscale-[0.6] hover:opacity-80 hover:grayscale-0 blur-[1px] hover:blur-0'}`}
                                 style={{
-                                    backgroundImage: `url('https://images.unsplash.com/${mentor.img}?w=600&h=800&fit=crop')`
+                                    backgroundImage: `url('https://images.unsplash.com/${mentor.img}?w=800&h=1200&fit=crop')`,
                                 }}
                             >
-                                <div className={`absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/90 transition-opacity duration-300 ${activeMentor === i ? 'opacity-100' : 'opacity-80'}`} />
+                                {/* Active Glow Effect */}
+                                {activeMentor === i && (
+                                    <div className="absolute inset-0 bg-brand-purple/10 animate-pulse pointer-events-none" />
+                                )}
 
-                                <div className="absolute bottom-0 left-0 right-0 p-6 whitespace-nowrap overflow-hidden">
-                                    <div className={`transition-all duration-500 transform ${activeMentor === i ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-                                        <div className="text-brand-purple text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-1">{mentor.company}</div>
-                                        <div className="text-gray-300 text-[10px] sm:text-xs mb-2">{mentor.role}</div>
+                                <div className={`absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/95 transition-opacity duration-500 ${activeMentor === i ? 'opacity-100' : 'opacity-80'}`} />
+
+                                <div className="absolute bottom-0 left-0 right-0 p-8 whitespace-nowrap overflow-hidden">
+                                    <div className={`transition-all duration-700 delay-100 transform ${activeMentor === i ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
+                                        <div className="text-brand-purple text-[10px] sm:text-xs font-black tracking-[0.2em] uppercase mb-2 drop-shadow-sm">{mentor.company}</div>
+                                        <div className="text-gray-300 text-[10px] sm:text-xs font-medium mb-3">{mentor.role}</div>
                                     </div>
 
                                     <h3
-                                        className={`text-white font-bold transition-all duration-300 origin-bottom-left whitespace-nowrap
+                                        className={`text-white font-black transition-all duration-500 origin-bottom-left whitespace-nowrap
                                         ${activeMentor === i
-                                                ? 'text-xl sm:text-2xl mb-2 translate-x-0 translate-y-0 rotate-0 relative'
-                                                : 'text-2xl sm:text-3xl absolute bottom-8 left-8 -rotate-90 translate-x-0 translate-y-0'
+                                                ? 'text-2xl sm:text-3xl mb-3 translate-x-0 translate-y-0 rotate-0 relative'
+                                                : 'text-2xl sm:text-4xl absolute bottom-10 left-10 -rotate-90 translate-x-0 translate-y-0'
                                             }`}
                                     >
                                         {mentor.name}
                                     </h3>
 
-                                    <p className={`text-gray-400 text-[10px] sm:text-xs leading-relaxed max-w-xs whitespace-normal transition-all duration-500 delay-100 ${activeMentor === i ? 'opacity-100 h-auto' : 'opacity-0 h-0 pointer-events-none'}`}>
+                                    <p className={`text-gray-400 text-xs sm:text-sm leading-relaxed max-w-xs whitespace-normal transition-all duration-700 delay-200 ${activeMentor === i ? 'opacity-100 h-auto translate-y-0' : 'opacity-0 h-0 translate-y-4 pointer-events-none'}`}>
                                         "{mentor.quote}"
                                     </p>
                                 </div>
 
-                                <div className={`absolute inset-0 border-2 rounded-3xl transition-colors duration-300 ${activeMentor === i ? 'border-brand-purple/50' : 'border-transparent'}`} />
-                            </div>
+                                {/* Selection Border */}
+                                <div className={`absolute inset-0 border-[3px] rounded-[2rem] transition-all duration-700 ${activeMentor === i ? 'border-brand-purple/40 scale-100' : 'border-transparent scale-95'}`} />
+                            </motion.div>
                         ))}
                     </div>
                 </div>
             </Section >
             {/* HOW VANGUARD WORKS */}
-            <Section id="how-it-works" className="relative overflow-hidden">
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-5xl font-bold mb-4">How Vanguard <span className="text-brand-purple">Works</span></h2>
-                    <p className="text-brand-muted max-w-2xl mx-auto">A structured path from idea to incubation.</p>
+            <Section id="how-it-works" className="relative overflow-hidden bg-[#0F0F14]">
+                {/* Subtle Background Depth */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-brand-purple/5 rounded-full blur-[150px] pointer-events-none animate-slow-pulse z-0" />
+
+                <div className="text-center mb-20 relative z-10">
+                    <motion.h2
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        className="text-4xl md:text-6xl font-black mb-6 tracking-tight text-white"
+                    >
+                        From Idea to Incubator — <span className="text-brand-purple">Structured.</span>
+                    </motion.h2>
+                    <motion.p
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.1 }}
+                        className="text-brand-muted text-base md:text-lg max-w-2xl mx-auto"
+                    >
+                        A structured path from idea to incubation.
+                    </motion.p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-                    {[
-                        { step: "01", title: "Create Your Profile", desc: "Build a structured startup profile with stage, traction, and skill gaps." },
-                        { step: "02", title: "Find The Right Match", desc: "Connect with co-founders and mentors based on real needs and compatibility." },
-                        { step: "03", title: "Execute With Structure", desc: "Track milestones, mentorship sessions, and startup progress in one place." },
-                        { step: "04", title: "Become Incubator Ready", desc: "Apply with verified execution data and structured startup visibility." }
-                    ].map((item, i) => (
-                        <FadeIn key={i} delay={i * 0.1}>
-                            <div className="relative group pt-8 px-8 rounded-3xl bg-brand-card/20 border border-white/5 hover:border-brand-purple/30 transition-all duration-300 hover:bg-brand-card/40 h-full overflow-hidden">
-                                <div className="absolute top-0 right-0 p-4 md:p-6 opacity-10 md:opacity-20 group-hover:opacity-100 transition-opacity duration-300">
-                                    <span className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-brand-purple to-transparent">{item.step}</span>
+                <div className="relative">
+                    {/* Visual Flow Connection Line */}
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-brand-purple/15 hidden lg:block -translate-y-1/2 z-0" />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
+                        {[
+                            {
+                                step: "01",
+                                title: "Define Your Startup DNA",
+                                desc: "Structure your stage, traction, and execution gaps."
+                            },
+                            {
+                                step: "02",
+                                title: "Match With Operators",
+                                desc: "Connect with co-founders and mentors aligned with your stage."
+                            },
+                            {
+                                step: "03",
+                                title: "Execute With Discipline",
+                                desc: "Track milestones, mentorship, and traction in one command center."
+                            },
+                            {
+                                step: "04",
+                                title: "Become Incubator-Ready",
+                                desc: "Apply with verified execution data — not just a pitch deck."
+                            }
+                        ].map((item, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, y: 30 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: i * 0.15 }}
+                                whileHover={{
+                                    y: -6,
+                                    borderColor: "rgba(139, 92, 246, 0.4)",
+                                    boxShadow: "0 20px 40px -15px rgba(139, 92, 246, 0.15)"
+                                }}
+                                className="relative group p-8 rounded-[2.5rem] bg-[#16161D] border border-white/5 transition-all duration-300 h-full overflow-hidden"
+                            >
+                                {/* Step Number Styling */}
+                                <div className="absolute top-4 right-8 select-none pointer-events-none">
+                                    <span className="text-7xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-brand-purple/20 to-transparent opacity-40">
+                                        {item.step}
+                                    </span>
                                 </div>
 
-                                <div className="relative z-10 pt-16 md:pt-24">
-                                    <h3 className="text-lg md:text-xl font-bold text-white mb-3 ">{item.title}</h3>
-                                    <p className="text-brand-muted text-[13px] md:text-sm leading-relaxed mb-6">{item.desc}</p>
+                                <div className="relative z-10 pt-12">
+                                    <div className="w-12 h-12 rounded-2xl bg-brand-purple/10 flex items-center justify-center text-brand-purple mb-8 group-hover:scale-110 transition-transform duration-300">
+                                        {i === 0 && <Info size={24} />}
+                                        {i === 1 && <Users size={24} />}
+                                        {i === 2 && <Zap size={24} />}
+                                        {i === 3 && <Briefcase size={24} />}
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-4 group-hover:text-brand-purple transition-colors duration-300">
+                                        {item.title}
+                                    </h3>
+                                    <p className="text-brand-muted text-sm leading-[1.6]">
+                                        {item.desc}
+                                    </p>
                                 </div>
 
-                                <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-brand-purple to-transparent w-0 group-hover:w-full transition-all duration-500" />
-                            </div>
-                        </FadeIn>
-                    ))}
+                                {/* Hover Border Glow */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-brand-purple/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
+
+                {/* Bottom CTA */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.6 }}
+                    className="mt-20 text-center relative z-10"
+                >
+                    <button
+                        onClick={() => navigate('/auth/role-selection')}
+                        className="px-10 py-4 rounded-full bg-brand-purple hover:bg-brand-purple-hover text-white font-bold text-base shadow-[0_10px_30px_-10px_rgba(139,92,246,0.5)] transition-all hover:scale-105 active:scale-95"
+                    >
+                        Start Your Structured Path
+                    </button>
+                </motion.div>
             </Section >
             {/* SOCIAL PROOF
             <Section className="bg-gradient-to-b from-brand-black to-brand-card/20">
