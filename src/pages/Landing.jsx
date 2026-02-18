@@ -250,7 +250,7 @@ const Landing = () => {
                     </div>
                 </div>
 
-                <div className="flex gap-4 md:gap-6 overflow-x-auto pt-10 pb-12 snap-x px-6 md:px-20 scrollbar-hide">
+                <div className="flex gap-4 md:gap-6 overflow-x-auto pt-10 pb-12 snap-x px-6 md:px-36 scrollbar-hide">
 
                     {[
                         {
@@ -268,6 +268,22 @@ const Landing = () => {
                             ],
                             btnMain: "Get Started",
                             btnSec: "View Demo"
+                        },
+                        {
+                            role: "The Co-Founder Program",
+                            tag: "SKILL MATCHING",
+                            desc: "Match your skills with high-potential startups. Connect with founders who need your expertise to scale their vision.",
+                            image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000",
+                            rating: "4.9",
+                            reviews: "800+ connections",
+                            avatars: [
+                                "https://i.pravatar.cc/150?u=13",
+                                "https://i.pravatar.cc/150?u=14",
+                                "https://i.pravatar.cc/150?u=15",
+                                "https://i.pravatar.cc/150?u=16"
+                            ],
+                            btnMain: "Find Startups",
+                            btnSec: "View Roles"
                         },
                         {
                             role: "The Mentor Network",
@@ -358,14 +374,28 @@ const Landing = () => {
 
                                     <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
                                         <button
-                                            onClick={() => navigate(`/auth/login?role=${card.role.toLowerCase().includes('founder') ? 'founder' : card.role.toLowerCase().includes('mentor') ? 'mentor' : 'incubator'}`)}
+                                            onClick={() => {
+                                                const lowerRole = card.role.toLowerCase();
+                                                const roleKey = lowerRole.includes('co-founder') ? 'co-founder' :
+                                                    lowerRole.includes('founder') ? 'founder' :
+                                                        lowerRole.includes('mentor') ? 'mentor' :
+                                                            'incubator';
+                                                navigate(`/auth/login?role=${roleKey}`);
+                                            }}
                                             className="flex-1 border border-gray-600 rounded-full py-2.5 md:py-3 hover:bg-gray-800 text-sm md:text-base transition-colors"
                                         >
                                             Login
                                         </button>
 
                                         <button
-                                            onClick={() => navigate(`/auth/signup?role=${card.role.toLowerCase().includes('founder') ? 'founder' : card.role.toLowerCase().includes('mentor') ? 'mentor' : 'incubator'}`)}
+                                            onClick={() => {
+                                                const lowerRole = card.role.toLowerCase();
+                                                const roleKey = lowerRole.includes('co-founder') ? 'co-founder' :
+                                                    lowerRole.includes('founder') ? 'founder' :
+                                                        lowerRole.includes('mentor') ? 'mentor' :
+                                                            'incubator';
+                                                navigate(`/auth/signup?role=${roleKey}`);
+                                            }}
                                             className="flex-1 bg-gradient-to-r from-brand-purple to-purple-600 text-white hover:opacity-90 rounded-full py-2.5 md:py-3 text-sm md:text-base font-black transition-all hover:scale-105 shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)]"
                                         >
                                             {card.btnMain}
