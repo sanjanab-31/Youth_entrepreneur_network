@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     Users,
     Flame,
@@ -21,11 +21,14 @@ import {
     Trash2,
     X,
     Save,
-    Check
+    Check,
+    Calendar,
+    UserCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
+import { calculateExecutionScore } from '../../../utils/executionScore';
 
 const StatCard = ({ label, value, icon: Icon, color, subtext }) => {
     const colorMap = {
@@ -109,8 +112,23 @@ const DashboardHome = ({ role: propsRole }) => {
     ];
 
     const currentStageIndex = stages.findIndex(s => s.id === startup.stage);
-    const executionScore = startup.executionScore || 0;
+    // Always compute from shared utility — never read stored field
+    const executionScore = calculateExecutionScore(startup);
     const profileCompletion = startup.profileCompletion || 0;
+
+    // Hydrate assigned mentor name from users array
+    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+    const assignedMentor = startup.mentorAssigned
+        ? allUsers.find(u => u.id === startup.mentorAssigned) || null
+        : null;
+    const assignedMentorName = assignedMentor?.name || assignedMentor?.email?.split('@')[0] || null;
+
+    // Founder sessions from shared sessions array
+    const allSessions = JSON.parse(localStorage.getItem('vanguard_sessions') || '[]');
+    const founderSessions = allSessions
+        .filter(s => s.startupId === startup.startupId)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 3);
 
     const handleUpdateTraction = () => {
         const newUsers = (startup.activeUsers || 0) + 100;
@@ -163,7 +181,7 @@ const DashboardHome = ({ role: propsRole }) => {
     };
 
     const alerts = [
-        { t: 'No mentor assigned', condition: !startup.mentor, type: 'warning' },
+        { t: 'No mentor assigned yet', condition: !startup.mentorAssigned, type: 'warning' },
         { t: 'Traction not updated in 14 days', condition: (new Date() - new Date(startup.lastTractionUpdate || 0)) > 14 * 24 * 60 * 60 * 1000, type: 'danger' },
         { t: 'Skill gap not filled', condition: startup.skillGap && !startup.skillGapFilled, type: 'warning' },
         { t: 'Profile incomplete (< 70%)', condition: profileCompletion < 70, type: 'warning' }
@@ -475,26 +493,65 @@ const DashboardHome = ({ role: propsRole }) => {
                             ))}
                         </div>
 
-                        {/* No Mentor Empty State */}
-                        {!startup.mentor && (
-                            <div className="mt-8 pt-8 border-t border-white/5 text-center">
-                                <p className="text-[11px] text-gray-500 font-bold mb-4">Request your first mentor to accelerate growth.</p>
-                                <button
-                                    onClick={() => alert("Redirecting to Mentor Network...")}
-                                    className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-black hover:bg-white/10 transition-all"
-                                >
-                                    Browse Mentor Network
-                                </button>
-                            </div>
-                        )}
-                        {startup.mentor && (
-                            <div className="mt-8 pt-8 border-t border-white/5 flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center font-bold text-white uppercase">
-                                    {startup.mentor.name[0]}
+                        {/* Mentor Assignment Status */}
+                        <div className="bg-[#1E1E2F] p-8 rounded-3xl border border-white/5">
+                            <h4 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                                <UserCheck className="text-[#8B5CF6]" size={18} /> Mentorship
+                            </h4>
+                            {assignedMentor ? (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-4 p-4 bg-[#8B5CF6]/5 rounded-2xl border border-[#8B5CF6]/20">
+                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B5CF6] to-indigo-600 flex items-center justify-center font-bold text-white uppercase text-lg flex-shrink-0">
+                                            {assignedMentorName?.[0] || 'M'}
+                                        </div>
+                                        <div>
+                                            <p className="text-white font-black">{assignedMentorName}</p>
+                                            <p className="text-[10px] text-[#8B5CF6] font-black uppercase tracking-widest">Active Mentor</p>
+                                            {startup.mentorshipStartDate && (
+                                                <p className="text-[10px] text-gray-500 mt-0.5">
+                                                    Since {new Date(startup.mentorshipStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 p-3 bg-green-500/5 rounded-xl border border-green-500/20">
+                                        <ShieldCheck size={14} className="text-green-400" />
+                                        <span className="text-xs font-bold text-green-400">Mentorship Active</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-xs font-black text-white">{startup.mentor.name}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold">{startup.mentor.role}</p>
+                            ) : (
+                                <div className="text-center">
+                                    <p className="text-[11px] text-gray-500 font-bold mb-4">No mentor assigned yet. Request one to accelerate growth.</p>
+                                    <button
+                                        onClick={() => alert("Redirecting to Mentor Network...")}
+                                        className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-black hover:bg-white/10 transition-all"
+                                    >
+                                        Browse Mentor Network
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Founder Sessions Panel */}
+                        {founderSessions.length > 0 && (
+                            <div className="bg-[#1E1E2F] p-8 rounded-3xl border border-white/5">
+                                <h4 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                                    <Calendar className="text-[#8B5CF6]" size={18} /> Sessions
+                                </h4>
+                                <div className="space-y-3">
+                                    {founderSessions.map(session => (
+                                        <div key={session.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                                            <div>
+                                                <p className="text-xs font-bold text-white">{session.date} · {session.time}</p>
+                                                <p className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${session.status === 'completed' ? 'text-green-400' :
+                                                        session.status === 'upcoming' ? 'text-[#8B5CF6]' : 'text-gray-500'
+                                                    }`}>{session.status}</p>
+                                            </div>
+                                            {session.status === 'completed' && session.notes && (
+                                                <CheckCircle2 size={16} className="text-green-400" />
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}

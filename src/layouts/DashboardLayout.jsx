@@ -88,7 +88,8 @@ const DashboardLayout = ({ children, role }) => {
         ] : []),
         ...(isFounder ? [
             { id: 'my-startup', label: 'My Startup', icon: Rocket, path: `/${role}/my-startup` },
-            { id: 'find-co-founder', label: 'Find Co-Founder', icon: UserPlus, path: `/${role}/find-co-founder` }
+            { id: 'find-co-founder', label: 'Find Co-Founder', icon: UserPlus, path: `/${role}/find-co-founder` },
+            { id: 'sessions', label: 'Sessions', icon: Calendar, path: `/${role}/sessions` }
         ] : []),
         ...(isCoFounder ? [
             { id: 'startup-overview', label: 'Startup Overview', icon: Rocket, path: `/${role}/startup-overview` },

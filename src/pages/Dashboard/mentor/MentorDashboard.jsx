@@ -200,7 +200,22 @@ const MentorDashboard = () => {
         { label: 'Response Rate', value: `${stats.responseRate}%`, icon: Zap, color: 'orange' },
     ];
 
-    const upcomingSessions = sessions.filter(s => s.status === 'upcoming').slice(0, 3);
+    const hydrateSession = (session) => {
+        const allStartups = JSON.parse(localStorage.getItem('vanguard_startups') || '[]');
+        const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+        const startup = allStartups.find(s => s.startupId === session.startupId);
+        const founder = allUsers.find(u => u.id === startup?.founderId);
+        return {
+            ...session,
+            startupName: startup?.startupName || 'Unknown Startup',
+            founderName: founder?.name || founder?.email?.split('@')[0] || '—',
+            stage: startup?.stage || 'Idea'
+        };
+    };
+
+    const upcomingSessions = sessions.filter(s => s.status === 'upcoming')
+        .map(hydrateSession)
+        .slice(0, 3);
 
     // Dynamic Logic for High-Potential Startups
     // Pull from requests or mentees where: Stage = MVP or Revenue, Execution score > 60

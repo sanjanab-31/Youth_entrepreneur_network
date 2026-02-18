@@ -15,45 +15,55 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMentor } from '../../../context/MentorContext';
 
-const SessionItem = ({ session, onComplete }) => (
-    <div className="bg-[#1E1E2F] p-6 rounded-2xl border border-white/5 hover:border-[#8B5CF6]/30 transition-all group">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#8B5CF6] to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg border border-white/10 flex-shrink-0">
-                    {session?.founderName?.[0] || '?'}
-                </div>
-                <div>
-                    <h4 className="text-white font-bold">{session?.founderName || 'Unknown Founder'}</h4>
-                    <p className="text-gray-500 text-xs font-medium uppercase tracking-widest">{session?.startupName || 'Startup'}</p>
-                    <div className="flex items-center gap-4 mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                        <span className="flex items-center gap-1.5"><CalendarIcon size={12} className="text-[#8B5CF6]" /> {session.date}</span>
-                        <span className="flex items-center gap-1.5"><Clock size={12} className="text-[#8B5CF6]" /> {session.time}</span>
+const SessionItem = ({ session, onComplete, onConfirm }) => {
+    const startupName = session.startupName;
+    const founderName = session.founderName;
+
+    return (
+        <div className="bg-[#1E1E2F] p-6 rounded-2xl border border-white/5 hover:border-[#8B5CF6]/30 transition-all group">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#8B5CF6] to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg border border-white/10 flex-shrink-0">
+                        {startupName?.[0] || '?'}
+                    </div>
+                    <div>
+                        <h4 className="text-white font-bold">{founderName}</h4>
+                        <p className="text-gray-500 text-xs font-medium uppercase tracking-widest">{startupName}</p>
+                        <div className="flex items-center gap-4 mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            <span className="flex items-center gap-1.5"><CalendarIcon size={12} className="text-[#8B5CF6]" /> {session.date}</span>
+                            <span className="flex items-center gap-1.5"><Clock size={12} className="text-[#8B5CF6]" /> {session.time}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-                <button className="p-3 text-gray-500 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5">
-                    <MessageSquare size={18} />
-                </button>
-                {session.status === 'upcoming' ? (
-                    <button
-                        onClick={() => onComplete(session)}
-                        className="px-6 py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#8B5CF6]/20 transition-all whitespace-nowrap"
-                    >
-                        Complete Session
-                    </button>
-                ) : (
-                    <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${session.status === 'completed' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                        }`}>
-                        {session.status === 'completed' ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-                        {session.status}
-                    </span>
-                )}
+                <div className="flex items-center gap-3">
+                    {session.status === 'requested' && (
+                        <button
+                            onClick={() => onConfirm(session.id)}
+                            className="px-6 py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#8B5CF6]/20 transition-all whitespace-nowrap"
+                        >
+                            Confirm Request
+                        </button>
+                    )}
+                    {session.status === 'upcoming' && (
+                        <button
+                            onClick={() => onComplete(session)}
+                            className="px-6 py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#8B5CF6]/20 transition-all whitespace-nowrap"
+                        >
+                            Complete Session
+                        </button>
+                    )}
+                    {(session.status === 'completed' || session.status === 'cancelled') && (
+                        <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${session.status === 'completed' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                            {session.status === 'completed' ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                            {session.status}
+                        </span>
+                    )}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const PostSessionUpdate = ({ session, onSave, onBack }) => {
     const [advice, setAdvice] = useState('');
@@ -143,11 +153,25 @@ const PostSessionUpdate = ({ session, onSave, onBack }) => {
 };
 
 const Sessions = () => {
-    const { sessions, updateSession } = useMentor();
+    const { sessions, updateSession, confirmSessionRequest } = useMentor();
     const [activeTab, setActiveTab] = useState('upcoming');
     const [completingSession, setCompletingSession] = useState(null);
 
-    const filteredSessions = sessions.filter(s => s.status === activeTab);
+    const hydrateSession = (s) => {
+        const allStartups = JSON.parse(localStorage.getItem('vanguard_startups') || '[]');
+        const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+        const startup = allStartups.find(st => st.startupId === s.startupId);
+        const founder = allUsers.find(u => u.id === startup?.founderId);
+        return {
+            ...s,
+            startupName: startup?.startupName || '—',
+            founderName: founder?.name || founder?.email?.split('@')[0] || '—'
+        };
+    };
+
+    const filteredSessions = sessions
+        .map(hydrateSession)
+        .filter(s => s.status === activeTab);
 
     const handleSaveSessionUpdate = (data) => {
         updateSession(completingSession.id, {
@@ -190,7 +214,7 @@ const Sessions = () => {
                 </div>
 
                 <div className="bg-[#1E1E2F] p-1.5 rounded-2xl border border-white/5 flex gap-2">
-                    {['upcoming', 'completed', 'cancelled'].map((tab) => (
+                    {['requested', 'upcoming', 'completed', 'cancelled'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -213,6 +237,7 @@ const Sessions = () => {
                             key={session.id}
                             session={session}
                             onComplete={setCompletingSession}
+                            onConfirm={confirmSessionRequest}
                         />
                     ))
                 ) : (

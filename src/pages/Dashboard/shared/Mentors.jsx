@@ -527,19 +527,25 @@ const Mentors = () => {
 
                                     <div className="pt-6">
                                         <button
-                                            disabled={hasRequested(selectedMentor.id) || selectedMentor.availabilityStatus === 'unavailable' || !canRequest}
+                                            disabled={hasRequested(selectedMentor.id) || !!startup?.mentorAssigned || selectedMentor.availabilityStatus === 'unavailable' || !canRequest}
                                             onClick={() => {
                                                 setRequestingMentor(selectedMentor);
                                                 setSelectedMentor(null);
                                             }}
-                                            className={`w-full py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-xl ${hasRequested(selectedMentor.id)
-                                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                                : selectedMentor.availabilityStatus === 'unavailable' || !canRequest
-                                                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                                                    : 'bg-[#8B5CF6] text-white hover:bg-[#7C3AED] hover:shadow-[#8B5CF6]/20'
+                                            className={`w-full py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-xl ${startup?.mentorAssigned === selectedMentor.id
+                                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                                    : (hasRequested(selectedMentor.id) || !!startup?.mentorAssigned)
+                                                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5'
+                                                        : selectedMentor.availabilityStatus === 'unavailable' || !canRequest
+                                                            ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                                                            : 'bg-[#8B5CF6] text-white hover:bg-[#7C3AED] hover:shadow-[#8B5CF6]/20'
                                                 }`}
                                         >
-                                            {hasRequested(selectedMentor.id) ? (
+                                            {startup?.mentorAssigned === selectedMentor.id ? (
+                                                <>Mentorship Active <CheckCircle2 size={18} /></>
+                                            ) : startup?.mentorAssigned ? (
+                                                'Mentor Already Assigned'
+                                            ) : hasRequested(selectedMentor.id) ? (
                                                 <>Request Sent <CheckCircle2 size={18} /></>
                                             ) : selectedMentor.availabilityStatus === 'unavailable' ? (
                                                 'Unavailable'
@@ -551,6 +557,9 @@ const Mentors = () => {
                                         </button>
                                         {!canRequest && user?.role === 'co-founder' && (
                                             <p className="text-[8px] text-gray-600 text-center mt-2 uppercase font-black">Only Founders or authorized Co-Founders can send mentorship requests</p>
+                                        )}
+                                        {startup?.mentorAssigned && startup.mentorAssigned !== selectedMentor.id && (
+                                            <p className="text-[8px] text-gray-600 text-center mt-2 uppercase font-black">You already have an active mentor assigned to your startup</p>
                                         )}
                                     </div>
                                 </div>

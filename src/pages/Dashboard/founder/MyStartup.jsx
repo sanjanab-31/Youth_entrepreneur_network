@@ -25,7 +25,7 @@ import {
     Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useStartup } from '../../../context/StartupContext';
+import { useStartup, calculateExecutionScore } from '../../../context/StartupContext';
 
 const SectionHeader = ({ icon: Icon, title, children }) => (
     <div className="flex items-center justify-between mb-6">
@@ -103,6 +103,9 @@ const MyStartup = () => {
         if (section === 'audience') {
             const arr = editValue.split('\n').filter(t => t.trim() !== "");
             handleUpdate({ targetAudience: arr });
+        } else if (section === 'focusAreas') {
+            const arr = editValue.split('\n').filter(t => t.trim() !== "");
+            handleUpdate({ focusAreas: arr });
         } else {
             handleUpdate({ [section]: editValue });
         }
@@ -118,10 +121,7 @@ const MyStartup = () => {
         }
     };
 
-    const completedMilestones = startup.milestones.filter(m => m.status === 'completed').length;
-    const executionPercentage = startup.milestones.length > 0
-        ? Math.round((completedMilestones / startup.milestones.length) * 100)
-        : 0;
+    const executionPercentage = calculateExecutionScore(startup);
 
     return (
         <div className="space-y-10 animate-in fade-in duration-500 pb-20">
@@ -157,6 +157,7 @@ const MyStartup = () => {
                                 const data = {
                                     startupName: formData.get('startupName'),
                                     stage: formData.get('stage'),
+                                    fundingGoal: formData.get('fundingGoal'),
                                     activeUsers: parseInt(formData.get('activeUsers')),
                                     teamSize: parseInt(formData.get('teamSize')),
                                     burnRate: parseInt(formData.get('burnRate'))
@@ -178,17 +179,23 @@ const MyStartup = () => {
                                         <option value="Scaling">Scaling</option>
                                     </select>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Funding Goal</label>
+                                        <input name="fundingGoal" defaultValue={startup.fundingGoal} placeholder="e.g. $500k Pre-Seed" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                                    </div>
                                     <div>
                                         <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Users</label>
                                         <input type="number" name="activeUsers" defaultValue={startup.activeUsers} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
                                     </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Team</label>
+                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Team Size</label>
                                         <input type="number" name="teamSize" defaultValue={startup.teamSize} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
                                     </div>
                                     <div>
-                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Burn ($)</label>
+                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Burn Rate ($)</label>
                                         <input type="number" name="burnRate" defaultValue={startup.burnRate} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
                                     </div>
                                 </div>
@@ -250,7 +257,7 @@ const MyStartup = () => {
             {/* Structured Summary Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricItem label="Current Stage" value={startup.stage} onEdit={() => setIsEditModalOpen(true)} />
-                <MetricItem label="Active Users" value={(startup.activeUsers || 0).toLocaleString()} onEdit={() => setIsEditModalOpen(true)} />
+                <MetricItem label="Funding Goal" value={startup.fundingGoal || "No funding goal set."} onEdit={() => setIsEditModalOpen(true)} />
                 <MetricItem label="Internal Team" value={`${startup.teamSize || 0} Members`} onEdit={() => setIsEditModalOpen(true)} />
                 <MetricItem label="Burn Rate" value={`$${(startup.burnRate || 0).toLocaleString()} / Mo`} onEdit={() => setIsEditModalOpen(true)} />
             </div>
@@ -441,6 +448,38 @@ const MyStartup = () => {
                         >
                             <Plus size={18} /> Add New Milestone
                         </button>
+                    </div>
+
+                    {/* Mentorship Focus Areas (Shared with Mentor) */}
+                    <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
+                            <Target size={120} />
+                        </div>
+                        <SectionHeader icon={Rocket} title="Mentorship Focus">
+                            <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 bg-[#8B5CF6]/20 text-[#8B5CF6] text-[8px] font-black uppercase tracking-widest rounded border border-[#8B5CF6]/30">Collaborative</span>
+                            </div>
+                        </SectionHeader>
+
+                        <p className="text-xs text-gray-500 font-medium mb-6 leading-relaxed">
+                            These focus areas are set in collaboration with your mentor to guide your current execution sprint.
+                        </p>
+
+                        {!Array.isArray(startup.focusAreas) || startup.focusAreas.length === 0 ? (
+                            <div className="py-8 text-center bg-white/5 rounded-xl border border-dashed border-white/10">
+                                <p className="text-gray-500 text-xs font-bold">No mentorship focus areas defined yet.</p>
+                                <p className="text-[9px] text-gray-600 uppercase font-black mt-2">Will be updated by your assigned mentor</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-wrap gap-3">
+                                {startup.focusAreas.map((area, i) => (
+                                    <div key={i} className="flex items-center gap-2 px-4 py-2 bg-[#8B5CF6]/10 border border-[#8B5CF6]/20 rounded-xl text-white font-bold text-sm group/tag">
+                                        <Zap size={14} className="text-[#8B5CF6]" />
+                                        {area}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 

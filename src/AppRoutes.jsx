@@ -8,16 +8,17 @@ import Dashboard from './pages/Dashboard/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Dashboard Sub-page Imports
-import DashboardHome from './pages/Dashboard/shared/DashboardHome';
-import MyStartup from './pages/Dashboard/founder/MyStartup';
-import FindCoFounder from './pages/Dashboard/founder/FindCoFounder';
-import Mentors from './pages/Dashboard/shared/Mentors';
-import Incubators from './pages/Dashboard/shared/Incubators';
 import Messages from './pages/Dashboard/shared/Messages';
 import ActivityFeed from './pages/Dashboard/shared/ActivityFeed';
+import SessionsFounder from './pages/Dashboard/founder/Sessions';
 import Settings from './pages/Dashboard/shared/Settings';
 import StartupOverview from './pages/Dashboard/co-founder/StartupOverview';
 import TeamCollaboration from './pages/Dashboard/co-founder/TeamCollaboration';
+import Mentors from './pages/Dashboard/shared/Mentors';
+import Incubators from './pages/Dashboard/shared/Incubators';
+import DashboardHome from './pages/Dashboard/shared/DashboardHome';
+import MyStartup from './pages/Dashboard/founder/MyStartup';
+import FindCoFounder from './pages/Dashboard/founder/FindCoFounder';
 
 // Mentor Dashboard Sub-page Imports
 import MentorDashboard from './pages/Dashboard/mentor/MentorDashboard';
@@ -68,6 +69,7 @@ const AppRoutes = () => {
                     <Route path="my-startup" element={<MyStartup />} />
                     <Route path="find-co-founder" element={<FindCoFounder />} />
                     <Route path="mentors" element={<Mentors />} />
+                    <Route path="sessions" element={<SessionsFounder />} />
                     <Route path="incubators" element={<Incubators />} />
                     <Route path="messages" element={<Messages />} />
                     <Route path="activity-feed" element={<ActivityFeed />} />
