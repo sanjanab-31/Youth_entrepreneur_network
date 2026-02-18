@@ -15,6 +15,7 @@ import {
     Building
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useMentor } from '../../../context/MentorContext';
 
 const ExpertiseBadge = ({ text }) => (
     <span className="px-3 py-1 bg-[#8B5CF6]/10 text-[#8B5CF6] text-[10px] font-black uppercase tracking-widest rounded-full border border-[#8B5CF6]/20">
@@ -32,27 +33,31 @@ const CompanyLogo = ({ name }) => (
 );
 
 const MentorProfile = () => {
+    const { profile, stats } = useMentor();
+
+    if (!profile) return null;
+
     const mentorInfo = {
-        name: 'Arjun Malhotra',
+        name: profile.name || 'Arjun Malhotra',
         expertise: ['FinTech', 'SaaS Scaleup', 'B2B Sales', 'Seed Funding'],
-        experience: '12+ Years Experience',
+        experience: profile.expertise || '12+ Years Experience',
         bio: 'Former VP of Growth at Stripe Asia. Serial entrepreneur with 2 successful exits in the fintech space. I specialize in helping seed-stage startups define their GTM strategy and scale their initial sales team from 0 to 10.',
         companies: ['Stripe', 'Revolut', 'Goldman Sachs', 'Y Combinator'],
         stages: ['Idea', 'MVP', 'Seed', 'Series A'],
-        sessionType: 'Free / Fixed Fee / Equity-Based',
-        availability: 'Mon, Wed, Fri (10 AM - 4 PM IST)',
-        responseRate: '92%',
+        sessionType: profile.availability?.sessionType === '1:1' ? 'Personal 1:1 Advisory' : 'Group / Multi-Session',
+        availability: `${profile.availability?.days?.join(', ') || 'Mon, Wed, Fri'} (10 AM - 4 PM IST)`,
+        responseRate: `${stats.responseRate}%`,
     };
 
     return (
-        <div className="space-y-10 animate-in fade-in duration-500">
+        <div className="space-y-10 animate-in fade-in duration-500 pb-20">
             {/* Header / Profile Cover */}
             <div className="relative">
                 <div className="h-48 w-full bg-gradient-to-r from-[#8B5CF6] to-indigo-900 rounded-3xl opacity-50 blur-sm" />
                 <div className="absolute -bottom-10 left-10 flex flex-col md:flex-row md:items-end gap-8">
                     <div className="w-32 h-32 rounded-3xl bg-[#1E1E2F] border-4 border-[#0F0F14] shadow-2xl overflow-hidden p-1">
                         <div className="w-full h-full rounded-2xl bg-gradient-to-tr from-[#8B5CF6] to-indigo-500 flex items-center justify-center text-4xl font-black text-white">
-                            A
+                            {mentorInfo.name[0]}
                         </div>
                     </div>
                     <div className="pb-2">

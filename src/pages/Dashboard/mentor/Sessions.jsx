@@ -13,17 +13,18 @@ import {
     ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMentor } from '../../../context/MentorContext';
 
 const SessionItem = ({ session, onComplete }) => (
     <div className="bg-[#1E1E2F] p-6 rounded-2xl border border-white/5 hover:border-[#8B5CF6]/30 transition-all group">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex gap-4">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#8B5CF6] to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg border border-white/10 flex-shrink-0">
-                    {session.founderName[0]}
+                    {session?.founderName?.[0] || '?'}
                 </div>
                 <div>
-                    <h4 className="text-white font-bold">{session.founderName}</h4>
-                    <p className="text-gray-500 text-xs font-medium uppercase tracking-widest">{session.startupName}</p>
+                    <h4 className="text-white font-bold">{session?.founderName || 'Unknown Founder'}</h4>
+                    <p className="text-gray-500 text-xs font-medium uppercase tracking-widest">{session?.startupName || 'Startup'}</p>
                     <div className="flex items-center gap-4 mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                         <span className="flex items-center gap-1.5"><CalendarIcon size={12} className="text-[#8B5CF6]" /> {session.date}</span>
                         <span className="flex items-center gap-1.5"><Clock size={12} className="text-[#8B5CF6]" /> {session.time}</span>
@@ -73,11 +74,11 @@ const PostSessionUpdate = ({ session, onSave, onBack }) => {
         >
             <div className="flex items-center gap-4 mb-10 pb-10 border-b border-white/5">
                 <div className="w-14 h-14 rounded-2xl bg-[#8B5CF6] flex items-center justify-center font-black text-white text-xl">
-                    {session.founderName[0]}
+                    {session?.founderName?.[0] || '?'}
                 </div>
                 <div>
                     <h2 className="text-2xl font-black text-white">Post-Session Update</h2>
-                    <p className="text-gray-500 font-medium">{session.founderName} • {session.startupName}</p>
+                    <p className="text-gray-500 font-medium">{session?.founderName || 'Unknown Founder'} • {session?.startupName || 'Startup'}</p>
                 </div>
             </div>
 
@@ -142,17 +143,22 @@ const PostSessionUpdate = ({ session, onSave, onBack }) => {
 };
 
 const Sessions = () => {
+    const { sessions, updateSession } = useMentor();
     const [activeTab, setActiveTab] = useState('upcoming');
     const [completingSession, setCompletingSession] = useState(null);
-    const [sessions, setSessions] = useState([
-        { id: 1, founderName: 'Sarah Jenkins', startupName: 'EcoFlow', date: 'Oct 24, 2026', time: '10:30 AM', status: 'upcoming' },
-        { id: 2, founderName: 'Alex Rivera', startupName: 'Nexus AI', date: 'Oct 25, 2026', time: '02:00 PM', status: 'upcoming' },
-        { id: 3, founderName: 'Michael Chen', startupName: 'PayBolt', date: 'Oct 15, 2026', time: '04:30 PM', status: 'completed' },
-        { id: 4, founderName: 'Elena Rossi', startupName: 'VibeHealth', date: 'Oct 12, 2026', time: '11:00 AM', status: 'completed' },
-        { id: 5, founderName: 'John Doe', startupName: 'Stealth Startup', date: 'Oct 10, 2026', time: '09:00 AM', status: 'cancelled' },
-    ]);
 
     const filteredSessions = sessions.filter(s => s.status === activeTab);
+
+    const handleSaveSessionUpdate = (data) => {
+        updateSession(completingSession.id, {
+            status: 'completed',
+            notes: data.advice,
+            actionItems: data.actionItems,
+            completedAt: new Date().toISOString()
+        });
+        setCompletingSession(null);
+        setActiveTab('completed');
+    };
 
     if (completingSession) {
         return (
@@ -165,11 +171,7 @@ const Sessions = () => {
                 </button>
                 <PostSessionUpdate
                     session={completingSession}
-                    onSave={() => {
-                        setSessions(prev => prev.map(s => s.id === completingSession.id ? { ...s, status: 'completed' } : s));
-                        setCompletingSession(null);
-                        setActiveTab('completed');
-                    }}
+                    onSave={handleSaveSessionUpdate}
                     onBack={() => setCompletingSession(null)}
                 />
             </div>
@@ -193,8 +195,8 @@ const Sessions = () => {
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab
-                                    ? 'bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20'
-                                    : 'text-gray-500 hover:text-white hover:bg-white/5'
+                                ? 'bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20'
+                                : 'text-gray-500 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             {tab}

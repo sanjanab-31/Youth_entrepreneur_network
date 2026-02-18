@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { useMentor } from '../../../context/MentorContext';
+
 const RequestCard = ({ request, onAccept, onDecline, onViewProfile }) => (
     <motion.div
         layout
@@ -23,11 +25,11 @@ const RequestCard = ({ request, onAccept, onDecline, onViewProfile }) => (
         <div className="flex justify-between items-start mb-6">
             <div className="flex gap-4">
                 <div className="w-12 h-12 rounded-xl bg-[#8B5CF6]/10 border border-[#8B5CF6]/20 flex items-center justify-center text-[#8B5CF6] font-black group-hover:scale-110 transition-transform">
-                    {request.founderName[0]}
+                    {request?.founderName?.[0] || '?'}
                 </div>
                 <div>
-                    <h4 className="text-white font-bold group-hover:text-[#8B5CF6] transition-colors">{request.founderName}</h4>
-                    <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">{request.startupName} • <span className="text-[#8B5CF6]">{request.stage}</span></p>
+                    <h4 className="text-white font-bold group-hover:text-[#8B5CF6] transition-colors">{request?.founderName || 'Unknown Founder'}</h4>
+                    <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">{request?.startupName || 'Startup'} • <span className="text-[#8B5CF6]">{request?.stage || 'Idea'}</span></p>
                 </div>
             </div>
         </div>
@@ -198,20 +200,24 @@ const StartupDetailModal = ({ startup, onClose }) => {
 };
 
 const FounderRequests = () => {
+    const { requests, acceptRequest, declineRequest } = useMentor();
     const [selectedStartup, setSelectedStartup] = useState(null);
-    const [requests, setRequests] = useState([
-        { id: 1, founderName: 'Sarah Jenkins', startupName: 'EcoFlow', stage: 'MVP', traction: '500+ Active Users', sector: 'SaaS / CleanTech', mentorshipArea: 'GTM Strategy', problemSummary: 'Scaling from initial 100 users to 1000 with limited budget.' },
-        { id: 2, founderName: 'Alex Rivera', startupName: 'Nexus AI', stage: 'Idea', traction: 'Waitlist of 2k+', sector: 'AI / DevTools', mentorshipArea: 'Product Validation', problemSummary: 'Verifying technical feasibility and core value prop.' },
-        { id: 3, founderName: 'Michael Chen', startupName: 'PayBolt', stage: 'Revenue', traction: '$12k Monthly Vol', sector: 'FinTech / Web3', mentorshipArea: 'Regulatory Compliance', problemSummary: 'Navigating multi-state payment processing regulations.' },
-        { id: 4, founderName: 'Elena Rossi', startupName: 'VibeHealth', stage: 'Seed', traction: '3 Clinical Trials', sector: 'HealthTech', mentorshipArea: 'Strategic Partnerships', problemSummary: 'Connecting with hospital networks for pilot deployment.' },
-    ]);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const pendingRequests = requests.filter(r =>
+        r.status === 'pending' &&
+        (r.startupName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            r.sector.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
     const handleAccept = (id) => {
-        setRequests(prev => prev.filter(r => r.id !== id));
+        acceptRequest(id);
+        setSelectedStartup(null);
     };
 
     const handleDecline = (id) => {
-        setRequests(prev => prev.filter(r => r.id !== id));
+        declineRequest(id);
+        setSelectedStartup(null);
     };
 
     return (
@@ -231,6 +237,8 @@ const FounderRequests = () => {
                     <input
                         type="text"
                         placeholder="Search by startup or sector..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-12 pr-6 py-4 bg-[#1E1E2F] border border-white/5 rounded-2xl text-white font-medium focus:outline-none focus:border-[#8B5CF6]/50 transition-all placeholder:text-gray-600 shadow-xl shadow-black/20"
                     />
                 </div>
@@ -249,15 +257,23 @@ const FounderRequests = () => {
 
             {/* Request Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {requests.map((request) => (
-                    <RequestCard
-                        key={request.id}
-                        request={request}
-                        onAccept={handleAccept}
-                        onDecline={handleDecline}
-                        onViewProfile={setSelectedStartup}
-                    />
-                ))}
+                {pendingRequests.length === 0 ? (
+                    <div className="col-span-full py-20 text-center">
+                        <Users className="mx-auto text-gray-700 mb-4" size={48} />
+                        <h3 className="text-xl font-bold text-gray-500">No pending requests</h3>
+                        <p className="text-gray-600">Check back later for new mentorship opportunities.</p>
+                    </div>
+                ) : (
+                    pendingRequests.map((request) => (
+                        <RequestCard
+                            key={request.id}
+                            request={request}
+                            onAccept={handleAccept}
+                            onDecline={handleDecline}
+                            onViewProfile={setSelectedStartup}
+                        />
+                    ))
+                )}
             </div>
 
             <AnimatePresence>

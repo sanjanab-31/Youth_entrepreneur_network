@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { StartupProvider } from './context/StartupContext.jsx';
+import { MentorProvider } from './context/MentorContext.jsx';
 import AppRoutes from './AppRoutes';
 
 function App() {
@@ -9,7 +10,9 @@ function App() {
     <Router>
       <AuthProvider>
         <StartupProvider>
-          <AppRoutes />
+          <MentorProvider>
+            <AppRoutes />
+          </MentorProvider>
         </StartupProvider>
       </AuthProvider>
     </Router>
