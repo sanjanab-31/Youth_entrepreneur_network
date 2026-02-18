@@ -24,10 +24,17 @@ const Login = () => {
         setLoading(true);
 
         try {
+            console.log("Attempting login with role:", role);
             await login(email, password, role);
-            // Redirect handled inside login for simplicity, but cleaner to handle here? UseAuth logic redirects.
         } catch (err) {
-            setError('Invalid credentials. Please try again.');
+            console.error(err);
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                setError('Invalid email or password. Please try again.');
+            } else if (err.code === 'auth/too-many-requests') {
+                setError('Too many failed attempts. Please try again later.');
+            } else {
+                setError('An error occurred during login. Please try again.');
+            }
         } finally {
             setLoading(false);
         }

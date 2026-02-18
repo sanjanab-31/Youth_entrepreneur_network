@@ -10,7 +10,7 @@ const Settings = ({ role: initialRole }) => {
 
     // Initialization Logic
     useEffect(() => {
-        const savedUser = localStorage.getItem('vanguardUser');
+        const savedUser = localStorage.getItem('userProfile');
         if (savedUser) {
             const parsedUser = JSON.parse(savedUser);
             // Ensure structure is maintained if some fields are missing
@@ -48,7 +48,7 @@ const Settings = ({ role: initialRole }) => {
                     startup: "visible"
                 }
             };
-            localStorage.setItem('vanguardUser', JSON.stringify(defaultUser));
+            localStorage.setItem('userProfile', JSON.stringify(defaultUser));
             setUser(defaultUser);
         }
     }, [initialRole]);
@@ -62,7 +62,7 @@ const Settings = ({ role: initialRole }) => {
     const updateField = (field, value) => {
         const newUser = { ...user, [field]: value };
         setUser(newUser);
-        localStorage.setItem('vanguardUser', JSON.stringify(newUser));
+        localStorage.setItem('userProfile', JSON.stringify(newUser));
         triggerToast("Changes Saved");
     };
 
@@ -75,7 +75,7 @@ const Settings = ({ role: initialRole }) => {
             }
         };
         setUser(newUser);
-        localStorage.setItem('vanguardUser', JSON.stringify(newUser));
+        localStorage.setItem('userProfile', JSON.stringify(newUser));
         triggerToast("Changes Saved");
     };
 

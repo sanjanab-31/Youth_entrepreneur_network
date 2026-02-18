@@ -13,6 +13,7 @@ const Signup = () => {
     const role = searchParams.get('role');
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     const [formData, setFormData] = useState({});
 
     // Redirect admin away from signup
@@ -33,6 +34,7 @@ const Signup = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError(null);
 
         if (step < 3) {
             setStep(prev => prev + 1);
@@ -41,9 +43,17 @@ const Signup = () => {
 
         setLoading(true);
         try {
-            await signup(formData, role);
+            const { email, password, ...profileData } = formData;
+            await signup(email, password, role, profileData);
         } catch (error) {
             console.error(error);
+            if (error.code === 'auth/email-already-in-use') {
+                setError('This email is already registered.');
+            } else if (error.code === 'auth/weak-password') {
+                setError('Password should be at least 6 characters.');
+            } else {
+                setError('Failed to create account. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -291,11 +301,17 @@ const Signup = () => {
                         <p className="text-gray-400">Join Vanguard as a {role}</p>
                     </div>
 
+                    {error && (
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm mb-6 flex items-center">
+                            <span className="flex-1">{error}</span>
+                        </div>
+                    )}
+
                     {renderStepIndicator()}
 
                     <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-between">
                         <div className="flex-1">
-                            {role === 'founder' && renderFounderForm()}
+                            {(role === 'founder' || role === 'co-founder' || role === 'cofounder') && renderFounderForm()}
                             {role === 'mentor' && renderMentorForm()}
                             {role === 'incubator' && renderIncubatorForm()}
                         </div>
@@ -339,7 +355,7 @@ const Signup = () => {
                     </form>
                 </div>
             </div>
-        </AuthLayout>
+        </AuthLayout >
     );
 };
 

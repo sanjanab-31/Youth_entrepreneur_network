@@ -63,6 +63,7 @@ const AppRoutes = () => {
             {/* Founder Dashboard Routes */}
             <Route element={<ProtectedRoute allowedRoles={['founder']} />}>
                 <Route path="/founder" element={<Dashboard role="founder" />}>
+                    <Route index element={<DashboardHome role="founder" />} />
                     <Route path="dashboard" element={<DashboardHome role="founder" />} />
                     <Route path="my-startup" element={<MyStartup />} />
                     <Route path="find-co-founder" element={<FindCoFounder />} />
@@ -75,8 +76,9 @@ const AppRoutes = () => {
             </Route>
 
             {/* Co-Founder Dashboard Routes */}
-            <Route element={<ProtectedRoute allowedRoles={['co-founder']} />}>
-                <Route path="/co-founder" element={<Dashboard role="co-founder" />}>
+            <Route element={<ProtectedRoute allowedRoles={['co-founder', 'cofounder']} />}>
+                <Route path="/cofounder" element={<Dashboard role="cofounder" />}>
+                    <Route index element={<DashboardHome role="co-founder" />} />
                     <Route path="dashboard" element={<DashboardHome role="co-founder" />} />
                     <Route path="startup-overview" element={<StartupOverview />} />
                     <Route path="team-collaboration" element={<TeamCollaboration />} />
@@ -86,11 +88,16 @@ const AppRoutes = () => {
                     <Route path="activity-feed" element={<ActivityFeed />} />
                     <Route path="settings" element={<Settings role="co-founder" />} />
                 </Route>
+                <Route path="/co-founder" element={<Dashboard role="co-founder" />}>
+                    <Route index element={<DashboardHome role="co-founder" />} />
+                    <Route path="dashboard" element={<DashboardHome role="co-founder" />} />
+                </Route>
             </Route>
 
             {/* Mentor Dashboard Routes */}
             <Route element={<ProtectedRoute allowedRoles={['mentor']} />}>
                 <Route path="/mentor" element={<Dashboard role="mentor" />}>
+                    <Route index element={<MentorDashboard />} />
                     <Route path="dashboard" element={<MentorDashboard />} />
                     <Route path="founder-requests" element={<FounderRequests />} />
                     <Route path="my-mentees" element={<MyMentees />} />
@@ -104,6 +111,7 @@ const AppRoutes = () => {
             {/* Incubator Dashboard Routes */}
             <Route element={<ProtectedRoute allowedRoles={['incubator']} />}>
                 <Route path="/incubator" element={<Dashboard role="incubator" />}>
+                    <Route index element={<IncubatorDashboard />} />
                     <Route path="dashboard" element={<IncubatorDashboard />} />
                     <Route path="startup-pipeline" element={<StartupPipeline />} />
                     <Route path="applications" element={<Applications />} />
@@ -118,6 +126,7 @@ const AppRoutes = () => {
             {/* Admin Dashboard Routes */}
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                 <Route path="/admin" element={<Dashboard role="admin" />}>
+                    <Route index element={<AdminDashboard />} />
                     <Route path="dashboard" element={<AdminDashboard />} />
                     <Route path="users" element={<UserManagement />} />
                     <Route path="startups" element={<StartupManagement />} />
@@ -128,6 +137,9 @@ const AppRoutes = () => {
                     <Route path="analytics" element={<AdminAnalytics />} />
                     <Route path="content" element={<ContentManagement />} />
                     <Route path="settings" element={<AdminSettings />} />
+                </Route>
+                <Route path="/admin-dashboard" element={<Dashboard role="admin" />}>
+                    <Route index element={<AdminDashboard />} />
                 </Route>
             </Route>
         </Routes>

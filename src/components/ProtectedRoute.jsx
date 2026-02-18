@@ -16,6 +16,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
     if (allowedRoles && !allowedRoles.includes(user.role)) {
         // Redirect to their own dashboard if they have the wrong role
+        if (user.role === 'admin') return <Navigate to="/admin-dashboard" replace />;
         return <Navigate to={`/${user.role}/dashboard`} replace />;
     }
 
