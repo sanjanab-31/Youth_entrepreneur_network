@@ -16,16 +16,26 @@ import {
     CheckCircle2
 } from 'lucide-react';
 
+import { useIncubator } from '../../../context/IncubatorContext';
+
 const Settings = () => {
-    const [notifications, setNotifications] = useState({
-        newApplications: true,
-        mentorMessages: true,
-        cohortUpdates: true,
-        systemAlerts: false
-    });
+    const { settings, updateSettings } = useIncubator();
+    const [localSettings, setLocalSettings] = useState(settings);
 
     const toggleNotification = (key) => {
-        setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
+        const updated = {
+            ...localSettings,
+            notifications: {
+                ...localSettings.notifications,
+                [key]: !localSettings.notifications[key]
+            }
+        };
+        setLocalSettings(updated);
+    };
+
+    const handleSave = () => {
+        updateSettings(localSettings);
+        // Could add a toast here
     };
 
     return (
@@ -69,7 +79,11 @@ const Settings = () => {
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Cohort Maximum Capacity</label>
                                     <input
                                         type="number"
-                                        defaultValue={20}
+                                        value={localSettings.batchLimits?.maxCapacity}
+                                        onChange={(e) => setLocalSettings({
+                                            ...localSettings,
+                                            batchLimits: { ...localSettings.batchLimits, maxCapacity: parseInt(e.target.value) }
+                                        })}
                                         className="w-full bg-[#0F0F14] border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all"
                                     />
                                 </div>
@@ -77,7 +91,11 @@ const Settings = () => {
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Program Duration (Weeks)</label>
                                     <input
                                         type="number"
-                                        defaultValue={12}
+                                        value={localSettings.batchLimits?.durationWeeks}
+                                        onChange={(e) => setLocalSettings({
+                                            ...localSettings,
+                                            batchLimits: { ...localSettings.batchLimits, durationWeeks: parseInt(e.target.value) }
+                                        })}
                                         className="w-full bg-[#0F0F14] border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all"
                                     />
                                 </div>
@@ -88,7 +106,11 @@ const Settings = () => {
                                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                                     <input
                                         type="date"
-                                        defaultValue="2025-04-30"
+                                        value={localSettings.batchLimits?.deadline}
+                                        onChange={(e) => setLocalSettings({
+                                            ...localSettings,
+                                            batchLimits: { ...localSettings.batchLimits, deadline: e.target.value }
+                                        })}
                                         className="w-full bg-[#0F0F14] border border-white/5 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all"
                                     />
                                 </div>
@@ -104,7 +126,7 @@ const Settings = () => {
                         </div>
 
                         <div className="space-y-4">
-                            {Object.entries(notifications).map(([key, value]) => (
+                            {Object.entries(localSettings.notifications || {}).map(([key, value]) => (
                                 <div key={key} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
                                     <div>
                                         <p className="text-sm font-bold text-white capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
@@ -134,13 +156,10 @@ const Settings = () => {
                         </div>
 
                         <div className="space-y-4">
-                            {[
-                                { name: 'Admin Vanguard', role: 'Super Admin', email: 'admin@vanguard.io' },
-                                { name: 'Sarah Wilson', role: 'Cohort Manager', email: 'sarah@vanguard.io' },
-                            ].map((member, i) => (
+                            {(localSettings.subAdmins || []).map((member, i) => (
                                 <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-white text-xs">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center font-bold text-white text-xs">
                                             {member.name[0]}
                                         </div>
                                         <div>
@@ -158,7 +177,10 @@ const Settings = () => {
 
                     {/* Action Bar */}
                     <div className="pt-4 flex gap-4">
-                        <button className="flex-1 py-4 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-black uppercase tracking-widest text-sm rounded-2xl shadow-xl shadow-[#8B5CF6]/30 transition-all flex items-center justify-center gap-2">
+                        <button
+                            onClick={handleSave}
+                            className="flex-1 py-4 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-black uppercase tracking-widest text-sm rounded-2xl shadow-xl shadow-[#8B5CF6]/30 transition-all flex items-center justify-center gap-2"
+                        >
                             <Save size={20} /> Save Configuration
                         </button>
                     </div>
