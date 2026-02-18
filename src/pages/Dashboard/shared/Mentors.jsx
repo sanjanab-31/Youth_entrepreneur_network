@@ -24,7 +24,7 @@ import { useStartup } from '../../../context/StartupContext';
 
 const Mentors = () => {
     const { user } = useAuth();
-    const { startup } = useStartup();
+    const { startup, requestMentor } = useStartup();
 
     // --- State Management ---
     const [mentors, setMentors] = useState([]);
@@ -51,164 +51,89 @@ const Mentors = () => {
 
     // --- Initialization ---
     useEffect(() => {
-        const initializeData = () => {
-            const storedMentors = localStorage.getItem('vanguardMentors');
-            const storedRequests = localStorage.getItem('vanguardMentorRequests');
+        const refreshData = () => {
+            setLoading(true);
+            try {
+                // Fetch mentors from global users
+                const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+                const mentorsList = allUsers
+                    .filter(u => u.role === 'mentor')
+                    .map(m => ({
+                        id: m.id,
+                        name: m.name || m.profileData?.fullName || m.email.split('@')[0],
+                        initials: (m.name || m.email.split('@')[0]).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+                        title: m.profileData?.title || 'Expert Mentor',
+                        expertiseSector: m.profileData?.expertiseSector || 'General',
+                        mentorshipFocus: m.profileData?.mentorshipFocus || 'Scaling & Growth',
+                        supportedStages: m.profileData?.supportedStages || ['Idea', 'MVP', 'Revenue'],
+                        responseRate: m.profileData?.responseRate || 95,
+                        verified: m.profileData?.verified || true,
+                        sessionType: m.profileData?.sessionType || 'one-on-one',
+                        availabilityStatus: m.profileData?.availabilityStatus || 'available',
+                        shortBio: m.profileData?.shortBio || 'Professional mentor helping startups scale.',
+                        totalMentees: m.profileData?.totalMentees || 0,
+                        rating: m.profileData?.rating || 5.0
+                    }));
+                setMentors(mentorsList);
 
-            if (!storedMentors) {
-                const demoMentors = [
-                    {
-                        id: 'm1',
-                        name: 'Anant Goenka',
-                        initials: 'AG',
-                        title: 'Founder @ NeoPay (Ex-Paytm)',
-                        expertiseSector: 'Fintech',
-                        mentorshipFocus: 'Solving infra bottlenecks & regulation.',
-                        supportedStages: ['MVP', 'Revenue'],
-                        responseRate: 98,
-                        verified: true,
-                        sessionType: 'one-on-one',
-                        availabilityStatus: 'available',
-                        shortBio: 'Serial entrepreneur with 15+ years in Fintech. Scaled NeoPay to 5M+ users.',
-                        totalMentees: 154,
-                        rating: 4.9
-                    },
-                    {
-                        id: 'm2',
-                        name: 'Meera Iyer',
-                        initials: 'MI',
-                        title: 'Marketing Head @ Urban Co',
-                        expertiseSector: 'D2C',
-                        mentorshipFocus: 'Brand positioning & customer acquisition.',
-                        supportedStages: ['Idea', 'MVP'],
-                        responseRate: 92,
-                        verified: true,
-                        sessionType: 'group',
-                        availabilityStatus: 'limited',
-                        shortBio: 'Award-winning marketer helping early-stage startups find their voice.',
-                        totalMentees: 89,
-                        rating: 4.8
-                    },
-                    {
-                        id: 'm3',
-                        name: 'Varun Aggarwal',
-                        initials: 'VA',
-                        title: 'Core Dev @ DeepMind',
-                        expertiseSector: 'Deep Tech',
-                        mentorshipFocus: 'Model deployment & edge optimization.',
-                        supportedStages: ['MVP', 'Revenue'],
-                        responseRate: 85,
-                        verified: false,
-                        sessionType: 'both',
-                        availabilityStatus: 'available',
-                        shortBio: 'AI researcher and systems architect focused on scalable machine learning.',
-                        totalMentees: 42,
-                        rating: 4.7
-                    },
-                    {
-                        id: 'm4',
-                        name: 'Sarah Chen',
-                        initials: 'SC',
-                        title: 'CTO @ CloudSync',
-                        expertiseSector: 'SaaS',
-                        mentorshipFocus: 'Infrastructure scaling and technical hiring.',
-                        supportedStages: ['Idea', 'MVP', 'Revenue'],
-                        responseRate: 95,
-                        verified: true,
-                        sessionType: 'one-on-one',
-                        availabilityStatus: 'available',
-                        shortBio: 'Building robust cloud infrastructure for enterprise-level applications.',
-                        totalMentees: 67,
-                        rating: 4.9
-                    },
-                    {
-                        id: 'm5',
-                        name: 'Rajiv Malhotra',
-                        initials: 'RM',
-                        title: 'Head of Growth @ Eduspark',
-                        expertiseSector: 'Edtech',
-                        mentorshipFocus: 'Go-to-market strategy and user retention.',
-                        supportedStages: ['Idea', 'MVP'],
-                        responseRate: 78,
-                        verified: true,
-                        sessionType: 'group',
-                        availabilityStatus: 'unavailable',
-                        shortBio: 'Growth specialist who transformed Eduspark into a unicorn.',
-                        totalMentees: 210,
-                        rating: 4.6
-                    }
-                ];
-                localStorage.setItem('vanguardMentors', JSON.stringify(demoMentors));
-                setMentors(demoMentors);
-            } else {
-                setMentors(JSON.parse(storedMentors));
+                // Fetch requests for this founder
+                const allRequests = JSON.parse(localStorage.getItem('vanguard_mentorRequests') || '[]');
+                const founderRequests = allRequests.filter(r => r.founderId === user.id);
+                setRequests(founderRequests);
+            } catch (err) {
+                console.error("Error fetching mentors:", err);
+            } finally {
+                setLoading(false);
             }
-
-            if (storedRequests) {
-                setRequests(JSON.parse(storedRequests));
-            } else {
-                localStorage.setItem('vanguardMentorRequests', JSON.stringify([]));
-            }
-            setLoading(false);
         };
 
-        initializeData();
-    }, []);
+        refreshData();
+    }, [user.id]);
 
     // --- Logic: Dynamic Response Rate ---
-    // Update response rates based on activity (simulated: ratio of requests in local storage)
     const processedMentors = useMemo(() => {
+        const allRequests = JSON.parse(localStorage.getItem('vanguard_mentorRequests') || '[]');
         return mentors.map(m => {
-            const mentorRequests = requests.filter(r => r.mentorId === m.id);
+            const mentorRequests = allRequests.filter(r => r.mentorId === m.id);
             const acceptedRequests = mentorRequests.filter(r => r.status === 'accepted').length;
 
-            // Simulation logic
             let calculatedRate = m.responseRate;
-            if (mentorRequests.length > 5) {
+            if (mentorRequests.length > 0) {
                 const ratio = acceptedRequests / mentorRequests.length;
-                calculatedRate = Math.floor(60 + (ratio * 38)); // Range 60-98%
-            } else if (mentorRequests.length > 0) {
-                calculatedRate = Math.min(98, m.responseRate + (acceptedRequests * 2));
+                calculatedRate = Math.floor(60 + (ratio * 38));
             }
 
             return { ...m, dynamicResponseRate: calculatedRate };
         });
-    }, [mentors, requests]);
+    }, [mentors]);
 
     // --- Logic: Premium Matching & Filtering ---
     const filteredMentors = useMemo(() => {
         let result = [...processedMentors];
 
-        // 1. Sector Filter
         if (filters.sector !== 'All') {
             result = result.filter(m => m.expertiseSector === filters.sector);
         }
 
-        // 2. Stage Filter
         if (filters.stages.length > 0) {
             result = result.filter(m =>
                 m.supportedStages.some(stage => filters.stages.includes(stage))
             );
         }
 
-        // 3. Session Type Filter
         if (filters.sessionType !== 'All') {
             result = result.filter(m =>
                 m.sessionType === filters.sessionType.toLowerCase() || m.sessionType === 'both'
             );
         }
 
-        // 4. Verified Toggle
         if (filters.verifiedOnly) {
             result = result.filter(m => m.verified);
         }
 
-        // 5. Premium Matching (Ranking)
-        // Match sector and stage first
-        const founderSector = startup?.expertiseSector || ''; // Hypothetical if startup has sector
+        const founderSector = startup?.sector || '';
         const founderStage = startup?.stage || 'Idea';
 
-        // Add matching flags
         result = result.map(m => {
             const sectorMatch = m.expertiseSector === founderSector;
             const stageMatch = m.supportedStages.includes(founderStage);
@@ -216,7 +141,6 @@ const Mentors = () => {
             return { ...m, matchScore, isBestMatch: matchScore >= 2 };
         });
 
-        // Sort by match score then response rate
         result.sort((a, b) => {
             if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
             return b.dynamicResponseRate - a.dynamicResponseRate;
@@ -247,30 +171,19 @@ const Mentors = () => {
     const handleRequestSubmit = (e) => {
         e.preventDefault();
 
-        const newRequest = {
-            id: `req_${Date.now()}`,
-            mentorId: requestingMentor.id,
-            founderId: user?.email, // Using email as ID for simple demo
-            startupName: startup?.startupName || 'Default Startup',
-            problemSummary: requestForm.problem,
-            tried: requestForm.tried,
-            outcome: requestForm.outcome,
-            founderStage: startup?.stage || 'Idea',
-            status: 'pending',
-            timestamp: new Date().toISOString()
-        };
+        const message = `Problem: ${requestForm.problem}\n\nTried: ${requestForm.tried}\n\nOutcome: ${requestForm.outcome}`;
+        requestMentor(requestingMentor.id, message);
 
-        const updatedRequests = [...requests, newRequest];
-        setRequests(updatedRequests);
-        localStorage.setItem('vanguardMentorRequests', JSON.stringify(updatedRequests));
+        // Re-fetch requests
+        const allRequests = JSON.parse(localStorage.getItem('vanguard_mentorRequests') || '[]');
+        setRequests(allRequests.filter(r => r.founderId === user.id));
 
-        // Reset form and close
         setRequestForm({ problem: '', tried: '', outcome: '' });
         setRequestingMentor(null);
     };
 
     const hasRequested = (mentorId) => {
-        return requests.some(r => r.mentorId === mentorId && r.founderId === user?.email);
+        return requests.some(r => r.mentorId === mentorId);
     };
 
     const isAccessRestricted = !['founder', 'co-founder'].includes(user?.role);

@@ -3,54 +3,45 @@ import React, { useState, useEffect } from 'react';
 import { User, Bell, Eye, Shield, CheckCircle2, ChevronRight, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const SETTINGS_KEY = 'vanguard_userSettings';
+const AUTH_KEY = 'vanguard_currentUser';
+
 const Settings = ({ role: initialRole }) => {
     const [user, setUser] = useState(null);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
 
-    // Initialization Logic
+    // Initialization: seed from auth record, overlay saved settings on top
     useEffect(() => {
-        const savedUser = localStorage.getItem('userProfile');
-        if (savedUser) {
-            const parsedUser = JSON.parse(savedUser);
-            // Ensure structure is maintained if some fields are missing
-            const mergedUser = {
-                fullName: parsedUser.fullName || "User Name",
-                email: parsedUser.email || "user@vanguard.io",
-                role: parsedUser.role || initialRole || 'Founder',
-                commitmentLevel: parsedUser.commitmentLevel || "Full-time",
-                bio: parsedUser.bio || "",
-                preferences: {
-                    emailNotifications: true,
-                    mentorAlerts: true,
-                    ...(parsedUser.preferences || {})
-                },
-                visibility: {
-                    profile: "public",
-                    startup: "visible",
-                    ...(parsedUser.visibility || {})
-                }
-            };
-            setUser(mergedUser);
-        } else {
-            const defaultUser = {
-                fullName: "Siddharth Sharma",
-                email: "sid@nebulaai.io",
-                role: initialRole || 'Founder',
-                commitmentLevel: "Full-time",
-                bio: "Building the next generation of neural networks for startup workflows.",
-                preferences: {
-                    emailNotifications: true,
-                    mentorAlerts: true
-                },
-                visibility: {
-                    profile: "public",
-                    startup: "visible"
-                }
-            };
-            localStorage.setItem('userProfile', JSON.stringify(defaultUser));
-            setUser(defaultUser);
-        }
+        // Get the real authenticated user (name + email from signup)
+        const authRaw = localStorage.getItem(AUTH_KEY);
+        const authUser = authRaw ? JSON.parse(authRaw) : null;
+
+        // Get any previously saved settings overrides
+        const savedSettings = localStorage.getItem(SETTINGS_KEY);
+        const saved = savedSettings ? JSON.parse(savedSettings) : {};
+
+        const profile = {
+            // Real data from signup — never use hardcoded placeholders
+            fullName: saved.fullName ?? authUser?.name ?? '',
+            email: authUser?.email ?? '',
+            role: authUser?.role ?? initialRole ?? 'founder',
+            // Fields not collected at signup — empty until user fills them
+            commitmentLevel: saved.commitmentLevel ?? '',
+            bio: saved.bio ?? '',
+            preferences: {
+                emailNotifications: true,
+                mentorAlerts: true,
+                ...(saved.preferences || {})
+            },
+            visibility: {
+                profile: 'public',
+                startup: 'visible',
+                ...(saved.visibility || {})
+            }
+        };
+
+        setUser(profile);
     }, [initialRole]);
 
     const triggerToast = (msg) => {
@@ -62,7 +53,22 @@ const Settings = ({ role: initialRole }) => {
     const updateField = (field, value) => {
         const newUser = { ...user, [field]: value };
         setUser(newUser);
-        localStorage.setItem('userProfile', JSON.stringify(newUser));
+        // Save settings separately from auth record
+        const toSave = { ...newUser };
+        delete toSave.email; // email is read-only, don't duplicate
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(toSave));
+        // If name changed, sync back to auth record so it stays consistent
+        if (field === 'fullName') {
+            const authRaw = localStorage.getItem(AUTH_KEY);
+            if (authRaw) {
+                const authUser = JSON.parse(authRaw);
+                localStorage.setItem(AUTH_KEY, JSON.stringify({ ...authUser, name: value }));
+                // Also update in the users array
+                const users = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+                const updatedUsers = users.map(u => u.id === authUser.id ? { ...u, name: value } : u);
+                localStorage.setItem('vanguard_users', JSON.stringify(updatedUsers));
+            }
+        }
         triggerToast("Changes Saved");
     };
 
@@ -75,7 +81,9 @@ const Settings = ({ role: initialRole }) => {
             }
         };
         setUser(newUser);
-        localStorage.setItem('userProfile', JSON.stringify(newUser));
+        const toSave = { ...newUser };
+        delete toSave.email;
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(toSave));
         triggerToast("Changes Saved");
     };
 

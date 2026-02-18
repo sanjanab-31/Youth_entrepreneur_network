@@ -250,9 +250,9 @@ const MyStartup = () => {
             {/* Structured Summary Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricItem label="Current Stage" value={startup.stage} onEdit={() => setIsEditModalOpen(true)} />
-                <MetricItem label="Active Users" value={startup.activeUsers.toLocaleString()} onEdit={() => setIsEditModalOpen(true)} />
-                <MetricItem label="Internal Team" value={`${startup.teamSize} Members`} onEdit={() => setIsEditModalOpen(true)} />
-                <MetricItem label="Burn Rate" value={`$${startup.burnRate.toLocaleString()} / Mo`} onEdit={() => setIsEditModalOpen(true)} />
+                <MetricItem label="Active Users" value={(startup.activeUsers || 0).toLocaleString()} onEdit={() => setIsEditModalOpen(true)} />
+                <MetricItem label="Internal Team" value={`${startup.teamSize || 0} Members`} onEdit={() => setIsEditModalOpen(true)} />
+                <MetricItem label="Burn Rate" value={`$${(startup.burnRate || 0).toLocaleString()} / Mo`} onEdit={() => setIsEditModalOpen(true)} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

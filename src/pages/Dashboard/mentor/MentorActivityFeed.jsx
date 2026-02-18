@@ -19,7 +19,7 @@ import { useMentor } from '../../../context/MentorContext';
 import { motion } from 'framer-motion';
 
 const MentorActivityFeed = () => {
-    const { activity, mentees, stats } = useMentor();
+    const { activity = [], mentees, stats } = useMentor();
 
     const getActivityIcon = (type) => {
         switch (type) {

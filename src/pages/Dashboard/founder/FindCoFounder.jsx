@@ -37,122 +37,44 @@ const FindCoFounder = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
-    // Initial Data
-    const demoCandidates = [
-        {
-            id: 'cand_1',
-            name: 'Rahul Malhotra',
-            primarySkill: 'Marketing / GTM',
-            skills: ['Growth Strategy', 'SEO', 'AdOps', 'Branding'],
-            experienceTitle: 'Ex-Zomato Growth Lead',
-            location: 'Indore, MP',
-            equityExpectation: '5-10%',
-            commitmentType: 'Full-time',
-            verifiedStatus: true,
-            shortBio: 'Led growth for Zomato\'s tier-2 market expansion. Passionate about consumer tech and scaling from 0 to 1.',
-            connectionStatus: 'none',
-            previousExperience: 'Zomato (4 years), Swiggy (2 years)'
-        },
-        {
-            id: 'cand_2',
-            name: 'Anjali Deshmukh',
-            primarySkill: 'Product Design',
-            skills: ['Figma', 'Prototyping', 'User Research', 'Design Systems'],
-            experienceTitle: 'Freelance Design Lead',
-            location: 'Pune, Maharashtra',
-            equityExpectation: '10-20%',
-            commitmentType: 'Part-time',
-            verifiedStatus: true,
-            shortBio: 'Product designer focusing on human-centric AI interfaces. Helped 5+ startups launch their MVPs.',
-            connectionStatus: 'none',
-            previousExperience: 'Independent Consultant, Microsoft Intern'
-        },
-        {
-            id: 'cand_3',
-            name: 'Vikram Singh',
-            primarySkill: 'Sales / Operations',
-            skills: ['B2B Sales', 'Strategy', 'CRM', 'Team Management'],
-            experienceTitle: 'Ops at TechFlow (YC W21)',
-            location: 'New Delhi, Delhi',
-            equityExpectation: '20%+',
-            commitmentType: 'Contract',
-            verifiedStatus: false,
-            shortBio: 'Operations specialist with a focus on B2B SaaS. Scaled TechFlow\'s outbound team to 50+ members.',
-            connectionStatus: 'none',
-            previousExperience: 'TechFlow, Oracle'
-        },
-        {
-            id: 'cand_4',
-            name: 'Sarah Chen',
-            primarySkill: 'Backend Engineering',
-            skills: ['Node.js', 'Python', 'AWS', 'System Design'],
-            experienceTitle: 'Senior Dev at Stripe',
-            location: 'Bangalore, KA',
-            equityExpectation: 'Negotiable',
-            commitmentType: 'Full-time',
-            verifiedStatus: true,
-            shortBio: 'Built scalable payment infrastructure at Stripe. Interested in decentralized finance and AI infrastructure.',
-            connectionStatus: 'none',
-            previousExperience: 'Stripe, Uber'
-        },
-        {
-            id: 'cand_5',
-            name: 'Kabir Verma',
-            primarySkill: 'Marketing / GTM',
-            skills: ['Performance Marketing', 'Influencer GTM', 'Retention'],
-            experienceTitle: 'Growth at CRED',
-            location: 'Mumbai, MH',
-            equityExpectation: '10-20%',
-            commitmentType: 'Full-time',
-            verifiedStatus: true,
-            shortBio: 'Obsessed with retention metrics and brand building. Managed $1M+ monthly ad spend at CRED.',
-            connectionStatus: 'none',
-            previousExperience: 'CRED, Razorpay'
-        },
-        {
-            id: 'cand_6',
-            name: 'Priya Sharma',
-            primarySkill: 'Product Design',
-            skills: ['UI/UX', 'Interaction Design', 'Motion Graphics'],
-            experienceTitle: 'Product Designer at Canva',
-            location: 'Hyderabad, TS',
-            equityExpectation: '5-10%',
-            commitmentType: 'Part-time',
-            verifiedStatus: false,
-            shortBio: 'Crafting delight-driven experiences. Specialized in mobile-first design for developing markets.',
-            connectionStatus: 'none',
-            previousExperience: 'Canva, Google (L3)'
-        }
-    ];
-
     // Load Data
     useEffect(() => {
-        // Load User Role
-        const storedUser = localStorage.getItem('yen_user');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
+        const refreshData = () => {
+            // Load Current User
+            const storedUser = localStorage.getItem('vanguard_currentUser');
+            if (storedUser) {
+                setUser(JSON.parse(storedUser));
+            }
 
-        // Load Candidates
-        const storedCandidates = localStorage.getItem('vanguardCandidates');
-        if (storedCandidates) {
-            setCandidates(JSON.parse(storedCandidates));
-        } else {
-            localStorage.setItem('vanguardCandidates', JSON.stringify(demoCandidates));
-            setCandidates(demoCandidates);
-        }
+            // Load Candidates (Users with role 'co-founder')
+            const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+            const coFounders = allUsers
+                .filter(u => u.role === 'co-founder')
+                .map(u => ({
+                    id: u.id,
+                    name: u.name || u.profileData?.fullName || u.email.split('@')[0],
+                    primarySkill: u.profileData?.primarySkill || 'Generalist',
+                    skills: u.profileData?.skills || [],
+                    experienceTitle: u.profileData?.experienceTitle || 'Professional',
+                    location: u.profileData?.location || 'Remote',
+                    equityExpectation: u.profileData?.equityExpectation || 'Negotiable',
+                    commitmentType: u.profileData?.commitmentType || 'Full-time',
+                    verifiedStatus: u.profileData?.verified || true,
+                    shortBio: u.profileData?.shortBio || 'Ready to join a high-impact startup.',
+                    previousExperience: u.profileData?.previousExperience || ''
+                }));
+            setCandidates(coFounders);
 
-        // Load Connections
-        const storedConnections = localStorage.getItem('vanguardConnections');
-        if (storedConnections) {
-            setConnections(JSON.parse(storedConnections));
-        }
+            // Load Connections
+            const storedConnections = JSON.parse(localStorage.getItem('vanguard_connections') || '[]');
+            setConnections(storedConnections);
 
-        // Load Saved
-        const storedSaved = localStorage.getItem('vanguardSavedCandidates');
-        if (storedSaved) {
-            setSavedCandidates(JSON.parse(storedSaved));
-        }
+            // Load Saved
+            const storedSaved = JSON.parse(localStorage.getItem('vanguard_savedCandidates') || '[]');
+            setSavedCandidates(storedSaved);
+        };
+
+        refreshData();
     }, []);
 
     // Role-Aware Logic
@@ -175,12 +97,11 @@ const FindCoFounder = () => {
         if (!startup?.skillGap) return { score: 50, label: 'Medium Match' };
 
         const gap = startup.skillGap.toLowerCase();
-        const skill = candidatePrimarySkill.toLowerCase();
+        const skill = (candidatePrimarySkill || '').toLowerCase();
 
         if (gap === skill) return { score: 95, label: 'High Compatibility' };
-        if (gap.includes(skill) || skill.includes(gap)) return { score: 75, label: 'Strong Match' };
+        if (gap.includes(skill) || (skill && skill.includes(gap))) return { score: 75, label: 'Strong Match' };
 
-        // Check if any words match
         const gapWords = gap.split(' ');
         const skillWords = skill.split(' ');
         const overlap = gapWords.filter(w => skillWords.includes(w) && w.length > 3);
@@ -192,27 +113,17 @@ const FindCoFounder = () => {
 
     // Connection Logic
     const handleConnect = (candidateId) => {
-        const updatedCandidates = candidates.map(c => {
-            if (c.id === candidateId) {
-                return { ...c, connectionStatus: 'pending' };
-            }
-            return c;
-        });
-
         const newConnection = {
+            id: `conn_${Date.now()}`,
             candidateId,
-            founderId: user?.email,
+            founderId: user?.id,
             requestStatus: 'pending',
             timestamp: new Date().toISOString()
         };
 
         const updatedConnections = [...connections, newConnection];
-
-        setCandidates(updatedCandidates);
         setConnections(updatedConnections);
-
-        localStorage.setItem('vanguardCandidates', JSON.stringify(updatedCandidates));
-        localStorage.setItem('vanguardConnections', JSON.stringify(updatedConnections));
+        localStorage.setItem('vanguard_connections', JSON.stringify(updatedConnections));
     };
 
     // Saved Logic
@@ -224,7 +135,7 @@ const FindCoFounder = () => {
             updatedSaved = [...savedCandidates, candidateId];
         }
         setSavedCandidates(updatedSaved);
-        localStorage.setItem('vanguardSavedCandidates', JSON.stringify(updatedSaved));
+        localStorage.setItem('vanguard_savedCandidates', JSON.stringify(updatedSaved));
     };
 
     // Filtering Logic
@@ -233,9 +144,9 @@ const FindCoFounder = () => {
             // Search filter
             const matchesSearch = searchTerm === '' ||
                 c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                c.primarySkill.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                c.skills.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                c.location.toLowerCase().includes(searchTerm.toLowerCase());
+                (c.primarySkill && c.primarySkill.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (c.skills && c.skills.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()))) ||
+                (c.location && c.location.toLowerCase().includes(searchTerm.toLowerCase()));
 
             // Skill filter
             const matchesSkill = filters.primarySkill === 'All' || c.primarySkill === filters.primarySkill;

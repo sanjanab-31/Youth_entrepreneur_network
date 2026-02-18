@@ -1,48 +1,71 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 const StartupContext = createContext();
 
 export const useStartup = () => useContext(StartupContext);
 
-const STORAGE_KEY = 'vanguardStartupData';
+const KEYS = {
+    STARTUPS: 'vanguard_startups',
+    APPLICATIONS: 'vanguard_applications',
+    MENTOR_REQUESTS: 'vanguard_mentorRequests'
+};
 
 export const StartupProvider = ({ children }) => {
+    const { user } = useAuth();
     const [startup, setStartup] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const defaultStartup = {
-        startupName: "Nebula AI",
-        stage: "Validation",
-        activeUsers: 1280,
-        teamSize: 5,
-        burnRate: 2400,
-        problemStatement: "Small-scale retailers struggle with inventory forecasting, leading to a 35% average waste in perishable goods each month.",
-        solutionOverview: "Nebula AI provides a low-cost, mobile-first inventory management system that uses lightweight ML models to predict demand patterns.",
-        targetAudience: ['Tier 2/3 City Retailers', 'Agritech Supply Chains', 'Urban Tech-first Bodegas'],
-        skillGap: "Marketing Lead",
-        skillGapPriority: "High",
-        skillGapFilled: false,
-        milestones: [
-            { id: 1, title: 'User Interview (20/20 Completed)', status: 'completed', createdAt: new Date().toISOString() },
-            { id: 2, title: 'MVP Wireframes Finalized', status: 'completed', createdAt: new Date().toISOString() },
-            { id: 3, title: 'Core ML Model Training', status: 'in-progress', createdAt: new Date().toISOString() }
-        ],
-        documents: [
-            { name: 'Executive_Summary.pdf', size: '1.2MB', uploadTimestamp: new Date().toISOString() },
-            { name: 'Financial_Projections.xlsx', size: '450KB', uploadTimestamp: new Date().toISOString() }
-        ],
-        activity: [
-            { id: 1, type: 'milestone', msg: 'Milestone: User Interviews Completed', time: '2 hours ago', createdAt: new Date().toISOString() },
-            { id: 2, type: 'session', msg: 'Mentor Session: Scalability discussion', time: 'Yesterday', createdAt: new Date().toISOString() }
-        ],
-        lastUpdated: new Date().toISOString(),
-        lastTractionUpdate: new Date().toISOString(),
-        profileCompletion: 0,
-        executionScore: 0,
-        mentor: null,
-        expertiseSector: "Fintech"
-    };
+    // Sync startup from global startups array based on currentUser
+    useEffect(() => {
+        if (!user || user.role !== 'founder') {
+            setStartup(null);
+            setLoading(false);
+            return;
+        }
+
+        const normalizeStartup = (data) => ({
+            milestones: [],
+            targetAudience: [],
+            documents: [],
+            activity: [],
+            applications: [],
+            activeUsers: 0,
+            teamSize: 0,
+            burnRate: 0,
+            skillGap: '',
+            skillGapPriority: 'Medium',
+            skillGapFilled: false,
+            problemStatement: '',
+            solutionOverview: '',
+            ...data,
+            milestones: Array.isArray(data.milestones) ? data.milestones : [],
+            targetAudience: Array.isArray(data.targetAudience) ? data.targetAudience : [],
+            documents: Array.isArray(data.documents) ? data.documents : [],
+            activity: Array.isArray(data.activity) ? data.activity : [],
+            applications: Array.isArray(data.applications) ? data.applications : [],
+            activeUsers: data.activeUsers ?? 0,
+            teamSize: data.teamSize ?? 0,
+            burnRate: data.burnRate ?? 0,
+        });
+
+        const syncData = () => {
+            const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
+            const userStartup = allStartups.find(s => s.founderId === user.id);
+            if (userStartup) {
+                const refreshed = updateCalculations(normalizeStartup(userStartup));
+                setStartup(refreshed);
+            }
+            setLoading(false);
+        };
+
+        syncData();
+        // Simple polling/event mechanism could be added for cross-tab sync, 
+        // but for now, we'll rely on direct updates within the app.
+        window.addEventListener('storage', syncData);
+        return () => window.removeEventListener('storage', syncData);
+    }, [user]);
 
     const calculateProfileCompletion = (data) => {
         let score = 0;
@@ -59,21 +82,15 @@ export const StartupProvider = ({ children }) => {
     };
 
     const calculateExecutionScore = (data) => {
-        // Weighted average calculation:
-        // Completed Milestones (40%)
-        // Profile Completion (20%)
-        // Active Mentor (20%)
-        // Updated Traction (20%) - updated within 14 days
-
         const completedMilestonesCount = data.milestones?.filter(m => m.status === 'completed').length || 0;
         const totalMilestones = data.milestones?.length || 1;
         const milestonesWeight = (completedMilestonesCount / totalMilestones) * 40;
 
-        const profileWeight = (data.profileCompletion / 100) * 20;
+        const profileWeight = (calculateProfileCompletion(data) / 100) * 20;
 
-        const mentorWeight = data.mentor ? 20 : 0;
+        const mentorWeight = data.mentorAssigned ? 20 : 0;
 
-        const lastTraction = new Date(data.lastTractionUpdate || 0);
+        const lastTraction = new Date(data.updatedAt || 0);
         const fourteenDaysAgo = new Date();
         fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
         const tractionWeight = lastTraction > fourteenDaysAgo ? 20 : 0;
@@ -83,131 +100,169 @@ export const StartupProvider = ({ children }) => {
 
     const updateCalculations = (data) => {
         const profileCompletion = calculateProfileCompletion(data);
-        const updatedWithProfile = { ...data, profileCompletion };
-        const executionScore = calculateExecutionScore(updatedWithProfile);
-        return { ...updatedWithProfile, executionScore };
+        const executionScore = calculateExecutionScore(data);
+        return { ...data, profileCompletion, executionScore };
     };
 
-    useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                let migration = {
-                    ...defaultStartup,
-                    ...parsed,
-                };
-                migration = updateCalculations(migration);
-                setStartup(migration);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(migration));
-            } catch (e) {
-                console.error("Failed to parse startup data", e);
-                setStartup(updateCalculations(defaultStartup));
-            }
-        } else {
-            const initial = updateCalculations(defaultStartup);
-            setStartup(initial);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-        }
-        setLoading(false);
-    }, []);
+    const saveStartupToGlobal = (updatedStartup) => {
+        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
+        const updatedAll = allStartups.map(s => s.startupId === updatedStartup.startupId ? updatedStartup : s);
+        localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedAll));
+        setStartup(updateCalculations(updatedStartup));
+    };
 
     const updateStartup = (newData) => {
-        setStartup(prev => {
-            let updated = {
-                ...prev,
-                ...newData,
-                lastUpdated: new Date().toISOString()
-            };
-            if (newData.activeUsers !== undefined) {
-                updated.lastTractionUpdate = new Date().toISOString();
-            }
-            updated = updateCalculations(updated);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-            return updated;
-        });
-    };
-
-    const addActivity = (msg, type = 'milestone') => {
-        const newActivity = {
-            id: Date.now(),
-            type,
-            msg,
-            time: 'Just now',
-            createdAt: new Date().toISOString()
+        if (!startup) return;
+        const updated = {
+            ...startup,
+            ...newData,
+            updatedAt: new Date().toISOString()
         };
-        setStartup(prev => {
-            const updatedActivity = [newActivity, ...(prev.activity || [])];
-            let updated = { ...prev, activity: updatedActivity };
-            updated = updateCalculations(updated);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-            return updated;
-        });
+        saveStartupToGlobal(updated);
     };
 
     const addMilestone = (title) => {
+        if (!startup) return;
         const newMilestone = {
-            id: Date.now(),
+            id: Date.now().toString(),
             title,
             status: 'pending',
             createdAt: new Date().toISOString()
         };
-        setStartup(prev => {
-            const updatedMilestones = [...prev.milestones, newMilestone];
-            let updated = { ...prev, milestones: updatedMilestones };
-            updated = updateCalculations(updated);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-            return updated;
-        });
-        addActivity(`New Milestone Added: ${title}`, 'milestone');
+        const updated = {
+            ...startup,
+            milestones: [...(startup.milestones || []), newMilestone],
+            updatedAt: new Date().toISOString()
+        };
+        saveStartupToGlobal(updated);
+        addActivity(`Added milestone: ${title}`, 'milestone');
     };
 
-    const updateMilestone = (id, updates) => {
-        setStartup(prev => {
-            const updatedMilestones = prev.milestones.map(m =>
-                m.id === id ? { ...m, ...updates } : m
-            );
-            let updated = { ...prev, milestones: updatedMilestones };
-            updated = updateCalculations(updated);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-            return updated;
-        });
-
+    const updateMilestone = (milestoneId, updates) => {
+        if (!startup) return;
+        const updatedMilestones = startup.milestones.map(m =>
+            m.id === milestoneId ? { ...m, ...updates, updatedAt: new Date().toISOString() } : m
+        );
+        const updated = {
+            ...startup,
+            milestones: updatedMilestones,
+            updatedAt: new Date().toISOString()
+        };
+        saveStartupToGlobal(updated);
         if (updates.status === 'completed') {
-            const milestone = startup.milestones.find(m => m.id === id);
-            addActivity(`Milestone Completed: ${milestone?.title}`, 'milestone');
+            const m = startup.milestones.find(ms => ms.id === milestoneId);
+            addActivity(`Completed milestone: ${m?.title}`, 'milestone');
         }
     };
 
-    const deleteMilestone = (id) => {
-        setStartup(prev => {
-            const updatedMilestones = prev.milestones.filter(m => m.id !== id);
-            let updated = { ...prev, milestones: updatedMilestones };
-            updated = updateCalculations(updated);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-            return updated;
-        });
+    const deleteMilestone = (milestoneId) => {
+        if (!startup) return;
+        const updated = {
+            ...startup,
+            milestones: startup.milestones.filter(m => m.id !== milestoneId),
+            updatedAt: new Date().toISOString()
+        };
+        saveStartupToGlobal(updated);
     };
 
     const addDocument = (name, size) => {
-        const newDoc = {
-            name,
-            size,
-            uploadTimestamp: new Date().toISOString()
+        if (!startup) return;
+        const newDoc = { name, size, uploadedAt: new Date().toISOString() };
+        const updated = {
+            ...startup,
+            documents: [...(startup.documents || []), newDoc],
+            updatedAt: new Date().toISOString()
         };
-        const updatedDocs = [...startup.documents, newDoc];
-        updateStartup({ documents: updatedDocs });
+        saveStartupToGlobal(updated);
+        addActivity(`Uploaded document: ${name}`, 'document');
     };
 
     const deleteDocument = (index) => {
-        const updatedDocs = startup.documents.filter((_, i) => i !== index);
-        updateStartup({ documents: updatedDocs });
+        if (!startup) return;
+        const docs = [...(startup.documents || [])];
+        docs.splice(index, 1);
+        const updated = {
+            ...startup,
+            documents: docs,
+            updatedAt: new Date().toISOString()
+        };
+        saveStartupToGlobal(updated);
     };
 
     const renameDocument = (index, newName) => {
-        const updatedDocs = [...startup.documents];
-        updatedDocs[index] = { ...updatedDocs[index], name: newName };
-        updateStartup({ documents: updatedDocs });
+        if (!startup) return;
+        const docs = [...(startup.documents || [])];
+        docs[index] = { ...docs[index], name: newName };
+        const updated = {
+            ...startup,
+            documents: docs,
+            updatedAt: new Date().toISOString()
+        };
+        saveStartupToGlobal(updated);
+    };
+
+    const applyToIncubator = (incubatorId, message) => {
+        if (!startup) return;
+        const applications = JSON.parse(localStorage.getItem(KEYS.APPLICATIONS) || '[]');
+        const newApp = {
+            id: Date.now().toString(),
+            startupId: startup.startupId,
+            founderId: user.id,
+            incubatorId,
+            startupName: startup.startupName,
+            sector: startup.sector,
+            traction: startup.traction,
+            status: 'pending',
+            message,
+            createdAt: new Date().toISOString()
+        };
+        localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify([...applications, newApp]));
+
+        // Update startup applications list
+        const updated = {
+            ...startup,
+            applications: [...(startup.applications || []), { applicationId: newApp.id, incubatorId, status: 'pending' }],
+            updatedAt: new Date().toISOString()
+        };
+        saveStartupToGlobal(updated);
+        addActivity(`Applied to incubator: ${incubatorId}`, 'incubator');
+    };
+
+    const requestMentor = (mentorId, message) => {
+        if (!startup) return;
+        const requests = JSON.parse(localStorage.getItem(KEYS.MENTOR_REQUESTS) || '[]');
+        const newRequest = {
+            id: Date.now().toString(),
+            startupId: startup.startupId,
+            founderId: user.id,
+            mentorId,
+            founderName: user.name,
+            startupName: startup.startupName,
+            sector: startup.sector,
+            traction: startup.traction,
+            executionScore: startup.executionScore,
+            status: 'pending',
+            message,
+            createdAt: new Date().toISOString()
+        };
+        localStorage.setItem(KEYS.MENTOR_REQUESTS, JSON.stringify([...requests, newRequest]));
+        addActivity(`Requested mentor: ${mentorId}`, 'mentor');
+    };
+
+    const addActivity = (msg, type = 'info') => {
+        if (!startup) return;
+        const newActivity = {
+            id: Date.now().toString(),
+            msg,
+            type,
+            time: 'Just now'
+        };
+        const updated = {
+            ...startup,
+            activity: [newActivity, ...(startup.activity || [])].slice(0, 20),
+            updatedAt: new Date().toISOString()
+        };
+        saveStartupToGlobal(updated);
     };
 
     const value = {
@@ -220,6 +275,8 @@ export const StartupProvider = ({ children }) => {
         deleteDocument,
         renameDocument,
         addActivity,
+        applyToIncubator,
+        requestMentor,
         loading
     };
 

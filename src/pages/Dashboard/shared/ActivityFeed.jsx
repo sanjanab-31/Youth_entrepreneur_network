@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     CheckCircle2,
     UserPlus,
@@ -10,17 +10,40 @@ import {
     Search,
     Filter,
     Clock,
-    MoreHorizontal
+    MoreHorizontal,
+    Info
 } from 'lucide-react';
+import { useStartup } from '../../../context/StartupContext';
 
 const ActivityFeed = () => {
-    const activities = [
-        { id: 1, type: 'milestone', title: 'Milestone Completed', desc: 'Market Validation user interviews finished.', time: '2h ago', meta: 'User Testing', icon: CheckCircle2, color: 'green' },
-        { id: 2, type: 'mentor', title: 'New Mentor Joined', desc: 'Anant Goenka is now available for Fintech guidance.', time: '5h ago', meta: 'Expert Network', icon: UserPlus, color: 'blue' },
-        { id: 3, type: 'incubator', title: 'Incubator Deadline', desc: 'NSRCEL IIMB applications close in 3 days.', time: '8h ago', meta: 'Growth', icon: Building, color: 'orange' },
-        { id: 4, type: 'team', title: 'Team Update', desc: 'Priya Kapoor uploaded new design assets for MVP.', time: '12h ago', meta: 'Internal', icon: Zap, color: 'purple' },
-        { id: 5, type: 'milestone', title: 'New Milestone Set', desc: 'Execute Pilot Run - Phase 1.', time: 'Yesterday', meta: 'Execution', icon: Calendar, color: 'pink' }
-    ];
+    const { startup } = useStartup();
+
+    const activityIconMap = {
+        milestone: CheckCircle2,
+        startup: Building,
+        mentor: UserPlus,
+        incubator: Building,
+        document: Zap,
+        info: Info,
+        engagement: Calendar
+    };
+
+    const colorMap = {
+        milestone: 'green',
+        startup: 'blue',
+        mentor: 'purple',
+        incubator: 'orange',
+        document: 'pink',
+        info: 'gray',
+        engagement: 'blue'
+    };
+
+    const activities = useMemo(() => {
+        if (!startup?.activity) return [
+            { id: 'initial', type: 'info', msg: 'Welcome to Vanguard. Your execution journey begins here.', time: 'Just now' }
+        ];
+        return startup.activity;
+    }, [startup]);
 
     return (
         <div className="space-y-10 animate-in fade-in duration-500">
@@ -41,32 +64,42 @@ const ActivityFeed = () => {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 {/* Main Feed */}
                 <div className="lg:col-span-3 space-y-4">
-                    {activities.map((act) => (
-                        <div key={act.id} className="group bg-[#1E1E2F] p-6 rounded-2xl border border-white/5 hover:border-white/10 transition-all cursor-pointer relative overflow-hidden">
-                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 relative z-10">
-                                <div className={`w-12 h-12 rounded-xl bg-${act.color}-500/10 flex items-center justify-center text-${act.color}-400 border border-${act.color}-500/20 flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                                    <act.icon size={24} />
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-2">
-                                        <div>
-                                            <h3 className="text-base md:text-lg font-black text-white group-hover:text-[#8B5CF6] transition-colors">{act.title}</h3>
-                                            <div className="flex items-center flex-wrap gap-2 md:gap-3 mt-1">
-                                                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{act.meta}</span>
-                                                <span className="hidden sm:block w-1 h-1 bg-gray-700 rounded-full" />
-                                                <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-600 uppercase"><Clock size={10} /> {act.time}</span>
+                    {activities.length === 0 ? (
+                        <div className="p-20 bg-[#1E1E2F] rounded-3xl border border-dashed border-white/5 text-center">
+                            <Zap className="mx-auto text-gray-700 mb-4" size={48} />
+                            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No activity yet</p>
+                        </div>
+                    ) : (
+                        activities.map((act) => {
+                            const Icon = activityIconMap[act.type] || Info;
+                            const color = colorMap[act.type] || 'gray';
+                            return (
+                                <div key={act.id} className="group bg-[#1E1E2F] p-6 rounded-2xl border border-white/5 hover:border-white/10 transition-all cursor-pointer relative overflow-hidden">
+                                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 relative z-10">
+                                        <div className={`w-12 h-12 rounded-xl bg-${color}-500/10 flex items-center justify-center text-${color}-400 border border-${color}-500/20 flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                                            <Icon size={24} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-2">
+                                                <div>
+                                                    <h3 className="text-base md:text-lg font-black text-white group-hover:text-[#8B5CF6] transition-colors">{act.msg}</h3>
+                                                    <div className="flex items-center flex-wrap gap-2 md:gap-3 mt-1">
+                                                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{act.type}</span>
+                                                        <span className="hidden sm:block w-1 h-1 bg-gray-700 rounded-full" />
+                                                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-600 uppercase"><Clock size={10} /> {act.time}</span>
+                                                    </div>
+                                                </div>
+                                                <button className="p-2 text-gray-700 hover:text-white transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100 flex self-end sm:self-auto"><MoreHorizontal size={20} /></button>
                                             </div>
                                         </div>
-                                        <button className="p-2 text-gray-700 hover:text-white transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100 flex self-end sm:self-auto"><MoreHorizontal size={20} /></button>
                                     </div>
-                                    <p className="text-xs md:text-sm text-gray-400 font-medium leading-relaxed max-w-2xl">{act.desc}</p>
-                                </div>
-                            </div>
 
-                            {/* Accent Glow */}
-                            <div className={`absolute top-0 right-0 w-24 h-24 bg-${act.color}-500/2 blur-[60px] rounded-full translate-x-1/2 -translate-y-1/2 group-hover:bg-${act.color}-500/5 transition-all`} />
-                        </div>
-                    ))}
+                                    {/* Accent Glow */}
+                                    <div className={`absolute top-0 right-0 w-24 h-24 bg-${color}-500/2 blur-[60px] rounded-full translate-x-1/2 -translate-y-1/2 group-hover:bg-${color}-500/5 transition-all`} />
+                                </div>
+                            );
+                        })
+                    )}
 
                     <button className="w-full py-6 bg-white/5 border border-dashed border-white/10 rounded-2xl text-xs font-black text-gray-600 uppercase tracking-widest hover:text-white hover:bg-white/10 transition-all flex items-center justify-center gap-2">
                         View Older Activity <ArrowRight size={14} />

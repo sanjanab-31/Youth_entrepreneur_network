@@ -1,104 +1,70 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged
-} from 'firebase/auth';
-import { auth } from '../firebase/config';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
+
+const KEYS = {
+    USERS: 'vanguard_users',
+    STARTUPS: 'vanguard_startups',
+    MENTOR_REQUESTS: 'vanguard_mentorRequests',
+    SESSIONS: 'vanguard_sessions',
+    APPLICATIONS: 'vanguard_applications',
+    CURRENT_USER: 'vanguard_currentUser'
+};
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    const ADMIN_EMAIL = "admin@vanguard.com"; // Example admin email
-
+    // Initialize localStorage keys if they don't exist
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-            if (firebaseUser) {
-                // Get role and profile from localStorage
-                let role = localStorage.getItem('userRole');
-                const profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-
-                // Handle Admin role strictly by email if not set
-                if (firebaseUser.email === ADMIN_EMAIL) {
-                    role = 'admin';
-                    localStorage.setItem('userRole', 'admin');
-                } else if (!role) {
-                    // Fallback to founder if role is lost (limitation of no DB)
-                    role = 'founder';
+        Object.values(KEYS).forEach(key => {
+            if (!localStorage.getItem(key)) {
+                if (key === KEYS.CURRENT_USER) {
+                    // Current user is null by default
+                } else {
+                    localStorage.setItem(key, JSON.stringify([]));
                 }
-
-                setUser({
-                    ...firebaseUser,
-                    role: role,
-                    fullName: profile.fullName || firebaseUser.email.split('@')[0],
-                    ...profile
-                });
-            } else {
-                setUser(null);
             }
-            setLoading(false);
         });
 
-        return () => unsubscribe();
+        // Rehydrate state
+        const storedUser = localStorage.getItem(KEYS.CURRENT_USER);
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
+        setLoading(false);
     }, []);
 
     const login = async (email, password, role) => {
         try {
-            // Normalize role if provided
-            if (role) role = role.toLowerCase();
+            const users = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
+            const matchedUser = users.find(u => u.email === email && u.password === password);
 
-            // Optimistically set localStorage BEFORE auth to prevent race condition with onAuthStateChanged
-            if (role) {
-                localStorage.setItem('userRole', role);
+            if (!matchedUser) {
+                throw { code: 'auth/invalid-credential', message: 'Invalid credentials' };
             }
 
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const firebaseUser = userCredential.user;
+            // Set current user
+            localStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(matchedUser));
+            setUser(matchedUser);
 
-            // Admin override
-            if (email === ADMIN_EMAIL) {
-                role = 'admin';
-                localStorage.setItem('userRole', 'admin');
-                navigate('/admin-dashboard');
-                return firebaseUser;
-            }
-
-            // Trust the role passed from the login form if provided
-            if (role) {
-                localStorage.setItem('userRole', role);
-            } else {
-                // If no role passed, check localStorage
-                role = localStorage.getItem('userRole');
-            }
-
-            if (!role) {
-                // FALLBACK: default to founder if role not found
-                role = 'founder';
-                localStorage.setItem('userRole', 'founder');
-            }
-
-            // Standard redirects based on role
+            // Redirect based on role
             const roleRedirects = {
                 'founder': '/founder',
-                'cofounder': '/cofounder',
                 'mentor': '/mentor',
                 'incubator': '/incubator',
-                'co-founder': '/cofounder' // handling both dash and no-dash
+                'admin': '/admin-dashboard'
             };
 
-            const path = roleRedirects[role] || '/founder';
+            const path = roleRedirects[matchedUser.role] || '/founder';
             navigate(path);
 
-            return firebaseUser;
+            return matchedUser;
         } catch (error) {
             console.error("Login error:", error);
             throw error;
@@ -107,48 +73,72 @@ export const AuthProvider = ({ children }) => {
 
     const signup = async (email, password, role, profileData) => {
         try {
-            // Optimistically set localStorage BEFORE auth to prevent race condition with onAuthStateChanged
-            localStorage.setItem('userRole', role);
-            localStorage.setItem('userProfile', JSON.stringify({
-                ...profileData,
-                email: email
-            }));
+            const users = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
 
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const firebaseUser = userCredential.user;
+            if (users.find(u => u.email === email)) {
+                throw { code: 'auth/email-already-in-use', message: 'Email already exists' };
+            }
 
-            // Redirect to respective portal dashboard
+            const newUser = {
+                id: Date.now().toString(),
+                name: profileData.fullName || email.split('@')[0],
+                email,
+                password,
+                role: role.toLowerCase(),
+                profileData,
+                createdAt: new Date().toISOString()
+            };
+
+            // Save user
+            const updatedUsers = [...users, newUser];
+            localStorage.setItem(KEYS.USERS, JSON.stringify(updatedUsers));
+
+            // If role is founder: Create a startup object
+            if (newUser.role === 'founder') {
+                const startups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
+                const newStartup = {
+                    startupId: `s_${Date.now()}`,
+                    founderId: newUser.id,
+                    startupName: profileData.startupName || "My Startup",
+                    sector: profileData.sector || "General",
+                    stage: profileData.stage || "Idea",
+                    traction: "0",
+                    teamSize: profileData.teamSize || "1",
+                    problemStatement: profileData.problemStatement || "",
+                    milestones: [],
+                    mentorAssigned: null,
+                    applications: [],
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    status: 'active'
+                };
+                localStorage.setItem(KEYS.STARTUPS, JSON.stringify([...startups, newStartup]));
+            }
+
+            // Set current user after signup
+            localStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(newUser));
+            setUser(newUser);
+
+            // Redirect
             const roleRedirects = {
                 'founder': '/founder',
-                'cofounder': '/cofounder',
-                'co-founder': '/cofounder',
                 'mentor': '/mentor',
                 'incubator': '/incubator'
             };
-
-            const path = roleRedirects[role] || '/founder';
+            const path = roleRedirects[newUser.role] || '/founder';
             navigate(path);
 
-            return firebaseUser;
+            return newUser;
         } catch (error) {
             console.error("Signup error:", error);
-            // Cleanup on error
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('userProfile');
             throw error;
         }
     };
 
     const logout = async () => {
-        try {
-            await signOut(auth);
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('userProfile');
-            setUser(null);
-            navigate('/');
-        } catch (error) {
-            console.error("Logout error:", error);
-        }
+        localStorage.removeItem(KEYS.CURRENT_USER);
+        setUser(null);
+        navigate('/');
     };
 
     const value = {
@@ -157,7 +147,7 @@ export const AuthProvider = ({ children }) => {
         signup,
         logout,
         loading,
-        isAdmin: user?.email === ADMIN_EMAIL
+        isAdmin: user?.role === 'admin'
     };
 
     return (

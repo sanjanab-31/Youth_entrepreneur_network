@@ -26,7 +26,7 @@ import { useStartup } from '../../../context/StartupContext';
 
 const Incubators = () => {
     const { user } = useAuth();
-    const { startup } = useStartup();
+    const { startup, applyToIncubator } = useStartup();
 
     // --- State Management ---
     const [incubators, setIncubators] = useState([]);
@@ -54,105 +54,46 @@ const Incubators = () => {
 
     // --- Initialization ---
     useEffect(() => {
-        const initializeData = () => {
-            const storedIncubators = localStorage.getItem('vanguardIncubators');
-            const storedApplications = localStorage.getItem('vanguardIncubatorApplications');
+        const refreshData = () => {
+            setLoading(true);
+            try {
+                // Fetch incubators from global users
+                const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+                const incubatorsList = allUsers
+                    .filter(u => u.role === 'incubator')
+                    .map(inc => ({
+                        id: inc.id,
+                        name: inc.name || inc.profileData?.fullName || inc.email.split('@')[0],
+                        location: inc.profileData?.location || 'India',
+                        supportedStages: inc.profileData?.supportedStages || ['Idea', 'MVP', 'Revenue'],
+                        focus: inc.profileData?.sector || 'General',
+                        timeline: inc.profileData?.timeline || 'Rolling Admissions',
+                        metrics: inc.profileData?.metrics || 'N/A',
+                        initials: (inc.name || inc.email.split('@')[0]).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+                        verified: inc.profileData?.verified || true,
+                        shortBio: inc.profileData?.shortBio || 'Incubator supporting early-stage startups.',
+                        totalStartups: inc.profileData?.totalStartups || 0,
+                        fundingCap: inc.profileData?.fundingCap || '$0'
+                    }));
+                setIncubators(incubatorsList);
 
-            if (!storedIncubators) {
-                const demoIncubators = [
-                    {
-                        id: 'inc1',
-                        name: 'NSRCEL IIMB',
-                        location: 'Bangalore / Remote',
-                        supportedStages: ['MVP', 'Revenue'],
-                        focus: 'Fintech',
-                        timeline: 'Jan 2026 - June 2026',
-                        metrics: '92% Survival Rate • $10M+ Funding Raised',
-                        initials: 'II',
-                        verified: true,
-                        shortBio: 'Indias premier startup hub at IIM Bangalore, offering equity-free incubation for high-impact startups.',
-                        totalStartups: 1540,
-                        fundingCap: '$500K'
-                    },
-                    {
-                        id: 'inc2',
-                        name: 'Antler India',
-                        location: 'New Delhi / Hybrid',
-                        supportedStages: ['Idea', 'MVP'],
-                        focus: 'SaaS',
-                        timeline: 'Cycles every 3 months',
-                        metrics: 'Global Network • High-Value Mentorship',
-                        initials: 'AN',
-                        verified: true,
-                        shortBio: 'The day-zero investor that helps founders find co-founders and build global businesses from scratch.',
-                        totalStartups: 280,
-                        fundingCap: '$250K+'
-                    },
-                    {
-                        id: 'inc3',
-                        name: 'Venture Catalysts',
-                        location: 'Mumbai',
-                        supportedStages: ['Revenue'],
-                        focus: 'Deep Tech',
-                        timeline: 'Rolling Admissions',
-                        metrics: 'Angel Network • $25M+ Exit Value',
-                        initials: 'VC',
-                        verified: false,
-                        shortBio: 'Indias first and largest integrated incubator and angel network.',
-                        totalStartups: 850,
-                        fundingCap: '$1M'
-                    },
-                    {
-                        id: 'inc4',
-                        name: 'CIIE.CO',
-                        location: 'Ahmedabad',
-                        supportedStages: ['Idea', 'MVP'],
-                        focus: 'Sustainability',
-                        timeline: 'Summer Cohort 2026',
-                        metrics: '600+ Startups Mentored • IIM Ahmedabad Backed',
-                        initials: 'CI',
-                        verified: true,
-                        shortBio: 'Supporting fearless entrepreneurs since 2002. Built at IIM Ahmedabad.',
-                        totalStartups: 620,
-                        fundingCap: '$100K'
-                    },
-                    {
-                        id: 'inc5',
-                        name: 'T-Hub',
-                        location: 'Hyderabad',
-                        supportedStages: ['MVP', 'Revenue'],
-                        focus: 'AI',
-                        timeline: 'Lab32 Program 2026',
-                        metrics: 'Largest Incubation Center in India',
-                        initials: 'TH',
-                        verified: true,
-                        shortBio: 'Creating the world largest innovation ecosystem for tech startups.',
-                        totalStartups: 2100,
-                        fundingCap: '$50K - $2M'
-                    }
-                ];
-                localStorage.setItem('vanguardIncubators', JSON.stringify(demoIncubators));
-                setIncubators(demoIncubators);
-            } else {
-                setIncubators(JSON.parse(storedIncubators));
+                // Fetch applications for this founder
+                const allApps = JSON.parse(localStorage.getItem('vanguard_applications') || '[]');
+                setApplications(allApps.filter(a => a.founderId === user.id));
+            } catch (err) {
+                console.error("Error fetching incubators:", err);
+            } finally {
+                setLoading(false);
             }
-
-            if (storedApplications) {
-                setApplications(JSON.parse(storedApplications));
-            } else {
-                localStorage.setItem('vanguardIncubatorApplications', JSON.stringify([]));
-            }
-            setLoading(false);
         };
 
-        initializeData();
-    }, []);
+        refreshData();
+    }, [user.id]);
 
     // --- Logic: Premium Matching & Filtering ---
     const filteredIncubators = useMemo(() => {
         let result = [...incubators];
 
-        // 1. Search Query
         if (searchQuery) {
             result = result.filter(inc =>
                 inc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -160,25 +101,21 @@ const Incubators = () => {
             );
         }
 
-        // 2. Sector Filter
         if (filters.sector !== 'All') {
             result = result.filter(inc => inc.focus === filters.sector);
         }
 
-        // 3. Stage Filter
         if (filters.stages.length > 0) {
             result = result.filter(inc =>
                 inc.supportedStages.some(stage => filters.stages.includes(stage))
             );
         }
 
-        // 4. Verified institutions
         if (filters.verifiedOnly) {
             result = result.filter(inc => inc.verified);
         }
 
-        // 5. Premium Matching (Ranking based on Startup Context)
-        const founderSector = startup?.expertiseSector || 'Fintech';
+        const founderSector = startup?.sector || 'Fintech';
         const founderStage = startup?.stage || 'Idea';
 
         result = result.map(inc => {
@@ -188,7 +125,6 @@ const Incubators = () => {
             return { ...inc, matchScore, isBestMatch: matchScore >= 2 };
         });
 
-        // Sort by match score then verified status
         result.sort((a, b) => {
             if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
             return (b.verified ? 1 : 0) - (a.verified ? 1 : 0);
@@ -219,30 +155,19 @@ const Incubators = () => {
     const handleApplicationSubmit = (e) => {
         e.preventDefault();
 
-        const newApplication = {
-            id: `app_${Date.now()}`,
-            incubatorId: applyingIncubator.id,
-            founderId: user?.email,
-            startupName: startup?.startupName || 'Default Startup',
-            problemSummary: appForm.problem,
-            traction: appForm.traction,
-            reason: appForm.reason,
-            funding: appForm.funding,
-            status: 'pending',
-            timestamp: new Date().toISOString()
-        };
+        const message = `Problem: ${appForm.problem}\n\nTraction: ${appForm.traction}\n\nReason: ${appForm.reason}\n\nFunding: ${appForm.funding}`;
+        applyToIncubator(applyingIncubator.id, message);
 
-        const updatedApps = [...applications, newApplication];
-        setApplications(updatedApps);
-        localStorage.setItem('vanguardIncubatorApplications', JSON.stringify(updatedApps));
+        // Re-fetch applications
+        const allApps = JSON.parse(localStorage.getItem('vanguard_applications') || '[]');
+        setApplications(allApps.filter(a => a.founderId === user.id));
 
-        // Reset and close
         setAppForm({ problem: '', traction: '', reason: '', funding: '' });
         setApplyingIncubator(null);
     };
 
     const hasApplied = (incubatorId) => {
-        return applications.some(app => app.incubatorId === incubatorId && app.founderId === user?.email);
+        return applications.some(app => app.incubatorId === incubatorId);
     };
 
     const isAccessRestricted = !['founder', 'co-founder'].includes(user?.role);

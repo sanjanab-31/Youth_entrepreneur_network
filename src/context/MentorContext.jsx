@@ -1,197 +1,146 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 const MentorContext = createContext();
 
 export const useMentor = () => useContext(MentorContext);
 
-const STORAGE_KEYS = {
-    PROFILE: 'vanguardMentorProfile',
-    REQUESTS: 'vanguardMentorRequests',
-    MENTEES: 'vanguardMentorMentees',
-    SESSIONS: 'vanguardMentorSessions',
-    ACTIVITY: 'vanguardMentorActivityFeed',
-    STATS: 'vanguardMentorStats'
+const KEYS = {
+    USERS: 'vanguard_users',
+    STARTUPS: 'vanguard_startups',
+    MENTOR_REQUESTS: 'vanguard_mentorRequests',
+    SESSIONS: 'vanguard_sessions'
 };
 
 export const MentorProvider = ({ children }) => {
+    const { user } = useAuth();
     const [profile, setProfile] = useState(null);
     const [requests, setRequests] = useState([]);
-    const [mentees, setMentees] = useState([]);
     const [sessions, setSessions] = useState([]);
-    const [activity, setActivity] = useState([]);
+    const [mentees, setMentees] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const defaultProfile = {
-        name: "Arjun",
-        expertise: "FinTech | 12+ Years Experience",
-        sector: "FinTech",
-        badge: "Mentor Badge",
-        availability: {
-            status: "Active",
-            days: ["Mon", "Wed", "Fri"],
-            sessionType: "1:1"
+    const refreshData = () => {
+        if (!user || user.role !== 'mentor') {
+            setLoading(false);
+            return;
         }
-    };
 
-    const defaultRequests = [
-        { id: 1, founderName: "David Chen", startupName: "PayFlow", stage: "MVP", sector: "FinTech", executionScore: 75, traction: "500+ Beta Users", message: "Looking for advice on scaling our payment infrastructure.", status: "pending", timestamp: new Date(Date.now() - 3600000 * 2).toISOString() },
-        { id: 2, founderName: "Sarah Smith", startupName: "GreenTech", stage: "Revenue", sector: "CleanTech", executionScore: 82, traction: "$10k MRR", message: "Seeking guidance on seed round strategy.", status: "pending", timestamp: new Date(Date.now() - 3600000 * 5).toISOString() },
-        { id: 3, founderName: "Michael Wang", startupName: "CloudScale", stage: "Revenue", sector: "SaaS", executionScore: 90, traction: "$50k MRR", message: "Help with B2B sales motion.", status: "pending", timestamp: new Date(Date.now() - 3600000 * 24).toISOString() }
-    ];
+        // Build / load mentor profile from persisted key + auth user
+        const profileKey = `vanguard_mentorProfile_${user.id}`;
+        const savedProfile = localStorage.getItem(profileKey);
+        const baseProfile = savedProfile ? JSON.parse(savedProfile) : {};
 
-    const defaultMentees = [
-        { id: 101, founderName: "Sarah Jenkins", startupName: "EcoFlow", stage: "Seed", sector: "Energy", traction: "$20k MRR", executionScore: 85 },
-        { id: 102, founderName: "Alex Rivera", startupName: "Nexus AI", stage: "MVP", sector: "AI/ML", traction: "Partnership with 3 labs", executionScore: 70 }
-    ];
-
-    const defaultSessions = [
-        { id: 1, founderName: "Sarah Jenkins", startupName: "EcoFlow", stage: "Seed", date: "2026-10-24", time: "10:30 AM", status: "upcoming", notes: "" },
-        { id: 2, founderName: "Alex Rivera", startupName: "Nexus AI", stage: "MVP", date: "2026-10-25", time: "02:00 PM", status: "upcoming", notes: "" },
-        { id: 3, founderName: "Michael Chen", startupName: "PayBolt", stage: "Revenue", date: "2026-10-25", time: "04:30 PM", status: "upcoming", notes: "" }
-    ];
-
-    const defaultActivity = [
-        { id: 1, type: "request", message: "Received a new mentorship request from PayFlow", timestamp: new Date(Date.now() - 3600000 * 2).toISOString() },
-        { id: 2, type: "session", message: "Completed session with BioSense", timestamp: new Date(Date.now() - 3600000 * 24).toISOString() }
-    ];
-
-    useEffect(() => {
-        const loadData = (key, defaultValue) => {
-            const stored = localStorage.getItem(key);
-            if (stored) {
-                try {
-                    return JSON.parse(stored);
-                } catch (e) {
-                    console.error(`Failed to parse ${key}`, e);
-                    return defaultValue;
-                }
+        const mergedProfile = {
+            expertise: 'General Mentorship',
+            sector: 'General',
+            badge: 'Verified Mentor',
+            bio: '',
+            ...baseProfile,
+            // Always keep name/email in sync with auth record
+            name: baseProfile.name || user.name || 'Mentor',
+            email: user.email || '',
+            availability: {
+                status: 'Active',
+                days: ['Mon', 'Wed', 'Fri'],
+                sessionType: '1:1',
+                ...(baseProfile.availability || {})
             }
-            return defaultValue;
         };
 
-        setProfile(loadData(STORAGE_KEYS.PROFILE, defaultProfile));
-        setRequests(loadData(STORAGE_KEYS.REQUESTS, defaultRequests));
-        setMentees(loadData(STORAGE_KEYS.MENTEES, defaultMentees));
-        setSessions(loadData(STORAGE_KEYS.SESSIONS, defaultSessions));
-        setActivity(loadData(STORAGE_KEYS.ACTIVITY, defaultActivity));
+        // Persist defaults on first load
+        if (!savedProfile) {
+            localStorage.setItem(profileKey, JSON.stringify(mergedProfile));
+        }
+        setProfile(mergedProfile);
+
+        // Load requests, sessions, mentees for this mentor
+        const allRequests = JSON.parse(localStorage.getItem(KEYS.MENTOR_REQUESTS) || '[]');
+        const allSessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
+        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
+
+        setRequests(allRequests.filter(r => r.mentorId === user.id));
+        setSessions(allSessions.filter(s => s.mentorId === user.id));
+        setMentees(allStartups.filter(s => s.mentorAssigned === user.id));
         setLoading(false);
-    }, []);
+    };
 
-    // Persist to localStorage whenever state changes
     useEffect(() => {
-        if (!loading) {
-            localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
-            localStorage.setItem(STORAGE_KEYS.REQUESTS, JSON.stringify(requests));
-            localStorage.setItem(STORAGE_KEYS.MENTEES, JSON.stringify(mentees));
-            localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions));
-            localStorage.setItem(STORAGE_KEYS.ACTIVITY, JSON.stringify(activity));
-        }
-    }, [profile, requests, mentees, sessions, activity, loading]);
+        refreshData();
+        window.addEventListener('storage', refreshData);
+        return () => window.removeEventListener('storage', refreshData);
+    }, [user]);
 
-    const addActivity = (message, type = "info") => {
-        const newLog = {
-            id: Date.now(),
-            type,
-            message,
-            timestamp: new Date().toISOString()
-        };
-        setActivity(prev => [newLog, ...prev]);
-    };
+    // ── Mutations ──────────────────────────────────────────────
 
-    const acceptRequest = (requestId) => {
-        const request = requests.find(r => r.id === requestId);
-        if (request && request.status === 'pending') {
-            // Update request status to 'accepted' instead of removing
-            setRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'accepted' } : r));
-
-            // Add to mentees if not already present
-            setMentees(prev => {
-                if (prev.find(m => m.id === requestId)) return prev;
-                const newMentee = {
-                    ...request,
-                    joinedAt: new Date().toISOString()
-                };
-                return [...prev, newMentee];
-            });
-
-            // Add activity
-            addActivity(`Accepted mentorship request from ${request.founderName} (${request.startupName})`, "success");
-
-            // Auto-create initial session
-            const initialSession = {
-                id: Date.now() + 1,
-                founderName: request.founderName,
-                startupName: request.startupName,
-                stage: request.stage,
-                date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], // 3 days from now
-                time: "11:00 AM",
-                status: "upcoming",
-                notes: ""
-            };
-            setSessions(prev => [initialSession, ...prev]);
-        }
-    };
-
-    const declineRequest = (requestId) => {
-        const request = requests.find(r => r.id === requestId);
-        if (request && request.status === 'pending') {
-            setRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'declined' } : r));
-            addActivity(`Declined mentorship request from ${request.founderName}`, "warning");
-        }
+    const updateProfile = (updates) => {
+        if (!user) return;
+        const profileKey = `vanguard_mentorProfile_${user.id}`;
+        const current = JSON.parse(localStorage.getItem(profileKey) || '{}');
+        const updated = { ...current, ...updates };
+        localStorage.setItem(profileKey, JSON.stringify(updated));
+        setProfile(prev => ({ ...prev, ...updates }));
     };
 
     const updateSession = (sessionId, updates) => {
-        setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, ...updates } : s));
-
-        if (updates.status === 'completed') {
-            const session = sessions.find(s => s.id === sessionId);
-            addActivity(`Completed session with ${session.founderName}`, "success");
-        } else if (updates.status === 'cancelled') {
-            const session = sessions.find(s => s.id === sessionId);
-            addActivity(`Cancelled session with ${session.founderName}`, "error");
-        }
+        const allSessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
+        const updatedSessions = allSessions.map(s =>
+            s.id === sessionId ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s
+        );
+        localStorage.setItem(KEYS.SESSIONS, JSON.stringify(updatedSessions));
+        refreshData();
     };
 
-    const updateProfile = (newData) => {
-        setProfile(prev => ({ ...prev, ...newData }));
-        addActivity(`Updated availability and profile settings`, "info");
+    const acceptRequest = (requestId) => {
+        const allRequests = JSON.parse(localStorage.getItem(KEYS.MENTOR_REQUESTS) || '[]');
+        const request = allRequests.find(r => r.id === requestId);
+        if (!request) return;
+
+        const updatedRequests = allRequests.map(r =>
+            r.id === requestId ? { ...r, status: 'accepted', updatedAt: new Date().toISOString() } : r
+        );
+        localStorage.setItem(KEYS.MENTOR_REQUESTS, JSON.stringify(updatedRequests));
+
+        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
+        const updatedStartups = allStartups.map(s =>
+            s.startupId === request.startupId
+                ? { ...s, mentorAssigned: user.id, updatedAt: new Date().toISOString() }
+                : s
+        );
+        localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedStartups));
+        refreshData();
     };
 
-    // Stats Calculation
-    const stats = {
-        pendingRequests: requests.filter(r => r.status === "pending").length,
-        activeMentees: mentees.length,
-        sessionsThisWeek: sessions.filter(s => {
-            if (s.status !== 'upcoming') return false;
-            const sessionDate = new Date(s.date);
-            const today = new Date();
-            const nextWeek = new Date();
-            nextWeek.setDate(today.getDate() + 7);
-            return sessionDate >= today && sessionDate <= nextWeek;
-        }).length,
-        responseRate: (() => {
-            const total = requests.length;
-            if (total === 0) return 100;
-            const responded = requests.filter(r => r.status !== 'pending').length;
-            // The prompt says Response Rate = (acceptedRequests / totalRequests) * 100
-            // But usually response rate is (responded / total). 
-            // Let's stick to the prompt's specific formula if it meant that, 
-            // but "accepted" only would be "Success/Acceptance Rate".
-            // Prompt: "Response Rate = (acceptedRequests / totalRequests) × 100"
-            const accepted = requests.filter(r => r.status === 'accepted').length; // Wait, I remove them from requests when accepted in my logic?
-            // If I remove them, I need to keep track of total requests ever received.
-            // Let's change the logic to keep requests but update status.
-            return Math.round((accepted / total) * 100);
-        })()
+    const declineRequest = (requestId) => {
+        const allRequests = JSON.parse(localStorage.getItem(KEYS.MENTOR_REQUESTS) || '[]');
+        const updatedRequests = allRequests.map(r =>
+            r.id === requestId ? { ...r, status: 'declined', updatedAt: new Date().toISOString() } : r
+        );
+        localStorage.setItem(KEYS.MENTOR_REQUESTS, JSON.stringify(updatedRequests));
+        refreshData();
     };
 
-    // Refined Stats Logic to match prompt exactly
+    const scheduleSession = (startupId, startupName, date, time) => {
+        const allSessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
+        const newSession = {
+            id: Date.now().toString(),
+            mentorId: user.id,
+            mentorName: user.name,
+            startupId,
+            startupName,
+            date,
+            time,
+            status: 'upcoming',
+            createdAt: new Date().toISOString()
+        };
+        localStorage.setItem(KEYS.SESSIONS, JSON.stringify([...allSessions, newSession]));
+        refreshData();
+    };
+
+    // ── Derived data ───────────────────────────────────────────
+
     const calculateStats = () => {
-        const pending = requests.filter(r => r.status === 'pending').length;
-        const activeMenteesCount = mentees.length;
-
-        // Sessions this week
         const now = new Date();
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
@@ -203,26 +152,36 @@ export const MentorProvider = ({ children }) => {
             return d >= startOfWeek && d <= endOfWeek;
         }).length;
 
-        // Response Rate
-        // If I move accepted requests to mentees, I need a tally or keep them in requests.
-        // Let's keep them in requests with 'accepted' status for calculation.
-        // I'll adjust acceptRequest to not filter out but change status.
-
-        // Wait, if I change status to 'accepted', I should probably also have them in mentees.
-        // Let's recalculate based on state.
-
-        // Let's rethink: Total Requests = pending + accepted + declined.
         const accepted = requests.filter(r => r.status === 'accepted').length;
-        const declined = requests.filter(r => r.status === 'declined').length;
-        const total = pending + accepted + declined;
-        const rate = total > 0 ? Math.round((accepted / total) * 100) : 100;
+        const total = requests.length;
 
         return {
-            pendingRequests: pending,
-            activeMentees: activeMenteesCount,
+            pendingRequests: requests.filter(r => r.status === 'pending').length,
+            activeMentees: mentees.length,
             sessionsThisWeek: sessionsWeek,
-            responseRate: rate
+            responseRate: total > 0 ? Math.round((accepted / total) * 100) : 100
         };
+    };
+
+    const buildActivity = () => {
+        const items = [];
+
+        requests.forEach(r => {
+            const base = { founderName: r.founderName || r.startupName };
+            if (r.status === 'pending') {
+                items.push({ id: `req-${r.id}`, type: 'request', message: `New mentorship request from ${base.founderName}`, timestamp: r.createdAt });
+            } else if (r.status === 'accepted') {
+                items.push({ id: `acc-${r.id}`, type: 'success', message: `Accepted request from ${base.founderName}`, timestamp: r.updatedAt || r.createdAt });
+            } else if (r.status === 'declined') {
+                items.push({ id: `dec-${r.id}`, type: 'error', message: `Declined request from ${base.founderName}`, timestamp: r.updatedAt || r.createdAt });
+            }
+        });
+
+        sessions.forEach(s => {
+            items.push({ id: `ses-${s.id}`, type: 'session', message: `Session scheduled with ${s.startupName} on ${s.date} at ${s.time}`, timestamp: s.createdAt });
+        });
+
+        return items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     };
 
     const value = {
@@ -230,13 +189,13 @@ export const MentorProvider = ({ children }) => {
         requests,
         mentees,
         sessions,
-        activity,
+        activity: buildActivity(),
         stats: calculateStats(),
+        updateProfile,
+        updateSession,
         acceptRequest,
         declineRequest,
-        updateSession,
-        updateProfile,
-        addActivity,
+        scheduleSession,
         loading
     };
 
