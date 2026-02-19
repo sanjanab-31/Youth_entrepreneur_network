@@ -7,13 +7,14 @@ import {
     onAuthStateChanged
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
+import { getSystem, saveSystem } from '../utils/system';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-// localStorage keys (for role + profile metadata only — NOT for identity/passwords)
-const USER_KEY = 'vanguard_users';   // { [uid]: { uid, name, email, role, ...profileData, createdAt } }
+// legacy keys for reference in migration logic inside system.js
+const USER_KEY = 'vanguard_users';
 const STARTUPS_KEY = 'vanguard_startups';
 const MENTOR_REQUESTS_KEY = 'vanguard_mentorRequests';
 const SESSIONS_KEY = 'vanguard_sessions';
@@ -21,7 +22,6 @@ const APPLICATIONS_KEY = 'vanguard_applications';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'admin@vanguard.com';
 
-// Role → dashboard path mapping
 const ROLE_PATHS = {
     founder: '/founder',
     'co-founder': '/cofounder',
@@ -31,8 +31,9 @@ const ROLE_PATHS = {
     admin: '/admin'
 };
 
-// Helper: get user from localStorage by uid
+// Helper: get user from system by uid
 const getUserProfile = (uid) => {
+    // Priority 1: Direct Key (Profile-specific single source)
     const profileKey = `profile_${uid}`;
     let profile = localStorage.getItem(profileKey);
 
@@ -44,70 +45,49 @@ const getUserProfile = (uid) => {
         }
     }
 
-    // Proactive Migration: check aggregate USER_KEY and save to new key if found
-    let users = {};
-    try {
-        users = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
-        if (Array.isArray(users)) {
-            users = users.reduce((acc, u) => {
-                if (u.uid || u.id) acc[u.uid || u.id] = u;
-                return acc;
-            }, {});
-        }
-    } catch (e) { users = {}; }
-
-    if (users[uid]) {
-        console.log('Migrating profile from registry to direct key:', uid);
-        localStorage.setItem(profileKey, JSON.stringify(users[uid]));
-        return users[uid];
+    // Priority 2: System Object
+    const system = getSystem();
+    if (system.users[uid]) {
+        // Standardize: ensure uid profile exists
+        localStorage.setItem(profileKey, JSON.stringify(system.users[uid]));
+        return system.users[uid];
     }
 
-    // Migration from legacy vanguard_profiles
-    const oldProfiles = JSON.parse(localStorage.getItem('vanguard_profiles') || '{}');
-    if (oldProfiles[uid]) {
-        console.log('Migrating legacy profile for:', uid);
-        localStorage.setItem(profileKey, JSON.stringify(oldProfiles[uid]));
-        return oldProfiles[uid];
+    // Migration from legacy registry if still exists
+    let legacyRaw = localStorage.getItem(USER_KEY);
+    if (legacyRaw) {
+        try {
+            const users = JSON.parse(legacyRaw);
+            const user = Array.isArray(users) ? users.find(u => u.uid === uid || u.id === uid) : users[uid];
+            if (user) {
+                localStorage.setItem(profileKey, JSON.stringify(user));
+                return user;
+            }
+        } catch (e) { }
     }
 
     return null;
 };
 
-// Helper: save user to localStorage by uid
+// Helper: save user to system
 const saveUserProfile = (uid, data) => {
-    const profileKey = `profile_${uid}`;
+    // 1. Save to direct key
+    localStorage.setItem(`profile_${uid}`, JSON.stringify(data));
 
-    // 1. Save to direct key (Single Source of Truth)
-    localStorage.setItem(profileKey, JSON.stringify(data));
-
-    // 2. Sync to registry for cross-profile lookups (Mentors/Feed)
-    let users = {};
-    try {
-        users = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
-        if (Array.isArray(users)) {
-            users = users.reduce((acc, u) => {
-                if (u.uid || u.id) acc[u.uid || u.id] = u;
-                return acc;
-            }, {});
-        }
-    } catch (e) { users = {}; }
-
-    users[uid] = data;
-    localStorage.setItem(USER_KEY, JSON.stringify(users));
+    // 2. Save to centralized system
+    const system = getSystem();
+    system.users[uid] = data;
+    saveSystem(system);
 };
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);      // { uid, name, email, role, ...profileData }
+    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    // Initialize global storage if missing
+    // Initialize/Migrate on mount
     useEffect(() => {
-        [STARTUPS_KEY, MENTOR_REQUESTS_KEY, SESSIONS_KEY, APPLICATIONS_KEY].forEach(key => {
-            if (!localStorage.getItem(key)) {
-                localStorage.setItem(key, JSON.stringify([]));
-            }
-        });
+        getSystem(); // Triggers migration if needed
     }, []);
 
     // ─── AUTH STATE LISTENER ──────────────────────────────────────────────────
@@ -140,7 +120,6 @@ export const AuthProvider = ({ children }) => {
                     // We only sign out if we're not currently in the middle of a signup/login flow
                     const isNewUser = sessionStorage.getItem('vanguard_processing_auth') === 'true';
                     if (!isNewUser) {
-                        console.warn('Firebase user found but no local profile. Purging session.');
                         signOut(auth);
                         setUser(null);
                         localStorage.removeItem('vanguard_session_currentUser');
@@ -210,11 +189,11 @@ export const AuthProvider = ({ children }) => {
             };
 
             saveUserProfile(firebaseUser.uid, newUser);
-            console.log("Profile created for UID:", firebaseUser.uid, "Key: profile_" + firebaseUser.uid);
+
+            const system = getSystem();
 
             // Relational: Initialize Startup record if founder
             if (['founder', 'co-founder', 'cofounder'].includes(normalizedRole)) {
-                const allStartups = JSON.parse(localStorage.getItem(STARTUPS_KEY) || '[]');
                 const capitalizeStage = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Idea';
 
                 const newStartup = {
@@ -230,7 +209,7 @@ export const AuthProvider = ({ children }) => {
                     milestones: [],
                     focusAreas: [],
                     problemStatement: profileData.problemStatement || '',
-                    targetAudience: '',
+                    targetAudience: [],
                     skillGap: profileData.lookingFor || '',
                     primarySkills: profileData.primarySkills || '',
                     location: profileData.location || '',
@@ -251,13 +230,11 @@ export const AuthProvider = ({ children }) => {
                     updatedAt: new Date().toISOString(),
                     status: 'active'
                 };
-                localStorage.setItem(STARTUPS_KEY, JSON.stringify([...allStartups, newStartup]));
+                system.startups.push(newStartup);
             }
 
             // Relational: Initialize Incubator record if incubator
             if (normalizedRole === 'incubator') {
-                const INCUBATORS_KEY = 'vanguard_incubators';
-                const allIncubators = JSON.parse(localStorage.getItem(INCUBATORS_KEY) || '[]');
                 const newIncubator = {
                     id: firebaseUser.uid,
                     name: profileData.incubatorName || name,
@@ -271,12 +248,15 @@ export const AuthProvider = ({ children }) => {
                     batchSize: parseInt(profileData.cohortSize) || 20,
                     programHighlights: [],
                     successStats: { graduated: 0, raised: '$0', active: 0 },
+                    applicationsReceived: [],
+                    activeCohorts: [],
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
-                localStorage.setItem(INCUBATORS_KEY, JSON.stringify([...allIncubators, newIncubator]));
+                system.incubators.push(newIncubator);
             }
 
+            saveSystem(system);
             setUser(newUser);
             navigate(ROLE_PATHS[normalizedRole] || '/founder');
             return newUser;
@@ -292,14 +272,10 @@ export const AuthProvider = ({ children }) => {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const firebaseUser = userCredential.user;
 
-            console.log("Firebase Auth success. UID:", firebaseUser.uid);
-
             let profile = getUserProfile(firebaseUser.uid);
 
             // SPECIAL: Auto-Healing if profile is missing
             if (!profile) {
-                console.warn('Profile missing for UID:', firebaseUser.uid, '. Initiating auto-healing for role:', selectedRole);
-
                 // Create a minimal profile to allow access
                 profile = {
                     uid: firebaseUser.uid,
@@ -319,19 +295,17 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 saveUserProfile(firebaseUser.uid, profile);
-                console.log("Auto-healed profile created at Key: profile_" + firebaseUser.uid);
             }
 
             // Role match validation log
+            // Role match validation
             if (selectedRole && profile.role !== selectedRole.toLowerCase()) {
-                console.warn(`Role mismatch detected! Login selected ${selectedRole}, but profile is ${profile.role}`);
             }
 
             setUser(profile);
             localStorage.setItem('vanguard_session_currentUser', JSON.stringify(profile));
 
             const targetPath = ROLE_PATHS[profile.role] || '/founder';
-            console.log("Redirecting to:", targetPath);
             navigate(targetPath);
 
             return profile;

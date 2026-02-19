@@ -1,16 +1,10 @@
-
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useAuth } from './AuthContext';
+import { getSystem, saveSystem } from '../utils/system';
 
 const IncubatorContext = createContext();
 
 export const useIncubator = () => useContext(IncubatorContext);
-
-const KEYS = {
-    STARTUPS: 'vanguard_startups',
-    APPLICATIONS: 'vanguard_applications',
-    SETTINGS: 'vanguard_incubatorSettings'
-};
 
 const DEFAULT_SETTINGS = {
     batchLimits: {
@@ -34,7 +28,6 @@ export const IncubatorProvider = ({ children }) => {
     const [mentors, setMentors] = useState([]);
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [loading, setLoading] = useState(true);
-
     const [profile, setProfile] = useState(null);
 
     const refreshData = () => {
@@ -43,162 +36,119 @@ export const IncubatorProvider = ({ children }) => {
             return;
         }
 
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const allApplications = JSON.parse(localStorage.getItem(KEYS.APPLICATIONS) || '[]');
+        const system = getSystem();
 
-        const allUsersRaw = localStorage.getItem('vanguard_users');
-        let allUsers = {};
-        try {
-            allUsers = JSON.parse(allUsersRaw || '{}');
-            if (Array.isArray(allUsers)) {
-                allUsers = allUsers.reduce((acc, u) => {
-                    if (u.uid || u.id) acc[u.uid || u.id] = u;
-                    return acc;
-                }, {});
-            }
-        } catch (e) { allUsers = {}; }
-
-        const allCohorts = JSON.parse(localStorage.getItem('vanguard_cohorts') || '[]');
-        const savedSettings = JSON.parse(localStorage.getItem(`${KEYS.SETTINGS}_${user.uid}`) || 'null');
-
-        // UNIFIED SCHEMA: Use user object from AuthContext (Master Key: profile_${uid})
-        // Combine core user info with portal-specific metadata
-        const incubatorProfile = {
-            ...user,
-            ...(user.portalData || {}),
-            id: user.uid // Ensure 'id' alias for legacy prop consistency
-        };
-        setProfile(incubatorProfile);
-
-        // Pipeline shows startups assigned to this incubator
-        const myPipeline = allStartups.filter(s => s.incubatorAssigned === user.uid);
-        setPipeline(myPipeline);
-
-        // Filter applications for this incubator
-        const myApplications = allApplications.filter(a => a.incubatorId === user.uid);
+        // 1. Filter applications for this incubator
+        const myApplications = system.applications.filter(a => a.incubatorId === user.uid);
         setApplications(myApplications);
 
-        // Fetch active mentors
-        const mentorList = Object.values(allUsers).filter(u => u.role === 'mentor');
-        setMentors(mentorList);
+        // 2. Filter startups accepted into this incubator
+        const myPipeline = system.startups.filter(s => s.incubatorAssigned === user.uid);
+        setPipeline(myPipeline);
 
-        // Filter cohorts managed by this incubator
-        const myCohorts = allCohorts.filter(c => c.incubatorId === user.uid);
+        // 3. Filter cohorts managed by this incubator
+        const myCohorts = system.cohorts.filter(c => c.incubatorId === user.uid);
         setCohorts(myCohorts);
 
-        // Load settings with fallback
-        setSettings(savedSettings || DEFAULT_SETTINGS);
+        // 4. Mentors filter (available globally)
+        const mentorList = Object.values(system.users).filter(u => u.role === 'mentor');
+        setMentors(mentorList);
+
+        // 5. Settings & Profile
+        setProfile({ ...user, ...(user.portalData || {}), id: user.uid });
+        const savedSettings = localStorage.getItem(`vanguard_incubatorSettings_${user.uid}`);
+        setSettings(savedSettings ? JSON.parse(savedSettings) : DEFAULT_SETTINGS);
 
         setLoading(false);
     };
 
-    const updateSettings = (newSettings) => {
-        setSettings(newSettings);
-        localStorage.setItem(`${KEYS.SETTINGS}_${user.uid}`, JSON.stringify(newSettings));
-    };
-
     useEffect(() => {
         refreshData();
-        window.addEventListener('storage', refreshData);
-        return () => window.removeEventListener('storage', refreshData);
+        const handleStorage = () => refreshData();
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
     }, [user]);
 
+    const updateSystem = (mutationFn) => {
+        const system = getSystem();
+        mutationFn(system);
+        saveSystem(system);
+        refreshData();
+    };
+
+    // --- APPLICATION MANAGEMENT ---
     const acceptApplication = (appId, cohortId) => {
-        const allApplications = JSON.parse(localStorage.getItem(KEYS.APPLICATIONS) || '[]');
-        const app = allApplications.find(a => a.id === appId);
+        updateSystem(system => {
+            const app = system.applications.find(a => a.id === appId);
+            if (!app) return;
 
-        if (app) {
-            // 1. Update application status
-            const updatedApps = allApplications.map(a =>
-                a.id === appId ? { ...a, status: 'accepted', updatedAt: new Date().toISOString() } : a
-            );
-            localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updatedApps));
+            // 1. Update Application status
+            app.status = 'accepted';
+            app.updatedAt = new Date().toISOString();
 
-            // 2. Relational Link: Update startup to note it's now IN this incubator and cohort
-            const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-            const updatedStartups = allStartups.map(s =>
-                s.startupId === app.startupId ? {
-                    ...s,
-                    incubatorAssigned: user.uid,
-                    cohortId: cohortId || null,
-                    applicationStatus: 'accepted',
-                    updatedAt: new Date().toISOString()
-                } : s
-            );
-            localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedStartups));
+            // 2. Update Startup relational links
+            system.startups = system.startups.map(s => {
+                if (s.startupId === app.startupId) {
+                    return {
+                        ...s,
+                        incubatorAssigned: user.uid,
+                        cohortId: cohortId || null,
+                        applicationStatus: 'accepted',
+                        updatedAt: new Date().toISOString()
+                    };
+                }
+                return s;
+            });
 
-            refreshData();
-        }
+            // 3. Add Startup to Incubator's active list
+            system.incubators = system.incubators.map(inc => {
+                if (inc.id === user.uid) {
+                    return {
+                        ...inc,
+                        activeCohorts: Array.from(new Set([...(inc.activeCohorts || []), app.founderId]))
+                    };
+                }
+                return inc;
+            });
+        });
     };
 
     const rejectApplication = (appId) => {
-        const allApplications = JSON.parse(localStorage.getItem(KEYS.APPLICATIONS) || '[]');
-        const updatedApps = allApplications.map(a =>
-            a.id === appId ? { ...a, status: 'rejected', updatedAt: new Date().toISOString() } : a
-        );
-        localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updatedApps));
-        refreshData();
+        updateSystem(system => {
+            const app = system.applications.find(a => a.id === appId);
+            if (!app) return;
+
+            app.status = 'rejected';
+            app.updatedAt = new Date().toISOString();
+
+            system.startups = system.startups.map(s =>
+                s.startupId === app.startupId ? { ...s, applicationStatus: 'rejected', updatedAt: new Date().toISOString() } : s
+            );
+        });
     };
 
+    // --- MENTOR MANAGEMENT ---
     const assignMentorToStartup = (mentorId, startupId) => {
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const updatedStartups = allStartups.map(s =>
-            s.startupId === startupId ? { ...s, mentorAssigned: mentorId, updatedAt: new Date().toISOString() } : s
-        );
-        localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedStartups));
-        refreshData();
+        updateSystem(system => {
+            system.startups = system.startups.map(s =>
+                s.startupId === startupId ? { ...s, mentorAssigned: mentorId, updatedAt: new Date().toISOString() } : s
+            );
+        });
     };
 
     const removeMentorAssignment = (mentorId, startupId) => {
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const updatedStartups = allStartups.map(s =>
-            s.startupId === startupId ? { ...s, mentorAssigned: null, updatedAt: new Date().toISOString() } : s
-        );
-        localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedStartups));
-        refreshData();
+        updateSystem(system => {
+            system.startups = system.startups.map(s =>
+                s.startupId === startupId ? { ...s, mentorAssigned: null, updatedAt: new Date().toISOString() } : s
+            );
+        });
     };
 
-    const { updateProfile: authUpdate } = useAuth();
-
-    const updateProfile = (updatedData) => {
-        // Sync with unified profile storage
-        const updates = {
-            ...updatedData,
-            portalData: {
-                ...(user.portalData || {}),
-                ...updatedData
-            }
-        };
-        authUpdate(updates);
-
-        // Registry Sync: Keep vanguard_incubators up to date for public discovery
-        const allIncubators = JSON.parse(localStorage.getItem('vanguard_incubators') || '[]');
-        const index = allIncubators.findIndex(inc => inc.id === user.uid);
-
-        const firmProfile = {
-            ...(allIncubators[index] || {}),
-            ...updatedData,
-            id: user.uid,
-            updatedAt: new Date().toISOString()
-        };
-
-        if (index > -1) {
-            allIncubators[index] = firmProfile;
-        } else {
-            allIncubators.push(firmProfile);
-        }
-        localStorage.setItem('vanguard_incubators', JSON.stringify(allIncubators));
-
-        refreshData();
-    };
-
+    // --- ONBOARDING ---
     const onboardStartup = (startupData) => {
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-
-        // Generate a new startup record
         const newStartup = {
             startupId: `ST-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-            founderId: `GUEST-${Math.random().toString(36).substr(2, 6).toUpperCase()}`, // Mock ID for manually onboarded
+            founderId: `GUEST-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
             startupName: startupData.name || 'New Startup',
             sector: startupData.sector || 'General',
             stage: startupData.stage || 'Idea',
@@ -206,34 +156,18 @@ export const IncubatorProvider = ({ children }) => {
             executionScore: 0,
             incubatorAssigned: user.uid,
             status: 'active',
+            activity: [{ id: `act_${Date.now()}`, message: 'Onboarded by incubator.', type: 'info', timestamp: new Date().toISOString() }],
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            activity: [{
-                id: `act_${Date.now()}`,
-                message: 'Venture onboarded by incubator.',
-                type: 'info',
-                timestamp: new Date().toISOString()
-            }]
+            updatedAt: new Date().toISOString()
         };
 
-        localStorage.setItem(KEYS.STARTUPS, JSON.stringify([...allStartups, newStartup]));
-        refreshData();
+        updateSystem(system => {
+            system.startups.push(newStartup);
+        });
         return newStartup;
     };
 
     const onboardMentor = (mentorData) => {
-        const allUsersRaw = localStorage.getItem('vanguard_users');
-        let allUsers = {};
-        try {
-            allUsers = JSON.parse(allUsersRaw || '{}');
-            if (Array.isArray(allUsers)) {
-                allUsers = allUsers.reduce((acc, u) => {
-                    if (u.uid || u.id) acc[u.uid || u.id] = u;
-                    return acc;
-                }, {});
-            }
-        } catch (e) { allUsers = {}; }
-
         const mentorId = `MNT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
         const newMentor = {
             uid: mentorId,
@@ -246,82 +180,13 @@ export const IncubatorProvider = ({ children }) => {
             createdAt: new Date().toISOString()
         };
 
-        allUsers[mentorId] = newMentor;
-        localStorage.setItem('vanguard_users', JSON.stringify(allUsers));
-        refreshData();
+        updateSystem(system => {
+            system.users[mentorId] = newMentor;
+        });
         return newMentor;
     };
 
-    const inviteMentor = (mentorData) => {
-        // In a real app, this sends an email. Here, we'll just log it or add to a mock list.
-        console.log('Inviting mentor:', mentorData);
-        // We could also save to a 'vanguard_pending_invites' key if needed.
-    };
-
-    const analytics = useMemo(() => {
-        const totalStartups = pipeline.length;
-        const stageDistribution = pipeline.reduce((acc, s) => {
-            acc[s.stage] = (acc[s.stage] || 0) + 1;
-            return acc;
-        }, {});
-
-        const totalApps = applications.length;
-        const acceptedApps = applications.filter(a => a.status === 'accepted').length;
-        const pendingApps = applications.filter(a => a.status === 'pending').length;
-        const acceptedRate = totalApps > 0 ? Math.round((acceptedApps / totalApps) * 100) : 0;
-
-        const totalExecScore = pipeline.reduce((acc, s) => acc + (s.executionScore || 0), 0);
-        const avgExecutionScore = totalStartups > 0 ? Math.round(totalExecScore / totalStartups) : 0;
-
-        return {
-            totalStartups,
-            stageDistribution,
-            acceptedRate: `${acceptedRate}%`,
-            activeApps: pendingApps,
-            avgExecutionScore,
-            cohortSize: pipeline.filter(s => s.cohortId).length,
-            graduated: pipeline.filter(s => s.status === 'graduated').length
-        };
-    }, [pipeline, applications]);
-
-    // Derived alerts based on pipeline and applications
-    const alerts = useMemo(() => {
-        const list = [];
-        const pendingCount = applications.filter(a => a.status === 'pending').length;
-        if (pendingCount > 0) {
-            list.push({
-                id: 'pending_apps',
-                type: 'warning',
-                message: `You have ${pendingCount} pending applications requiring review.`,
-                timestamp: new Date().toISOString()
-            });
-        }
-
-        const lowExecutionStartups = pipeline.filter(s => (s.executionScore || 0) < 40);
-        if (lowExecutionStartups.length > 0) {
-            list.push({
-                id: 'low_execution',
-                type: 'critical',
-                message: `${lowExecutionStartups.length} startups have execution scores below 40%.`,
-                timestamp: new Date().toISOString()
-            });
-        }
-
-        return list;
-    }, [applications, pipeline]);
-
-    // Combined activity feed from all startups in pipeline
-    const activityFeed = useMemo(() => {
-        const feed = pipeline.flatMap(s => (s.activity || []).map(a => ({
-            ...a,
-            startupName: s.startupName,
-            startupId: s.startupId
-        })));
-        return feed.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 10);
-    }, [pipeline]);
-
     const createCohort = (cohortData) => {
-        const allCohorts = JSON.parse(localStorage.getItem('vanguard_cohorts') || '[]');
         const newCohort = {
             ...cohortData,
             id: `COH-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
@@ -330,13 +195,50 @@ export const IncubatorProvider = ({ children }) => {
             progress: 0,
             createdAt: new Date().toISOString()
         };
-        localStorage.setItem('vanguard_cohorts', JSON.stringify([...allCohorts, newCohort]));
-        refreshData();
+        updateSystem(system => {
+            system.cohorts.push(newCohort);
+        });
     };
+
+    // --- ANALYTICS & ALERTS ---
+    const analytics = useMemo(() => {
+        const totalStartups = pipeline.length;
+        const totalApps = applications.length;
+        const acceptedApps = applications.filter(a => a.status === 'accepted').length;
+        const acceptedRate = totalApps > 0 ? Math.round((acceptedApps / totalApps) * 100) : 0;
+        const totalExecScore = pipeline.reduce((acc, s) => acc + (s.executionScore || 0), 0);
+        const avgExecutionScore = totalStartups > 0 ? Math.round(totalExecScore / totalStartups) : 0;
+
+        return {
+            totalStartups,
+            acceptedRate: `${acceptedRate}%`,
+            activeApps: applications.filter(a => a.status === 'pending').length,
+            avgExecutionScore,
+            cohortSize: pipeline.filter(s => s.cohortId).length,
+            graduated: pipeline.filter(s => s.status === 'graduated').length
+        };
+    }, [pipeline, applications]);
+
+    const alerts = useMemo(() => {
+        const list = [];
+        const pendingCount = applications.filter(a => a.status === 'pending').length;
+        if (pendingCount > 0) {
+            list.push({ id: 'pending_apps', type: 'warning', message: `You have ${pendingCount} pending applications.`, timestamp: new Date().toISOString() });
+        }
+        const lowExec = pipeline.filter(s => (s.executionScore || 0) < 40);
+        if (lowExec.length > 0) {
+            list.push({ id: 'low_exec', type: 'critical', message: `${lowExec.length} startups have low execution score.`, timestamp: new Date().toISOString() });
+        }
+        return list;
+    }, [applications, pipeline]);
+
+    const activityFeed = useMemo(() => {
+        const feed = pipeline.flatMap(s => (s.activity || []).map(a => ({ ...a, startupName: s.startupName, startupId: s.startupId })));
+        return feed.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 10);
+    }, [pipeline]);
 
     const value = {
         profile,
-        updateProfile,
         pipeline,
         applications,
         cohorts,
@@ -347,13 +249,12 @@ export const IncubatorProvider = ({ children }) => {
         onboardMentor,
         assignMentorToStartup,
         removeMentorAssignment,
-        inviteMentor,
         createCohort,
         analytics,
         alerts,
         activityFeed,
         settings,
-        updateSettings,
+        updateSettings: (s) => { setSettings(s); localStorage.setItem(`vanguard_incubatorSettings_${user.uid}`, JSON.stringify(s)); refreshData(); },
         loading
     };
 

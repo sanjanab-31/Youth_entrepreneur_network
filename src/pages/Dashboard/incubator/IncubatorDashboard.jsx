@@ -140,10 +140,10 @@ const IncubatorDashboard = () => {
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-xl bg-[#8B5CF6]/20 flex items-center justify-center text-xl font-bold text-[#8B5CF6]">
-                                            {startup.name[0]}
+                                            {(startup.startupName || 'V')[0]}
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-white group-hover:text-[#8B5CF6] transition-colors">{startup.name}</h4>
+                                            <h4 className="font-bold text-white group-hover:text-[#8B5CF6] transition-colors">{startup.startupName || 'Unnamed Venture'}</h4>
                                             <p className="text-xs text-gray-400">{startup.sector}</p>
                                         </div>
                                     </div>
@@ -204,12 +204,12 @@ const IncubatorDashboard = () => {
                     <div className="p-6 bg-gradient-to-br from-[#1E1E2F] to-[#2A2A3F] rounded-2xl border border-white/5 mt-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-sm font-bold text-white">Mentor Utilization</h3>
-                            <span className="text-lg font-bold text-[#8B5CF6]">{analytics.mentorUtilization}%</span>
+                            <span className="text-lg font-bold text-[#8B5CF6]">{analytics.mentorUtilization || 0}%</span>
                         </div>
                         <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                             <motion.div
                                 initial={{ width: 0 }}
-                                animate={{ width: `${analytics.mentorUtilization}%` }}
+                                animate={{ width: `${analytics.mentorUtilization || 0}%` }}
                                 transition={{ duration: 1 }}
                                 className="h-full bg-[#8B5CF6]"
                             />

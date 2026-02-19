@@ -184,7 +184,7 @@ const StartupPipeline = () => {
 
                             <div className="flex items-center justify-between text-xs text-gray-400">
                                 <span className="flex items-center gap-1"><Clock size={12} /> Last Updated</span>
-                                <span>{new Date(startup.lastUpdated).toLocaleDateString()}</span>
+                                <span>{startup.updatedAt ? new Date(startup.updatedAt).toLocaleDateString() : 'N/A'}</span>
                             </div>
                         </div>
 

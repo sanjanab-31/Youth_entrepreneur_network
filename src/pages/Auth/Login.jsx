@@ -24,7 +24,7 @@ const Login = () => {
         setLoading(true);
 
         try {
-            console.log("Attempting login with role:", role);
+
             await login(email, password, role);
         } catch (err) {
             console.error(err);

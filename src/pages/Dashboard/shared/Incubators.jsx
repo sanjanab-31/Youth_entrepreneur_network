@@ -26,11 +26,10 @@ import { useStartup } from '../../../context/StartupContext';
 
 const Incubators = () => {
     const { user } = useAuth();
-    const { startup, applyToIncubator } = useStartup();
+    const { startup, applyToIncubator, applications } = useStartup();
 
     // --- State Management ---
     const [incubators, setIncubators] = useState([]);
-    const [applications, setApplications] = useState([]);
     const [selectedIncubator, setSelectedIncubator] = useState(null);
     const [applyingIncubator, setApplyingIncubator] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -169,16 +168,17 @@ const Incubators = () => {
         const message = `Problem: ${appForm.problem}\n\nTraction: ${appForm.traction}\n\nReason: ${appForm.reason}\n\nFunding: ${appForm.funding}`;
         applyToIncubator(applyingIncubator.id, message);
 
-        // Re-fetch applications
-        const allApps = JSON.parse(localStorage.getItem('vanguard_applications') || '[]');
-        setApplications(allApps.filter(a => a.founderId === user.uid));
-
         setAppForm({ problem: '', traction: '', reason: '', funding: '' });
         setApplyingIncubator(null);
     };
 
     const hasApplied = (incubatorId) => {
         return applications.some(app => app.incubatorId === incubatorId);
+    };
+
+    const getAppStatus = (incubatorId) => {
+        const app = applications.find(a => a.incubatorId === incubatorId);
+        return app ? app.status : null;
     };
 
     const isAccessRestricted = !['founder', 'co-founder'].includes(user?.role);
@@ -382,15 +382,19 @@ const Incubators = () => {
                                             <button
                                                 disabled={hasApplied(inc.id) || !canApply}
                                                 onClick={() => setApplyingIncubator(inc)}
-                                                className={`hidden md:flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black border transition-all shadow-xl ${hasApplied(inc.id)
-                                                    ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                                                    : !canApply
-                                                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed border-transparent'
-                                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-blue-500/20'
+                                                className={`hidden md:flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black border transition-all shadow-xl ${getAppStatus(inc.id) === 'accepted' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                                        getAppStatus(inc.id) === 'rejected' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
+                                                            getAppStatus(inc.id) === 'pending' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' :
+                                                                !canApply ? 'bg-gray-800 text-gray-500 cursor-not-allowed border-transparent' :
+                                                                    'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-blue-500/20'
                                                     }`}
                                             >
-                                                {hasApplied(inc.id) ? (
-                                                    <>Applied <CheckCircle2 size={18} /></>
+                                                {getAppStatus(inc.id) === 'accepted' ? (
+                                                    <>Accepted <CheckCircle2 size={18} /></>
+                                                ) : getAppStatus(inc.id) === 'rejected' ? (
+                                                    <>Rejected <AlertCircle size={18} /></>
+                                                ) : getAppStatus(inc.id) === 'pending' ? (
+                                                    <>Pending <Clock size={18} /></>
                                                 ) : !canApply ? (
                                                     'Access Locked'
                                                 ) : (

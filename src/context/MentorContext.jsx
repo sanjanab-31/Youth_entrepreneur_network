@@ -1,22 +1,15 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { calculateExecutionScore } from '../utils/executionScore';
+import { calculateExecutionScore } from '../context/StartupContext';
+import { getSystem, saveSystem } from '../utils/system';
 
 
 const MentorContext = createContext();
 
 export const useMentor = () => useContext(MentorContext);
 
-const KEYS = {
-    USERS: 'vanguard_users',
-    STARTUPS: 'vanguard_startups',
-    MENTOR_REQUESTS: 'vanguard_mentorRequests',
-    SESSIONS: 'vanguard_sessions'
-};
-
 export const MentorProvider = ({ children }) => {
-    const { user } = useAuth();
+    const { user, updateProfile: authUpdateProfile } = useAuth();
     const [profile, setProfile] = useState(null);
     const [requests, setRequests] = useState([]);
     const [sessions, setSessions] = useState([]);
@@ -29,7 +22,9 @@ export const MentorProvider = ({ children }) => {
             return;
         }
 
-        // Mentor context now derives the profile directly from the SSOT user object
+        const system = getSystem();
+
+        // Use the unified SSOT user object
         setProfile({
             expertise: user.expertise || 'General Mentorship',
             sector: user.sector || 'General',
@@ -45,14 +40,9 @@ export const MentorProvider = ({ children }) => {
             }
         });
 
-        // Load requests, sessions, mentees for this mentor using user.uid
-        const allRequests = JSON.parse(localStorage.getItem(KEYS.MENTOR_REQUESTS) || '[]');
-        const allSessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-
-        setRequests(allRequests.filter(r => r.mentorId === user.uid));
-        setSessions(allSessions.filter(s => s.mentorId === user.uid));
-        setMentees(allStartups.filter(s => s.mentorAssigned === user.uid));
+        setRequests((system.mentorRequests || []).filter(r => r.mentorId === user.uid));
+        setSessions((system.sessions || []).filter(s => s.mentorId === user.uid));
+        setMentees((system.startups || []).filter(s => s.mentorAssigned === user.uid));
         setLoading(false);
     };
 
@@ -66,41 +56,34 @@ export const MentorProvider = ({ children }) => {
 
     const updateProfile = (updates) => {
         if (!user) return;
-        // Use the unified AuthContext updateProfile for SSOT
-        const { updateProfile: authUpdate } = useAuth();
-        authUpdate(updates);
-        setProfile(prev => ({ ...prev, ...updates }));
+        authUpdateProfile(updates);
     };
 
     const updateSession = (sessionId, updates) => {
-        const allSessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
-        const updatedSessions = allSessions.map(s =>
+        const system = getSystem();
+        system.sessions = system.sessions.map(s =>
             s.id === sessionId ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s
         );
-        localStorage.setItem(KEYS.SESSIONS, JSON.stringify(updatedSessions));
-        refreshData();
+        saveSystem(system);
     };
 
     const acceptRequest = (requestId) => {
-        const allRequests = JSON.parse(localStorage.getItem(KEYS.MENTOR_REQUESTS) || '[]');
-        const request = allRequests.find(r => r.id === requestId);
+        const system = getSystem();
+        const request = system.mentorRequests.find(r => r.id === requestId);
         if (!request) return;
 
         // Update request status
-        const updatedRequests = allRequests.map(r =>
+        system.mentorRequests = system.mentorRequests.map(r =>
             r.id === requestId ? { ...r, status: 'accepted', updatedAt: new Date().toISOString() } : r
         );
-        localStorage.setItem(KEYS.MENTOR_REQUESTS, JSON.stringify(updatedRequests));
 
-        // Assign mentor to startup + log activity on the startup
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const updatedStartups = allStartups.map(s => {
+        // Assign mentor to startup + log activity
+        system.startups = system.startups.map(s => {
             if (s.startupId !== request.startupId) return s;
             const activityEntry = {
-                id: Date.now().toString(),
-                msg: `Mentor accepted your request`,
+                id: `act_${Date.now()}`,
+                message: `Mentor accepted your request`,
                 type: 'mentor',
-                time: 'Just now',
                 timestamp: new Date().toISOString()
             };
             const updated = {
@@ -110,51 +93,45 @@ export const MentorProvider = ({ children }) => {
                 activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 20),
                 updatedAt: new Date().toISOString()
             };
-            // Recalculate execution score after mentor assignment
             updated.executionScore = calculateExecutionScore(updated);
             return updated;
         });
-        localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedStartups));
-        refreshData();
+
+        saveSystem(system);
     };
 
     const declineRequest = (requestId) => {
-        const allRequests = JSON.parse(localStorage.getItem(KEYS.MENTOR_REQUESTS) || '[]');
-        const request = allRequests.find(r => r.id === requestId);
+        const system = getSystem();
+        const request = system.mentorRequests.find(r => r.id === requestId);
+        if (!request) return;
 
-        const updatedRequests = allRequests.map(r =>
+        system.mentorRequests = system.mentorRequests.map(r =>
             r.id === requestId ? { ...r, status: 'declined', updatedAt: new Date().toISOString() } : r
         );
-        localStorage.setItem(KEYS.MENTOR_REQUESTS, JSON.stringify(updatedRequests));
 
-        // Log activity on the startup
-        if (request) {
-            const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-            const updatedStartups = allStartups.map(s => {
-                if (s.startupId !== request.startupId) return s;
-                const activityEntry = {
-                    id: Date.now().toString(),
-                    msg: `Mentor declined your request`,
-                    type: 'warning',
-                    time: 'Just now',
-                    timestamp: new Date().toISOString()
-                };
-                return {
-                    ...s,
-                    activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 20),
-                    updatedAt: new Date().toISOString()
-                };
-            });
-            localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedStartups));
-        }
-        refreshData();
+        // Log activity
+        system.startups = system.startups.map(s => {
+            if (s.startupId !== request.startupId) return s;
+            const activityEntry = {
+                id: `act_${Date.now()}`,
+                message: `Mentor declined your request`,
+                type: 'warning',
+                timestamp: new Date().toISOString()
+            };
+            return {
+                ...s,
+                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 20),
+                updatedAt: new Date().toISOString()
+            };
+        });
+
+        saveSystem(system);
     };
 
     const scheduleSession = (startupId, date, time) => {
-        const allSessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
-        // Store IDs only — never duplicate business data
+        const system = getSystem();
         const newSession = {
-            id: Date.now().toString(),
+            id: `ses_${Date.now()}`,
             mentorId: user.uid,
             startupId,
             date,
@@ -162,17 +139,15 @@ export const MentorProvider = ({ children }) => {
             status: 'upcoming',
             createdAt: new Date().toISOString()
         };
-        localStorage.setItem(KEYS.SESSIONS, JSON.stringify([...allSessions, newSession]));
+        system.sessions.push(newSession);
 
-        // Log activity on the startup
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const updatedStartups = allStartups.map(s => {
+        // Log activity
+        system.startups = system.startups.map(s => {
             if (s.startupId !== startupId) return s;
             const activityEntry = {
-                id: Date.now().toString(),
-                msg: `Mentor scheduled a session for ${date}`,
+                id: `act_${Date.now()}`,
+                message: `Mentor scheduled a session for ${date}`,
                 type: 'mentor',
-                time: 'Just now',
                 timestamp: new Date().toISOString()
             };
             return {
@@ -181,29 +156,26 @@ export const MentorProvider = ({ children }) => {
                 updatedAt: new Date().toISOString()
             };
         });
-        localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedStartups));
-        refreshData();
+
+        saveSystem(system);
     };
 
     const confirmSessionRequest = (sessionId) => {
-        const allSessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
-        const session = allSessions.find(s => s.id === sessionId);
+        const system = getSystem();
+        const session = system.sessions.find(s => s.id === sessionId);
         if (!session) return;
 
-        const updatedSessions = allSessions.map(s =>
+        system.sessions = system.sessions.map(s =>
             s.id === sessionId ? { ...s, status: 'upcoming', updatedAt: new Date().toISOString() } : s
         );
-        localStorage.setItem(KEYS.SESSIONS, JSON.stringify(updatedSessions));
 
-        // Log activity on the startup
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const updatedStartups = allStartups.map(s => {
+        // Log activity
+        system.startups = system.startups.map(s => {
             if (s.startupId !== session.startupId) return s;
             const activityEntry = {
-                id: Date.now().toString(),
-                msg: `Mentor confirmed your session request for ${session.date}`,
+                id: `act_${Date.now()}`,
+                message: `Mentor confirmed your session request for ${session.date}`,
                 type: 'mentor',
-                time: 'Just now',
                 timestamp: new Date().toISOString()
             };
             return {
@@ -212,22 +184,21 @@ export const MentorProvider = ({ children }) => {
                 updatedAt: new Date().toISOString()
             };
         });
-        localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedStartups));
-        refreshData();
+
+        saveSystem(system);
     };
 
     const addFocusArea = (startupId, area) => {
         if (!area?.trim()) return;
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const updatedStartups = allStartups.map(s => {
+        const system = getSystem();
+        system.startups = system.startups.map(s => {
             if (s.startupId !== startupId) return s;
             const existing = Array.isArray(s.focusAreas) ? s.focusAreas : [];
             if (existing.includes(area.trim())) return s;
             const activityEntry = {
-                id: Date.now().toString(),
-                msg: `Mentor added focus area: ${area.trim()}`,
+                id: `act_${Date.now()}`,
+                message: `Mentor added focus area: ${area.trim()}`,
                 type: 'mentor',
-                time: 'Just now',
                 timestamp: new Date().toISOString()
             };
             return {
@@ -237,13 +208,12 @@ export const MentorProvider = ({ children }) => {
                 updatedAt: new Date().toISOString()
             };
         });
-        localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedStartups));
-        refreshData();
+        saveSystem(system);
     };
 
     const removeFocusArea = (startupId, area) => {
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const updatedStartups = allStartups.map(s => {
+        const system = getSystem();
+        system.startups = system.startups.map(s => {
             if (s.startupId !== startupId) return s;
             return {
                 ...s,
@@ -251,17 +221,16 @@ export const MentorProvider = ({ children }) => {
                 updatedAt: new Date().toISOString()
             };
         });
-        localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedStartups));
-        refreshData();
+        saveSystem(system);
     };
 
     const sendMessage = (startupId, messageText) => {
         if (!messageText?.trim()) return;
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const updatedStartups = allStartups.map(s => {
+        const system = getSystem();
+        system.startups = system.startups.map(s => {
             if (s.startupId !== startupId) return s;
             const newMsg = {
-                id: Date.now().toString(),
+                id: `msg_${Date.now()}`,
                 senderId: user.uid,
                 senderName: user.name || 'Mentor',
                 senderRole: 'mentor',
@@ -269,10 +238,9 @@ export const MentorProvider = ({ children }) => {
                 timestamp: new Date().toISOString()
             };
             const activityEntry = {
-                id: (Date.now() + 1).toString(),
-                msg: `Mentor sent you a message`,
+                id: `act_${Date.now() + 1}`,
+                message: `Mentor sent you a message`,
                 type: 'mentor',
-                time: 'Just now',
                 timestamp: new Date().toISOString()
             };
             return {
@@ -282,8 +250,7 @@ export const MentorProvider = ({ children }) => {
                 updatedAt: new Date().toISOString()
             };
         });
-        localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedStartups));
-        refreshData();
+        saveSystem(system);
     };
 
     // ── Derived data ───────────────────────────────────────────
@@ -313,21 +280,11 @@ export const MentorProvider = ({ children }) => {
 
     const buildActivity = () => {
         // Hydrate names from IDs — never rely on stale duplicated data
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const allUsersRaw = localStorage.getItem(KEYS.USERS);
-        let allUsers = {};
-        try {
-            allUsers = JSON.parse(allUsersRaw || '{}');
-            if (Array.isArray(allUsers)) {
-                allUsers = allUsers.reduce((acc, u) => {
-                    if (u.uid || u.id) acc[u.uid || u.id] = u;
-                    return acc;
-                }, {});
-            }
-        } catch (e) { allUsers = {}; }
+        const system = getSystem();
+        const allUsers = system.users || {};
 
         const getStartupName = (startupId) =>
-            allStartups.find(s => s.startupId === startupId)?.startupName || 'Unknown Startup';
+            system.startups.find(s => s.startupId === startupId)?.startupName || 'Unknown Startup';
         const getFounderName = (founderId) => {
             const u = allUsers[founderId];
             return u?.name || u?.email?.split('@')[0] || 'Unknown Founder';
@@ -336,7 +293,7 @@ export const MentorProvider = ({ children }) => {
         const items = [];
 
         requests.forEach(r => {
-            const startup = allStartups.find(s => s.startupId === r.startupId);
+            const startup = system.startups.find(s => s.startupId === r.startupId);
             const founderName = startup ? getFounderName(startup.founderId) : 'Unknown Founder';
             const startupName = startup?.startupName || 'Unknown Startup';
             if (r.status === 'pending') {

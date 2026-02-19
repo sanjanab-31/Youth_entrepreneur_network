@@ -111,7 +111,7 @@ const Applications = () => {
                                         <span className="text-sm font-bold text-white">{app.teamSize || 0} Members</span>
                                     </td>
                                     <td className="py-5 px-4 text-sm text-gray-500 font-medium tracking-tight">
-                                        {app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A'}
+                                        {app.appliedDate ? new Date(app.appliedDate).toLocaleDateString() : 'N/A'}
                                     </td>
                                     <td className="py-5 px-4 text-sm">
                                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${getStatusColor(app.status)}`}>
@@ -176,7 +176,7 @@ const Applications = () => {
                                     <div className="space-y-3">
                                         <h3 className="text-sm font-black uppercase tracking-widest text-[#8B5CF6]">Pitch Overview</h3>
                                         <div className="p-5 bg-white/5 rounded-2xl border border-white/5 font-medium italic text-gray-300">
-                                            "{selectedApp.problemStatement || 'No detail provided.'}"
+                                            "{selectedApp.message || 'No detail provided.'}"
                                         </div>
                                     </div>
                                 </section>
@@ -195,7 +195,7 @@ const Applications = () => {
                                             >
                                                 <option value="">Move to Pipeline Only</option>
                                                 {cohorts.map(c => (
-                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                    <option key={c.id || `cohort-${c.name}`} value={c.id}>{c.name}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -209,7 +209,7 @@ const Applications = () => {
                                             >
                                                 <option value="">Assign Later</option>
                                                 {mentors.map(m => (
-                                                    <option key={m.uid} value={m.uid}>{m.name} ({m.expertise || m.industry})</option>
+                                                    <option key={m.uid || m.id || `mentor-${m.name}`} value={m.uid || m.id}>{m.name} ({m.expertise || m.industry})</option>
                                                 ))}
                                             </select>
                                         </div>

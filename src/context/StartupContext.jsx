@@ -1,77 +1,31 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { calculateExecutionScore, calculateProfileCompletion } from '../utils/executionScore';
+import { getSystem, saveSystem } from '../utils/system';
 
 const StartupContext = createContext();
 
 export const useStartup = () => useContext(StartupContext);
 
-const KEYS = {
-    STARTUPS: 'vanguard_startups',
-    APPLICATIONS: 'vanguard_applications',
-    MENTOR_REQUESTS: 'vanguard_mentorRequests',
-    SESSIONS: 'vanguard_sessions',
-    USERS: 'vanguard_users'
+// --- Calculation Helpers (Can be moved to a separate utils file later) ---
+export const calculateExecutionScore = (startup) => {
+    if (!startup || !startup.milestones || startup.milestones.length === 0) return 30;
+    const completed = startup.milestones.filter(m => m.status === 'completed').length;
+    const progress = Math.round((completed / startup.milestones.length) * 70);
+    return 30 + progress;
 };
-
-// Re-export so other files can import from context without touching utils directly
-export { calculateExecutionScore, calculateProfileCompletion };
 
 export const StartupProvider = ({ children }) => {
     const { user } = useAuth();
     const [startup, setStartup] = useState(null);
-    const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const normalizeStartup = (data = {}) => {
-        const defaults = {
-            milestones: [],
-            targetAudience: [],
-            documents: [],
-            activity: [],
-            applications: [],
-            focusAreas: [],
-            messages: [],
-            tractionHistory: [],
-            activeUsers: 0,
-            teamSize: 0,
-            burnRate: 0,
-            skillGap: '',
-            skillGapPriority: 'Medium',
-            skillGapFilled: false,
-            problemStatement: '',
-            solutionOverview: '',
-            traction: '',
-            fundingGoal: '',
-            mentorAssigned: null,
-            mentorshipStartDate: null
-        };
-
-        const merged = { ...defaults, ...data };
-
-        // Ensure arrays are actually arrays and numbers are numbers
-        return {
-            ...merged,
-            milestones: Array.isArray(merged.milestones) ? merged.milestones : [],
-            targetAudience: Array.isArray(merged.targetAudience) ? merged.targetAudience : [],
-            documents: Array.isArray(merged.documents) ? merged.documents : [],
-            activity: Array.isArray(merged.activity) ? merged.activity : [],
-            applications: Array.isArray(merged.applications) ? merged.applications : [],
-            focusAreas: Array.isArray(merged.focusAreas) ? merged.focusAreas : [],
-            messages: Array.isArray(merged.messages) ? merged.messages : [],
-            tractionHistory: Array.isArray(merged.tractionHistory) ? merged.tractionHistory : [],
-            activeUsers: Number(merged.activeUsers ?? 0),
-            teamSize: Number(merged.teamSize ?? 0),
-            burnRate: Number(merged.burnRate ?? 0)
-        };
-    };
-
-    const attachCalculations = (data) => {
-        const profileCompletion = calculateProfileCompletion(data);
-        const executionScore = calculateExecutionScore(data);
-        return { ...data, profileCompletion, executionScore };
-    };
+    // Initial Sync
+    useEffect(() => {
+        syncData();
+        const handleStorage = () => syncData();
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, [user]);
 
     const syncData = () => {
         if (!user) {
@@ -80,70 +34,67 @@ export const StartupProvider = ({ children }) => {
             return;
         }
 
-        const isFounderRole = ['founder', 'co-founder', 'cofounder'].includes(user.role);
-
-        if (!isFounderRole) {
-            setStartup(null);
-            setLoading(false);
-            return;
-        }
-
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-
-        // Find startup where user is founder OR co-founder (based on founderId or potential cofounderIds list)
-        let userStartup = allStartups.find(s => s.founderId === user.uid);
-
-        // If not found by founderId, check if user is a co-founder for any startup
-        if (!userStartup) {
-            userStartup = allStartups.find(s =>
-                (Array.isArray(s.coFounders) && s.coFounders.includes(user.uid)) ||
-                s.cofounderId === user.uid
-            );
-        }
+        const system = getSystem();
+        const userStartup = system.startups.find(s =>
+            s.founderId === user.uid || (Array.isArray(s.coFounders) && s.coFounders.includes(user.uid))
+        );
 
         if (userStartup) {
-            setStartup(attachCalculations(normalizeStartup(userStartup)));
-            const allSessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
-            setSessions(allSessions.filter(s => s.startupId === userStartup.startupId));
+            // Recalculate dynamic values
+            userStartup.executionScore = calculateExecutionScore(userStartup);
+
+            let completion = 0;
+            if (userStartup.startupName) completion += 20;
+            if (userStartup.problemStatement) completion += 20;
+            if (userStartup.targetAudience?.length > 0) completion += 20;
+            if (userStartup.milestones?.length > 0) completion += 20;
+            if (userStartup.sector) completion += 20;
+            userStartup.profileCompletion = completion;
+
+            setStartup({ ...userStartup });
         } else {
             setStartup(null);
-            setSessions([]);
         }
         setLoading(false);
     };
 
-    useEffect(() => {
-        syncData();
-        window.addEventListener('storage', syncData);
-        return () => window.removeEventListener('storage', syncData);
-    }, [user]);
-
-    // ── Persistence ────────────────────────────────────────────
-
-    const saveStartupToGlobal = (updatedStartup) => {
-        // Strip out calculated fields before saving to ensure SSOT
-        const { profileCompletion, executionScore, ...validData } = updatedStartup;
-
-        const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const updatedAll = allStartups.map(s =>
-            s.startupId === validData.startupId ? validData : s
+    const updateSystem = (updatedStartup) => {
+        const system = getSystem();
+        system.startups = system.startups.map(s =>
+            s.startupId === updatedStartup.startupId ? updatedStartup : s
         );
-        localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedAll));
-        setStartup(attachCalculations(validData));
+        saveSystem(system);
+        setStartup({ ...updatedStartup });
     };
 
-    // ── Mutations ──────────────────────────────────────────────
-
-    const updateStartup = (newData) => {
+    const updateStartup = (updates) => {
         if (!startup) return;
-        const updated = { ...startup, ...newData, updatedAt: new Date().toISOString() };
-        saveStartupToGlobal(updated);
+        const updated = {
+            ...startup,
+            ...updates,
+            updatedAt: new Date().toISOString()
+        };
+        updateSystem(updated);
     };
 
+    const addActivity = (message, type = 'info') => {
+        if (!startup) return;
+        const newAct = {
+            id: `act_${Date.now()}`,
+            message,
+            type,
+            timestamp: new Date().toISOString()
+        };
+        updateStartup({
+            activity: [newAct, ...(startup.activity || [])].slice(0, 50)
+        });
+    };
+
+    // --- MILESTONES ---
     const addMilestone = (title) => {
         if (!startup) return;
         const newMilestone = {
-            id: Date.now().toString(),
+            id: Date.now(),
             title,
             status: 'pending',
             createdAt: new Date().toISOString()
@@ -153,69 +104,36 @@ export const StartupProvider = ({ children }) => {
             milestones: [...(startup.milestones || []), newMilestone],
             updatedAt: new Date().toISOString()
         };
-        saveStartupToGlobal(updated);
+        updateSystem(updated);
         addActivity(`Added milestone: ${title}`, 'milestone');
     };
 
-    const updateMilestone = (milestoneId, updates) => {
+    const updateMilestone = (id, updates) => {
         if (!startup) return;
         const updatedMilestones = startup.milestones.map(m =>
-            m.id === milestoneId
-                ? {
-                    ...m, ...updates,
-                    updatedAt: new Date().toISOString(),
-                    ...(updates.status === 'completed' ? { completedAt: new Date().toISOString() } : {})
-                }
-                : m
+            m.id === id ? { ...m, ...updates, updatedAt: new Date().toISOString() } : m
         );
-        const updated = { ...startup, milestones: updatedMilestones, updatedAt: new Date().toISOString() };
-        saveStartupToGlobal(updated);
+        updateStartup({ milestones: updatedMilestones });
         if (updates.status === 'completed') {
-            const m = startup.milestones.find(ms => ms.id === milestoneId);
-            addActivity(`Completed milestone: ${m?.title}`, 'milestone');
+            const m = startup.milestones.find(ms => ms.id === id);
+            addActivity(`Completed milestone: ${m?.title}`, 'success');
         }
     };
 
-    const deleteMilestone = (milestoneId) => {
+    const deleteMilestone = (id) => {
         if (!startup) return;
-        const updated = {
-            ...startup,
-            milestones: startup.milestones.filter(m => m.id !== milestoneId),
-            updatedAt: new Date().toISOString()
-        };
-        saveStartupToGlobal(updated);
+        updateStartup({
+            milestones: startup.milestones.filter(m => m.id !== id)
+        });
     };
 
-    /**
-     * Update traction and append to tractionHistory for growth calculation.
-     */
-    const updateTraction = (tractionText, numericValue = null) => {
-        if (!startup) return;
-        const historyEntry = {
-            value: numericValue ?? parseFloat(tractionText) ?? 0,
-            text: tractionText,
-            date: new Date().toISOString()
-        };
-        const updated = {
-            ...startup,
-            traction: tractionText,
-            tractionHistory: [...(startup.tractionHistory || []), historyEntry].slice(-20),
-            lastTractionUpdate: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-        saveStartupToGlobal(updated);
-        addActivity(`Traction updated: ${tractionText}`, 'milestone');
-    };
-
+    // --- DOCUMENTS ---
     const addDocument = (name, size) => {
         if (!startup) return;
         const newDoc = { name, size, uploadedAt: new Date().toISOString() };
-        const updated = {
-            ...startup,
-            documents: [...(startup.documents || []), newDoc],
-            updatedAt: new Date().toISOString()
-        };
-        saveStartupToGlobal(updated);
+        updateStartup({
+            documents: [...(startup.documents || []), newDoc]
+        });
         addActivity(`Uploaded document: ${name}`, 'document');
     };
 
@@ -223,130 +141,90 @@ export const StartupProvider = ({ children }) => {
         if (!startup) return;
         const docs = [...(startup.documents || [])];
         docs.splice(index, 1);
-        const updated = { ...startup, documents: docs, updatedAt: new Date().toISOString() };
-        saveStartupToGlobal(updated);
+        updateStartup({ documents: docs });
     };
 
     const renameDocument = (index, newName) => {
         if (!startup) return;
         const docs = [...(startup.documents || [])];
         docs[index] = { ...docs[index], name: newName };
-        const updated = { ...startup, documents: docs, updatedAt: new Date().toISOString() };
-        saveStartupToGlobal(updated);
+        updateStartup({ documents: docs });
     };
 
+    // --- APPLICATIONS ---
     const applyToIncubator = (incubatorId, message) => {
-        if (!startup) return;
-        const applications = JSON.parse(localStorage.getItem(KEYS.APPLICATIONS) || '[]');
-        // Store IDs only — never duplicate business data
+        if (!startup || !user) return;
+        const system = getSystem();
         const newApp = {
-            id: Date.now().toString(),
-            startupId: startup.startupId,
+            id: `app_${Date.now()}`,
             founderId: user.uid,
-            incubatorId,
-            message,
-            status: 'pending',
-            createdAt: new Date().toISOString()
+            startupId: startup.startupId,
+            incubatorId: incubatorId,
+            startupName: startup.startupName,
+            sector: startup.sector || 'General',
+            teamSize: startup.teamSize || 1,
+            appliedDate: new Date().toISOString(),
+            status: "pending",
+            message: message || ''
         };
-        localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify([...applications, newApp]));
-        const updated = {
-            ...startup,
-            applications: [...(startup.applications || []), { applicationId: newApp.id, incubatorId, status: 'pending' }],
-            updatedAt: new Date().toISOString()
-        };
-        saveStartupToGlobal(updated);
-        addActivity(`Applied to incubator: ${incubatorId}`, 'incubator');
+        system.applications.push(newApp);
+        saveSystem(system);
+        addActivity(`Sent application to incubator`, 'incubator');
     };
 
-    const requestMentor = (mentorId, message) => {
-        if (!startup) return;
-        const requests = JSON.parse(localStorage.getItem(KEYS.MENTOR_REQUESTS) || '[]');
-
-        // Prevent duplicate requests to same mentor from same startup
-        const alreadyRequested = requests.some(
-            r => r.mentorId === mentorId && r.startupId === startup.startupId
-        );
-        if (alreadyRequested) return;
-
-        // Store IDs + message ONLY — never duplicate business data
+    const requestMentorship = (mentorId, message) => {
+        if (!startup || !user) return;
+        const system = getSystem();
         const newRequest = {
-            id: Date.now().toString(),
+            id: `mreq_${Date.now()}`,
+            mentorId,
             startupId: startup.startupId,
             founderId: user.uid,
-            mentorId,
-            message,
+            message: message || '',
             status: 'pending',
             createdAt: new Date().toISOString()
         };
-        localStorage.setItem(KEYS.MENTOR_REQUESTS, JSON.stringify([...requests, newRequest]));
-
-        // Hydrate mentor name for activity log
-        const allUsersRaw = localStorage.getItem(KEYS.USERS);
-        let allUsers = {};
-        try {
-            allUsers = JSON.parse(allUsersRaw || '{}');
-            if (Array.isArray(allUsers)) {
-                allUsers = allUsers.reduce((acc, u) => {
-                    if (u.uid || u.id) acc[u.uid || u.id] = u;
-                    return acc;
-                }, {});
-            }
-        } catch (e) { allUsers = {}; }
-
-        const mentor = allUsers[mentorId];
-        const mentorName = mentor?.name || mentor?.email?.split('@')[0] || mentorId;
-        addActivity(`Requested mentorship from ${mentorName}`, 'mentor');
+        system.mentorRequests = system.mentorRequests || [];
+        system.mentorRequests.push(newRequest);
+        saveSystem(system);
+        addActivity(`Requested mentorship from mentor`, 'mentor');
     };
 
-    const addActivity = (msg, type = 'info') => {
-        if (!startup) return;
-        const newActivity = {
-            id: Date.now().toString(),
-            msg,
-            type,
-            time: 'Just now',
-            timestamp: new Date().toISOString()
+    const requestSession = (mentorId, date, time) => {
+        if (!startup || !user) return;
+        const system = getSystem();
+        const newSession = {
+            id: `ses_${Date.now()}`,
+            mentorId,
+            startupId: startup.startupId,
+            date,
+            time,
+            status: 'pending_confirmation',
+            createdAt: new Date().toISOString()
         };
-        const updated = {
-            ...startup,
-            activity: [newActivity, ...(startup.activity || [])].slice(0, 20),
-            updatedAt: new Date().toISOString()
-        };
-        saveStartupToGlobal(updated);
+        system.sessions = system.sessions || [];
+        system.sessions.push(newSession);
+        saveSystem(system);
+        addActivity(`Requested session for ${date}`, 'mentor');
     };
 
     const value = {
         startup,
-        sessions,
+        loading,
         updateStartup,
         addMilestone,
         updateMilestone,
         deleteMilestone,
-        updateTraction,
         addDocument,
         deleteDocument,
         renameDocument,
-        addActivity,
         applyToIncubator,
-        requestMentor,
-        requestSession: (date, time, topic) => {
-            if (!startup || !startup.mentorAssigned) return;
-            const allSessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
-            const newRequest = {
-                id: Date.now().toString(),
-                startupId: startup.startupId,
-                mentorId: startup.mentorAssigned,
-                date,
-                time,
-                topic,
-                status: 'requested',
-                createdAt: new Date().toISOString()
-            };
-            localStorage.setItem(KEYS.SESSIONS, JSON.stringify([...allSessions, newRequest]));
-            syncData();
-            addActivity(`Requested session for ${date}`, 'mentor');
-        },
-        loading
+        requestMentorship,
+        requestSession,
+        addActivity,
+        applications: (getSystem().applications || []).filter(a => a.founderId === user?.uid),
+        mentorRequests: (getSystem().mentorRequests || []).filter(r => r.founderId === user?.uid),
+        sessions: (getSystem().sessions || []).filter(s => s.startupId === startup?.startupId)
     };
 
     return (
