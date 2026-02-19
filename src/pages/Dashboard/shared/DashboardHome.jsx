@@ -277,9 +277,9 @@ const DashboardHome = ({ role: propsRole }) => {
             {/* Structured Summary Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard label="Startup Stage" value={startup.stage} icon={Target} color="purple" />
-                <StatCard label="Users / Traction" value={(startup.activeUsers || 0).toLocaleString()} subtext="active users" icon={Flame} color="orange" />
-                <StatCard label="Burn Rate" value={`$${(startup.burnRate || 0).toLocaleString()}`} subtext="/ month" icon={Activity} color="red" />
-                <StatCard label="Team Strength" value={`${startup.teamSize || 0} Members`} subtext={startup.skillGapFilled ? "fully formed" : "growing"} icon={Users2} color="blue" />
+                <StatCard label="Users / Traction" value={(startup?.activeUsers || 0).toLocaleString()} subtext="active users" icon={Flame} color="orange" />
+                <StatCard label="Burn Rate" value={`$${(startup?.burnRate || 0).toLocaleString()}`} subtext="/ month" icon={Activity} color="red" />
+                <StatCard label="Team Strength" value={`${startup?.teamSize || 0} Members`} subtext={startup?.skillGapFilled ? "fully formed" : "growing"} icon={Users2} color="blue" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -366,7 +366,7 @@ const DashboardHome = ({ role: propsRole }) => {
                         </div>
 
                         {/* Milestone List */}
-                        {startup.milestones.length === 0 ? (
+                        {(!startup?.milestones || startup.milestones.length === 0) ? (
                             <div className="mt-20 p-10 rounded-2xl border border-dashed border-white/10 text-center">
                                 <p className="text-gray-500 font-bold mb-4">No milestones added yet. Start building your roadmap.</p>
                                 <button
@@ -694,15 +694,15 @@ const DashboardHome = ({ role: propsRole }) => {
                                         <div className="space-y-4">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-xs text-gray-400">Active Users</span>
-                                                <span className="text-sm font-bold text-white">{startup.activeUsers.toLocaleString()}</span>
+                                                <span className="text-sm font-bold text-white">{(startup?.activeUsers || 0).toLocaleString()}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-xs text-gray-400">Team Size</span>
-                                                <span className="text-sm font-bold text-white">{startup.teamSize}</span>
+                                                <span className="text-sm font-bold text-white">{startup?.teamSize || 1}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-xs text-gray-400">Milestones</span>
-                                                <span className="text-sm font-bold text-white">{startup.milestones.length} defined</span>
+                                                <span className="text-sm font-bold text-white">{(startup?.milestones || []).length} defined</span>
                                             </div>
                                         </div>
                                     </div>

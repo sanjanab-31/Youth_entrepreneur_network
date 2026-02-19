@@ -115,7 +115,7 @@ const Mentors = () => {
         }
     } catch (e) { allUsers = {}; }
 
-    const assignedMentor = startup.mentorAssigned ? allUsers[startup.mentorAssigned] : null;
+    const assignedMentor = startup?.mentorAssigned ? allUsers[startup.mentorAssigned] : null;
     const assignedMentorName = assignedMentor?.name || assignedMentor?.email?.split('@')[0] || null;
 
     const processedMentors = useMemo(() => {

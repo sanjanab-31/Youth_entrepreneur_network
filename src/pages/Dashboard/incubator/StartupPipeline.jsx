@@ -172,13 +172,13 @@ const StartupPipeline = () => {
                                 <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                                     <motion.div
                                         initial={{ width: 0 }}
-                                        animate={{ width: `${startup.executionScore}%` }}
+                                        animate={{ width: `${startup.executionScore || 0}%` }}
                                         className="h-full bg-[#8B5CF6]"
                                     />
                                 </div>
                                 <div className="flex justify-between text-[10px] font-bold text-gray-500">
                                     <span>Execution Score</span>
-                                    <span>{startup.executionScore}%</span>
+                                    <span>{startup.executionScore || 0}%</span>
                                 </div>
                             </div>
 

@@ -20,7 +20,20 @@ export const getSystem = () => {
                 ...system,
                 ...parsed,
                 users: parsed.users || {},
-                startups: parsed.startups || [],
+                startups: (parsed.startups || []).map(s => ({
+                    ...s,
+                    milestones: s.milestones || [],
+                    activity: s.activity || [],
+                    documents: s.documents || [],
+                    messages: s.messages || [],
+                    coFounders: s.coFounders || [],
+                    activeUsers: s.activeUsers || 0,
+                    burnRate: s.burnRate || 0,
+                    teamSize: s.teamSize || 1,
+                    startupName: s.startupName || 'Unnamed Venture',
+                    sector: s.sector || 'General',
+                    stage: s.stage || 'Idea'
+                })),
                 incubators: parsed.incubators || [],
                 applications: parsed.applications || [],
                 cohorts: parsed.cohorts || [],
@@ -38,7 +51,17 @@ export const getSystem = () => {
             const legacySessionsRaw = localStorage.getItem('vanguard_sessions');
 
             const legacyUsers = legacyUsersRaw ? JSON.parse(legacyUsersRaw) : {};
-            const legacyStartups = legacyStartupsRaw ? JSON.parse(legacyStartupsRaw) : [];
+            const legacyStartups = (legacyStartupsRaw ? JSON.parse(legacyStartupsRaw) : []).map(s => ({
+                ...s,
+                milestones: s.milestones || [],
+                activity: s.activity || [],
+                documents: s.documents || [],
+                messages: s.messages || [],
+                coFounders: s.coFounders || [],
+                activeUsers: s.activeUsers || 0,
+                burnRate: s.burnRate || 0,
+                teamSize: s.teamSize || 1
+            }));
             const legacyApplications = legacyApplicationsRaw ? JSON.parse(legacyApplicationsRaw) : [];
             const legacyIncubators = legacyIncubatorsRaw ? JSON.parse(legacyIncubatorsRaw) : [];
             const legacyCohorts = legacyCohortsRaw ? JSON.parse(legacyCohortsRaw) : [];
