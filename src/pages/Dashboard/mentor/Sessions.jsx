@@ -159,9 +159,10 @@ const Sessions = () => {
 
     const hydrateSession = (s) => {
         const allStartups = JSON.parse(localStorage.getItem('vanguard_startups') || '[]');
-        const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+        const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '{}');
         const startup = allStartups.find(st => st.startupId === s.startupId);
-        const founder = allUsers.find(u => u.id === startup?.founderId);
+        const allUsersList = Object.values(allUsers);
+        const founder = allUsersList.find(u => u.uid === startup?.founderId);
         return {
             ...s,
             startupName: startup?.startupName || '—',

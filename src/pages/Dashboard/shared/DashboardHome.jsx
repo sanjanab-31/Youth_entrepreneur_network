@@ -117,9 +117,9 @@ const DashboardHome = ({ role: propsRole }) => {
     const profileCompletion = startup.profileCompletion || 0;
 
     // Hydrate assigned mentor name from users array
-    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '{}');
     const assignedMentor = startup.mentorAssigned
-        ? allUsers.find(u => u.id === startup.mentorAssigned) || null
+        ? Object.values(allUsers).find(u => u.uid === startup.mentorAssigned) || null
         : null;
     const assignedMentorName = assignedMentor?.name || assignedMentor?.email?.split('@')[0] || null;
 
@@ -212,11 +212,11 @@ const DashboardHome = ({ role: propsRole }) => {
                             {role} Portal
                         </span>
                         <div className="h-4 w-px bg-white/10" />
-                        <span className="text-gray-500 text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em]">Deployment: Active</span>
+                        <span className="text-gray-500 text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em]">Execution Platform</span>
                     </div>
 
                     <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">
-                        Welcome back, <span className="text-[#8B5CF6]">{user?.fullName?.split(' ')[0] || 'Founder'}</span>
+                        Welcome back, <span className="text-[#8B5CF6]">{user?.name?.split(' ')[0] || 'Founder'}</span>
                     </h1>
 
                     <div className="flex flex-wrap items-center gap-x-4 md:gap-x-6 gap-y-3 mt-4">
@@ -544,7 +544,7 @@ const DashboardHome = ({ role: propsRole }) => {
                                             <div>
                                                 <p className="text-xs font-bold text-white">{session.date} · {session.time}</p>
                                                 <p className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${session.status === 'completed' ? 'text-green-400' :
-                                                        session.status === 'upcoming' ? 'text-[#8B5CF6]' : 'text-gray-500'
+                                                    session.status === 'upcoming' ? 'text-[#8B5CF6]' : 'text-gray-500'
                                                     }`}>{session.status}</p>
                                             </div>
                                             {session.status === 'completed' && session.notes && (

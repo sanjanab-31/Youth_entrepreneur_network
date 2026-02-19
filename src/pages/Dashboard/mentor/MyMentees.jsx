@@ -38,7 +38,8 @@ import { calculateExecutionScore } from '../../../utils/executionScore';
  */
 const hydrateStartup = (startup, allUsers, allSessions, mentorId) => {
     // Founder name
-    const founder = allUsers.find(u => u.id === startup.founderId);
+    const allUsersList = Object.values(allUsers || {});
+    const founder = allUsersList.find(u => u.uid === startup.founderId);
     const founderName = founder?.name || founder?.email?.split('@')[0] || 'Unknown Founder';
 
     // Execution score — use shared utility (identical to founder portal)
@@ -326,13 +327,13 @@ const ProgressView = ({ startup, onBack }) => {
     const [showScheduleModal, setShowScheduleModal] = useState(false);
 
     // Re-hydrate live on every render so changes from founder are reflected
-    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '{}');
     const allSessions = JSON.parse(localStorage.getItem('vanguard_sessions') || '[]');
     const allStartups = JSON.parse(localStorage.getItem('vanguard_startups') || '[]');
 
     // Always pull the freshest version of this startup
     const freshStartup = allStartups.find(s => s.startupId === startup.startupId) || startup;
-    const live = hydrateStartup(freshStartup, allUsers, allSessions, user?.id);
+    const live = hydrateStartup(freshStartup, allUsers, allSessions, user?.uid);
 
     const completedMilestones = live.milestones.filter(m => m.status === 'completed');
     const inProgressMilestones = live.milestones.filter(m => m.status === 'in-progress');
@@ -356,7 +357,7 @@ const ProgressView = ({ startup, onBack }) => {
         catch { return iso; }
     };
 
-    const isMyActiveMentee = live.mentorAssigned === user?.id;
+    const isMyActiveMentee = live.mentorAssigned === user?.uid;
 
     return (
         <motion.div
@@ -687,12 +688,12 @@ const MyMentees = () => {
     const [selectedStartup, setSelectedStartup] = useState(null);
 
     // Hydrate all mentees with live data on every render
-    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '{}');
     const allSessions = JSON.parse(localStorage.getItem('vanguard_sessions') || '[]');
 
     const hydratedMentees = useMemo(() => {
-        return mentees.map(s => hydrateStartup(s, allUsers, allSessions, user?.id));
-    }, [mentees, user?.id]);
+        return mentees.map(s => hydrateStartup(s, allUsers, allSessions, user?.uid));
+    }, [mentees, user?.uid]);
 
     // If a mentee is selected, re-hydrate it from the live mentees list
     const selectedHydrated = useMemo(() => {

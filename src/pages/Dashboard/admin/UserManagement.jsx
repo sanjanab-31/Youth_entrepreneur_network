@@ -15,14 +15,25 @@ import { motion } from 'framer-motion';
 
 const UserManagement = () => {
     const [filterRole, setFilterRole] = useState('All');
+    const [searchQuery, setSearchQuery] = useState('');
 
-    const users = [
-        { id: 1, name: 'Alex Thompson', role: 'Founder', sector: 'FinTech', joinDate: 'Jan 12, 2026', verified: true, active: true },
-        { id: 2, name: 'Sarah Chen', role: 'Mentor', sector: 'AI/ML', joinDate: 'Jan 15, 2026', verified: true, active: true },
-        { id: 3, name: 'Growth Labs', role: 'Incubator', sector: 'SaaS', joinDate: 'Jan 20, 2026', verified: false, active: true },
-        { id: 4, name: 'Michael Ross', role: 'Founder', sector: 'HealthTech', joinDate: 'Feb 01, 2026', verified: true, active: false },
-        { id: 5, name: 'Elena Rodriguez', role: 'Mentor', sector: 'Green Energy', joinDate: 'Feb 05, 2026', verified: true, active: true },
-    ];
+    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '{}');
+    const users = Object.values(allUsers).map((u, idx) => ({
+        id: u.uid,
+        name: u.name || u.email.split('@')[0],
+        role: u.role.charAt(0).toUpperCase() + u.role.slice(1).toLowerCase(),
+        sector: u.sector || u.expertise || 'General',
+        joinDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Feb 2026',
+        verified: u.verified !== undefined ? u.verified : true,
+        active: u.status !== 'inactive',
+        email: u.email
+    })).filter(u => {
+        const matchesRole = filterRole === 'All Roles' || u.role === filterRole;
+        const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.id.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesRole && matchesSearch;
+    });
 
     return (
         <div className="space-y-8">
@@ -49,6 +60,8 @@ const UserManagement = () => {
                     <input
                         type="text"
                         placeholder="Search by name, email or ID..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-black/20 border border-white/5 rounded-xl py-2.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all"
                     />
                 </div>
@@ -62,6 +75,7 @@ const UserManagement = () => {
                         <option>Founder</option>
                         <option>Mentor</option>
                         <option>Incubator</option>
+                        <option>Admin</option>
                     </select>
                     <select className="bg-black/20 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all">
                         <option>Verification Status</option>
@@ -100,7 +114,7 @@ const UserManagement = () => {
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold text-white">{user.name}</p>
-                                            <p className="text-xs text-gray-500">ID: #YEN-{1000 + user.id}</p>
+                                            <p className="text-xs text-gray-500">ID: #YEN-{user.id.slice(0, 6).toUpperCase()}</p>
                                         </div>
                                     </div>
                                 </td>

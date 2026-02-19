@@ -29,42 +29,30 @@ export const MentorProvider = ({ children }) => {
             return;
         }
 
-        // Build / load mentor profile from persisted key + auth user
-        const profileKey = `vanguard_mentorProfile_${user.id}`;
-        const savedProfile = localStorage.getItem(profileKey);
-        const baseProfile = savedProfile ? JSON.parse(savedProfile) : {};
-
-        const mergedProfile = {
-            expertise: 'General Mentorship',
-            sector: 'General',
-            badge: 'Verified Mentor',
-            bio: '',
-            ...baseProfile,
-            // Always keep name/email in sync with auth record
-            name: baseProfile.name || user.name || 'Mentor',
+        // Mentor context now derives the profile directly from the SSOT user object
+        setProfile({
+            expertise: user.expertise || 'General Mentorship',
+            sector: user.sector || 'General',
+            badge: user.badge || 'Verified Mentor',
+            bio: user.bio || '',
+            name: user.name || 'Mentor',
             email: user.email || '',
             availability: {
                 status: 'Active',
                 days: ['Mon', 'Wed', 'Fri'],
                 sessionType: '1:1',
-                ...(baseProfile.availability || {})
+                ...(user.availability || {})
             }
-        };
+        });
 
-        // Persist defaults on first load
-        if (!savedProfile) {
-            localStorage.setItem(profileKey, JSON.stringify(mergedProfile));
-        }
-        setProfile(mergedProfile);
-
-        // Load requests, sessions, mentees for this mentor
+        // Load requests, sessions, mentees for this mentor using user.uid
         const allRequests = JSON.parse(localStorage.getItem(KEYS.MENTOR_REQUESTS) || '[]');
         const allSessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
         const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
 
-        setRequests(allRequests.filter(r => r.mentorId === user.id));
-        setSessions(allSessions.filter(s => s.mentorId === user.id));
-        setMentees(allStartups.filter(s => s.mentorAssigned === user.id));
+        setRequests(allRequests.filter(r => r.mentorId === user.uid));
+        setSessions(allSessions.filter(s => s.mentorId === user.uid));
+        setMentees(allStartups.filter(s => s.mentorAssigned === user.uid));
         setLoading(false);
     };
 
@@ -78,10 +66,9 @@ export const MentorProvider = ({ children }) => {
 
     const updateProfile = (updates) => {
         if (!user) return;
-        const profileKey = `vanguard_mentorProfile_${user.id}`;
-        const current = JSON.parse(localStorage.getItem(profileKey) || '{}');
-        const updated = { ...current, ...updates };
-        localStorage.setItem(profileKey, JSON.stringify(updated));
+        // Use the unified AuthContext updateProfile for SSOT
+        const { updateProfile: authUpdate } = useAuth();
+        authUpdate(updates);
         setProfile(prev => ({ ...prev, ...updates }));
     };
 
@@ -118,7 +105,7 @@ export const MentorProvider = ({ children }) => {
             };
             const updated = {
                 ...s,
-                mentorAssigned: user.id,
+                mentorAssigned: user.uid,
                 mentorshipStartDate: new Date().toISOString(),
                 activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 20),
                 updatedAt: new Date().toISOString()
@@ -168,7 +155,7 @@ export const MentorProvider = ({ children }) => {
         // Store IDs only — never duplicate business data
         const newSession = {
             id: Date.now().toString(),
-            mentorId: user.id,
+            mentorId: user.uid,
             startupId,
             date,
             time,
@@ -275,7 +262,7 @@ export const MentorProvider = ({ children }) => {
             if (s.startupId !== startupId) return s;
             const newMsg = {
                 id: Date.now().toString(),
-                senderId: user.id,
+                senderId: user.uid,
                 senderName: user.name || 'Mentor',
                 senderRole: 'mentor',
                 message: messageText.trim(),
@@ -332,7 +319,7 @@ export const MentorProvider = ({ children }) => {
         const getStartupName = (startupId) =>
             allStartups.find(s => s.startupId === startupId)?.startupName || 'Unknown Startup';
         const getFounderName = (founderId) => {
-            const u = allUsers.find(u => u.id === founderId);
+            const u = allUsers.find(u => u.uid === founderId);
             return u?.name || u?.email?.split('@')[0] || 'Unknown Founder';
         };
 

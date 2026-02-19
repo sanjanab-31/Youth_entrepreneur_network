@@ -59,7 +59,7 @@ const Mentors = () => {
                 const mentorsList = allUsers
                     .filter(u => u.role === 'mentor')
                     .map(m => ({
-                        id: m.id,
+                        id: m.uid,
                         name: m.name || m.profileData?.fullName || m.email.split('@')[0],
                         initials: (m.name || m.email.split('@')[0]).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
                         title: m.profileData?.title || 'Expert Mentor',
@@ -78,7 +78,7 @@ const Mentors = () => {
 
                 // Fetch requests for this founder
                 const allRequests = JSON.parse(localStorage.getItem('vanguard_mentorRequests') || '[]');
-                const founderRequests = allRequests.filter(r => r.founderId === user.id);
+                const founderRequests = allRequests.filter(r => r.founderId === user.uid);
                 setRequests(founderRequests);
             } catch (err) {
                 console.error("Error fetching mentors:", err);
@@ -88,7 +88,7 @@ const Mentors = () => {
         };
 
         refreshData();
-    }, [user.id]);
+    }, [user.uid]);
 
     // --- Logic: Dynamic Response Rate ---
     const processedMentors = useMemo(() => {
@@ -176,7 +176,7 @@ const Mentors = () => {
 
         // Re-fetch requests
         const allRequests = JSON.parse(localStorage.getItem('vanguard_mentorRequests') || '[]');
-        setRequests(allRequests.filter(r => r.founderId === user.id));
+        setRequests(allRequests.filter(r => r.founderId === user.uid));
 
         setRequestForm({ problem: '', tried: '', outcome: '' });
         setRequestingMentor(null);
@@ -533,12 +533,12 @@ const Mentors = () => {
                                                 setSelectedMentor(null);
                                             }}
                                             className={`w-full py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-xl ${startup?.mentorAssigned === selectedMentor.id
-                                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                                    : (hasRequested(selectedMentor.id) || !!startup?.mentorAssigned)
-                                                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5'
-                                                        : selectedMentor.availabilityStatus === 'unavailable' || !canRequest
-                                                            ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                                                            : 'bg-[#8B5CF6] text-white hover:bg-[#7C3AED] hover:shadow-[#8B5CF6]/20'
+                                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                                : (hasRequested(selectedMentor.id) || !!startup?.mentorAssigned)
+                                                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5'
+                                                    : selectedMentor.availabilityStatus === 'unavailable' || !canRequest
+                                                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                                                        : 'bg-[#8B5CF6] text-white hover:bg-[#7C3AED] hover:shadow-[#8B5CF6]/20'
                                                 }`}
                                         >
                                             {startup?.mentorAssigned === selectedMentor.id ? (

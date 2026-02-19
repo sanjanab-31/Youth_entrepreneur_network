@@ -33,7 +33,7 @@ export const IncubatorProvider = ({ children }) => {
         setPipeline(allStartups);
 
         // Filter applications for this incubator
-        const myApplications = allApplications.filter(a => a.incubatorId === user.id);
+        const myApplications = allApplications.filter(a => a.incubatorId === user.uid);
         setApplications(myApplications);
 
         setLoading(false);

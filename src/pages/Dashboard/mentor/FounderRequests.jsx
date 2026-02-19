@@ -30,7 +30,7 @@ const hydrateRequest = (request) => {
     const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
 
     const startup = allStartups.find(s => s.startupId === request.startupId) || null;
-    const founder = allUsers.find(u => u.id === request.founderId) || null;
+    const founder = allUsers.find(u => u.uid === request.founderId) || null;
 
     return {
         ...request,

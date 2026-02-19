@@ -203,8 +203,9 @@ const MentorDashboard = () => {
     const hydrateSession = (session) => {
         const allStartups = JSON.parse(localStorage.getItem('vanguard_startups') || '[]');
         const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
-        const startup = allStartups.find(s => s.startupId === session.startupId);
-        const founder = allUsers.find(u => u.id === startup?.founderId);
+
+        const startup = allStartups.find(s => s.startupId === session.startupId) || null;
+        const founder = allUsers.find(u => u.uid === startup?.founderId) || null;
         return {
             ...session,
             startupName: startup?.startupName || 'Unknown Startup',

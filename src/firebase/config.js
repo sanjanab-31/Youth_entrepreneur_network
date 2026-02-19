@@ -1,18 +1,26 @@
-
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, browserLocalPersistence, setPersistence } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDSXGxh2LPupMEMS2uwyQmUjVwTx5FdyRQ",
-    authDomain: "vangaurd-f0cff.firebaseapp.com",
-    projectId: "vangaurd-f0cff",
-    storageBucket: "vangaurd-f0cff.firebasestorage.app",
-    messagingSenderId: "639864355537",
-    appId: "1:639864355537:web:5cd42c2387e77c2c94e3f0",
-    measurementId: "G-CKZE36F56G"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
+// Initialize Firebase (single instance)
 const app = initializeApp(firebaseConfig);
+
 export const auth = getAuth(app);
+export const db = getFirestore(app);
+
+// Keep user logged in across browser restarts
+setPersistence(auth, browserLocalPersistence).catch((err) => {
+    console.error("Firebase persistence error:", err);
+});
+
 export default app;

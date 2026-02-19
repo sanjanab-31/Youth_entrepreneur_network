@@ -66,13 +66,33 @@ export const StartupProvider = ({ children }) => {
     };
 
     const syncData = () => {
-        if (!user || user.role !== 'founder') {
+        if (!user) {
             setStartup(null);
             setLoading(false);
             return;
         }
+
+        const isFounderRole = ['founder', 'co-founder', 'cofounder'].includes(user.role);
+
+        if (!isFounderRole) {
+            setStartup(null);
+            setLoading(false);
+            return;
+        }
+
         const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const userStartup = allStartups.find(s => s.founderId === user.id);
+
+        // Find startup where user is founder OR co-founder (based on founderId or potential cofounderIds list)
+        let userStartup = allStartups.find(s => s.founderId === user.uid);
+
+        // If not found by founderId, check if user is a co-founder for any startup
+        if (!userStartup) {
+            userStartup = allStartups.find(s =>
+                (Array.isArray(s.coFounders) && s.coFounders.includes(user.uid)) ||
+                s.cofounderId === user.uid
+            );
+        }
+
         if (userStartup) {
             setStartup(attachCalculations(normalizeStartup(userStartup)));
             const allSessions = JSON.parse(localStorage.getItem(KEYS.SESSIONS) || '[]');
@@ -93,12 +113,15 @@ export const StartupProvider = ({ children }) => {
     // ── Persistence ────────────────────────────────────────────
 
     const saveStartupToGlobal = (updatedStartup) => {
+        // Strip out calculated fields before saving to ensure SSOT
+        const { profileCompletion, executionScore, ...validData } = updatedStartup;
+
         const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
         const updatedAll = allStartups.map(s =>
-            s.startupId === updatedStartup.startupId ? updatedStartup : s
+            s.startupId === validData.startupId ? validData : s
         );
         localStorage.setItem(KEYS.STARTUPS, JSON.stringify(updatedAll));
-        setStartup(attachCalculations(updatedStartup));
+        setStartup(attachCalculations(validData));
     };
 
     // ── Mutations ──────────────────────────────────────────────
@@ -211,7 +234,7 @@ export const StartupProvider = ({ children }) => {
         const newApp = {
             id: Date.now().toString(),
             startupId: startup.startupId,
-            founderId: user.id,
+            founderId: user.uid,
             incubatorId,
             message,
             status: 'pending',
@@ -241,7 +264,7 @@ export const StartupProvider = ({ children }) => {
         const newRequest = {
             id: Date.now().toString(),
             startupId: startup.startupId,
-            founderId: user.id,
+            founderId: user.uid,
             mentorId,
             message,
             status: 'pending',

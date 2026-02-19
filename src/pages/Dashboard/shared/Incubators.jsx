@@ -62,7 +62,7 @@ const Incubators = () => {
                 const incubatorsList = allUsers
                     .filter(u => u.role === 'incubator')
                     .map(inc => ({
-                        id: inc.id,
+                        id: inc.uid,
                         name: inc.name || inc.profileData?.fullName || inc.email.split('@')[0],
                         location: inc.profileData?.location || 'India',
                         supportedStages: inc.profileData?.supportedStages || ['Idea', 'MVP', 'Revenue'],
@@ -79,7 +79,7 @@ const Incubators = () => {
 
                 // Fetch applications for this founder
                 const allApps = JSON.parse(localStorage.getItem('vanguard_applications') || '[]');
-                setApplications(allApps.filter(a => a.founderId === user.id));
+                setApplications(allApps.filter(a => a.founderId === user.uid));
             } catch (err) {
                 console.error("Error fetching incubators:", err);
             } finally {
@@ -88,7 +88,7 @@ const Incubators = () => {
         };
 
         refreshData();
-    }, [user.id]);
+    }, [user.uid]);
 
     // --- Logic: Premium Matching & Filtering ---
     const filteredIncubators = useMemo(() => {
@@ -160,7 +160,7 @@ const Incubators = () => {
 
         // Re-fetch applications
         const allApps = JSON.parse(localStorage.getItem('vanguard_applications') || '[]');
-        setApplications(allApps.filter(a => a.founderId === user.id));
+        setApplications(allApps.filter(a => a.founderId === user.uid));
 
         setAppForm({ problem: '', traction: '', reason: '', funding: '' });
         setApplyingIncubator(null);
