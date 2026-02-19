@@ -48,8 +48,19 @@ const StartupOverview = () => {
     const nextSession = startupSessions.find(s => s.status === 'upcoming');
 
     // Get lead founder name
-    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '{}');
-    const founder = Object.values(allUsers).find(u => u.uid === startup.founderId);
+    const allUsersRaw = localStorage.getItem('vanguard_users');
+    let allUsers = {};
+    try {
+        allUsers = JSON.parse(allUsersRaw || '{}');
+        if (Array.isArray(allUsers)) {
+            allUsers = allUsers.reduce((acc, u) => {
+                if (u.uid || u.id) acc[u.uid || u.id] = u;
+                return acc;
+            }, {});
+        }
+    } catch (e) { allUsers = {}; }
+
+    const founder = allUsers[startup.founderId];
     const founderName = founder?.name || founder?.email?.split('@')[0] || 'Original Founder';
 
     return (

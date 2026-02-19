@@ -24,40 +24,48 @@ export const StartupProvider = ({ children }) => {
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const normalizeStartup = (data) => ({
-        milestones: [],
-        targetAudience: [],
-        documents: [],
-        activity: [],
-        applications: [],
-        focusAreas: [],
-        messages: [],
-        tractionHistory: [],
-        activeUsers: 0,
-        teamSize: 0,
-        burnRate: 0,
-        skillGap: '',
-        skillGapPriority: 'Medium',
-        skillGapFilled: false,
-        problemStatement: '',
-        solutionOverview: '',
-        traction: '',
-        fundingGoal: '',
-        mentorAssigned: null,
-        mentorshipStartDate: null,
-        ...data,
-        milestones: Array.isArray(data.milestones) ? data.milestones : [],
-        targetAudience: Array.isArray(data.targetAudience) ? data.targetAudience : [],
-        documents: Array.isArray(data.documents) ? data.documents : [],
-        activity: Array.isArray(data.activity) ? data.activity : [],
-        applications: Array.isArray(data.applications) ? data.applications : [],
-        focusAreas: Array.isArray(data.focusAreas) ? data.focusAreas : [],
-        messages: Array.isArray(data.messages) ? data.messages : [],
-        tractionHistory: Array.isArray(data.tractionHistory) ? data.tractionHistory : [],
-        activeUsers: data.activeUsers ?? 0,
-        teamSize: data.teamSize ?? 0,
-        burnRate: data.burnRate ?? 0,
-    });
+    const normalizeStartup = (data = {}) => {
+        const defaults = {
+            milestones: [],
+            targetAudience: [],
+            documents: [],
+            activity: [],
+            applications: [],
+            focusAreas: [],
+            messages: [],
+            tractionHistory: [],
+            activeUsers: 0,
+            teamSize: 0,
+            burnRate: 0,
+            skillGap: '',
+            skillGapPriority: 'Medium',
+            skillGapFilled: false,
+            problemStatement: '',
+            solutionOverview: '',
+            traction: '',
+            fundingGoal: '',
+            mentorAssigned: null,
+            mentorshipStartDate: null
+        };
+
+        const merged = { ...defaults, ...data };
+
+        // Ensure arrays are actually arrays and numbers are numbers
+        return {
+            ...merged,
+            milestones: Array.isArray(merged.milestones) ? merged.milestones : [],
+            targetAudience: Array.isArray(merged.targetAudience) ? merged.targetAudience : [],
+            documents: Array.isArray(merged.documents) ? merged.documents : [],
+            activity: Array.isArray(merged.activity) ? merged.activity : [],
+            applications: Array.isArray(merged.applications) ? merged.applications : [],
+            focusAreas: Array.isArray(merged.focusAreas) ? merged.focusAreas : [],
+            messages: Array.isArray(merged.messages) ? merged.messages : [],
+            tractionHistory: Array.isArray(merged.tractionHistory) ? merged.tractionHistory : [],
+            activeUsers: Number(merged.activeUsers ?? 0),
+            teamSize: Number(merged.teamSize ?? 0),
+            burnRate: Number(merged.burnRate ?? 0)
+        };
+    };
 
     const attachCalculations = (data) => {
         const profileCompletion = calculateProfileCompletion(data);
@@ -273,8 +281,19 @@ export const StartupProvider = ({ children }) => {
         localStorage.setItem(KEYS.MENTOR_REQUESTS, JSON.stringify([...requests, newRequest]));
 
         // Hydrate mentor name for activity log
-        const allUsers = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
-        const mentor = allUsers.find(u => u.id === mentorId);
+        const allUsersRaw = localStorage.getItem(KEYS.USERS);
+        let allUsers = {};
+        try {
+            allUsers = JSON.parse(allUsersRaw || '{}');
+            if (Array.isArray(allUsers)) {
+                allUsers = allUsers.reduce((acc, u) => {
+                    if (u.uid || u.id) acc[u.uid || u.id] = u;
+                    return acc;
+                }, {});
+            }
+        } catch (e) { allUsers = {}; }
+
+        const mentor = allUsers[mentorId];
         const mentorName = mentor?.name || mentor?.email?.split('@')[0] || mentorId;
         addActivity(`Requested mentorship from ${mentorName}`, 'mentor');
     };

@@ -55,8 +55,19 @@ const Mentors = () => {
             setLoading(true);
             try {
                 // Fetch mentors from global users
-                const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
-                const mentorsList = allUsers
+                const allUsersRaw = localStorage.getItem('vanguard_users');
+                let allUsers = {};
+                try {
+                    allUsers = JSON.parse(allUsersRaw || '{}');
+                    if (Array.isArray(allUsers)) {
+                        allUsers = allUsers.reduce((acc, u) => {
+                            if (u.uid || u.id) acc[u.uid || u.id] = u;
+                            return acc;
+                        }, {});
+                    }
+                } catch (e) { allUsers = {}; }
+
+                const mentorsList = Object.values(allUsers)
                     .filter(u => u.role === 'mentor')
                     .map(m => ({
                         id: m.uid,
@@ -91,6 +102,22 @@ const Mentors = () => {
     }, [user.uid]);
 
     // --- Logic: Dynamic Response Rate ---
+    // Hydrate assigned mentor name from users object (SSOT)
+    const allUsersRaw = localStorage.getItem('vanguard_users');
+    let allUsers = {};
+    try {
+        allUsers = JSON.parse(allUsersRaw || '{}');
+        if (Array.isArray(allUsers)) {
+            allUsers = allUsers.reduce((acc, u) => {
+                if (u.uid || u.id) acc[u.uid || u.id] = u;
+                return acc;
+            }, {});
+        }
+    } catch (e) { allUsers = {}; }
+
+    const assignedMentor = startup.mentorAssigned ? allUsers[startup.mentorAssigned] : null;
+    const assignedMentorName = assignedMentor?.name || assignedMentor?.email?.split('@')[0] || null;
+
     const processedMentors = useMemo(() => {
         const allRequests = JSON.parse(localStorage.getItem('vanguard_mentorRequests') || '[]');
         return mentors.map(m => {

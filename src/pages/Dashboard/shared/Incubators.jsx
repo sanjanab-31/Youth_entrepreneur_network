@@ -58,8 +58,19 @@ const Incubators = () => {
             setLoading(true);
             try {
                 // Fetch incubators from global users
-                const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
-                const incubatorsList = allUsers
+                const allUsersRaw = localStorage.getItem('vanguard_users');
+                let allUsers = {};
+                try {
+                    allUsers = JSON.parse(allUsersRaw || '{}');
+                    if (Array.isArray(allUsers)) {
+                        allUsers = allUsers.reduce((acc, u) => {
+                            if (u.uid || u.id) acc[u.uid || u.id] = u;
+                            return acc;
+                        }, {});
+                    }
+                } catch (e) { allUsers = {}; }
+
+                const incubatorsList = Object.values(allUsers)
                     .filter(u => u.role === 'incubator')
                     .map(inc => ({
                         id: inc.uid,

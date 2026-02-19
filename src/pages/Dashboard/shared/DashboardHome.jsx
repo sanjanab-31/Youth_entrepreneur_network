@@ -116,11 +116,20 @@ const DashboardHome = ({ role: propsRole }) => {
     const executionScore = calculateExecutionScore(startup);
     const profileCompletion = startup.profileCompletion || 0;
 
-    // Hydrate assigned mentor name from users array
-    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '{}');
-    const assignedMentor = startup.mentorAssigned
-        ? Object.values(allUsers).find(u => u.uid === startup.mentorAssigned) || null
-        : null;
+    // Hydrate assigned mentor name from users object (SSOT)
+    const allUsersRaw = localStorage.getItem('vanguard_users');
+    let allUsers = {};
+    try {
+        allUsers = JSON.parse(allUsersRaw || '{}');
+        if (Array.isArray(allUsers)) {
+            allUsers = allUsers.reduce((acc, u) => {
+                if (u.uid || u.id) acc[u.uid || u.id] = u;
+                return acc;
+            }, {});
+        }
+    } catch (e) { allUsers = {}; }
+
+    const assignedMentor = startup.mentorAssigned ? allUsers[startup.mentorAssigned] : null;
     const assignedMentorName = assignedMentor?.name || assignedMentor?.email?.split('@')[0] || null;
 
     // Founder sessions from shared sessions array

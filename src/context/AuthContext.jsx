@@ -33,18 +33,65 @@ const ROLE_PATHS = {
 
 // Helper: get user from localStorage by uid
 const getUserProfile = (uid) => {
-    const users = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
-    // Migration check: also check old key if new one is empty
-    if (!users[uid]) {
-        const oldProfiles = JSON.parse(localStorage.getItem('vanguard_profiles') || '{}');
-        if (oldProfiles[uid]) return oldProfiles[uid];
+    const profileKey = `profile_${uid}`;
+    let profile = localStorage.getItem(profileKey);
+
+    if (profile) {
+        try {
+            return JSON.parse(profile);
+        } catch (e) {
+            console.error('Error parsing profile for:', uid, e);
+        }
     }
-    return users[uid] || null;
+
+    // Proactive Migration: check aggregate USER_KEY and save to new key if found
+    let users = {};
+    try {
+        users = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
+        if (Array.isArray(users)) {
+            users = users.reduce((acc, u) => {
+                if (u.uid || u.id) acc[u.uid || u.id] = u;
+                return acc;
+            }, {});
+        }
+    } catch (e) { users = {}; }
+
+    if (users[uid]) {
+        console.log('Migrating profile from registry to direct key:', uid);
+        localStorage.setItem(profileKey, JSON.stringify(users[uid]));
+        return users[uid];
+    }
+
+    // Migration from legacy vanguard_profiles
+    const oldProfiles = JSON.parse(localStorage.getItem('vanguard_profiles') || '{}');
+    if (oldProfiles[uid]) {
+        console.log('Migrating legacy profile for:', uid);
+        localStorage.setItem(profileKey, JSON.stringify(oldProfiles[uid]));
+        return oldProfiles[uid];
+    }
+
+    return null;
 };
 
 // Helper: save user to localStorage by uid
 const saveUserProfile = (uid, data) => {
-    const users = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
+    const profileKey = `profile_${uid}`;
+
+    // 1. Save to direct key (Single Source of Truth)
+    localStorage.setItem(profileKey, JSON.stringify(data));
+
+    // 2. Sync to registry for cross-profile lookups (Mentors/Feed)
+    let users = {};
+    try {
+        users = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
+        if (Array.isArray(users)) {
+            users = users.reduce((acc, u) => {
+                if (u.uid || u.id) acc[u.uid || u.id] = u;
+                return acc;
+            }, {});
+        }
+    } catch (e) { users = {}; }
+
     users[uid] = data;
     localStorage.setItem(USER_KEY, JSON.stringify(users));
 };
@@ -54,7 +101,7 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    // Initialize other localStorage keys if they don't exist
+    // Initialize global storage if missing
     useEffect(() => {
         [STARTUPS_KEY, MENTOR_REQUESTS_KEY, SESSIONS_KEY, APPLICATIONS_KEY].forEach(key => {
             if (!localStorage.getItem(key)) {
@@ -63,40 +110,45 @@ export const AuthProvider = ({ children }) => {
         });
     }, []);
 
-    // ─── CRITICAL: Firebase auth state listener ───────────────────────────────
-    // This is the single source of truth. Fires on:
-    //   - App load (restores session from Firebase persistence)
-    //   - After login / signup
-    //   - After logout
+    // ─── AUTH STATE LISTENER ──────────────────────────────────────────────────
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
-                // Firebase says user is logged in — get their role/profile from localStorage
-                const profile = getUserProfile(firebaseUser.uid);
+                // Admin Rule: Case-insensitive check against .env or default
+                if (firebaseUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+                    const adminUser = { uid: firebaseUser.uid, email: firebaseUser.email, role: 'admin' };
+                    setUser(adminUser);
+                    localStorage.setItem('vanguard_session_currentUser', JSON.stringify(adminUser));
+                    setLoading(false);
+                    return;
+                }
 
-                if (profile) {
-                    setUser(profile);
-                } else if (firebaseUser.email === ADMIN_EMAIL) {
-                    // Admin logged in but no profile stored — build one from email
-                    const adminProfile = {
-                        uid: firebaseUser.uid,
-                        name: 'Admin',
-                        email: firebaseUser.email,
-                        role: 'admin',
-                        createdAt: new Date().toISOString()
-                    };
-                    saveUserProfile(firebaseUser.uid, adminProfile);
-                    setUser(adminProfile);
+                // Regular User Check
+                const userData = getUserProfile(firebaseUser.uid);
+
+                if (userData) {
+                    setUser(userData);
+                    localStorage.setItem('vanguard_session_currentUser', JSON.stringify(userData));
+
+                    // Redirect from auth pages to dashboard if already logged in
+                    const authPaths = ['/', '/auth/login', '/auth/signup', '/auth/role-selection'];
+                    if (authPaths.includes(window.location.pathname)) {
+                        navigate(ROLE_PATHS[userData.role] || '/founder');
+                    }
                 } else {
-                    // Firebase user exists but no local profile (e.g. cleared localStorage)
-                    // Sign them out to force re-login
-                    console.warn('Firebase user found but no local profile. Signing out.');
-                    signOut(auth);
-                    setUser(null);
+                    // Critical: if Firebase user exists but NO local profile found
+                    // We only sign out if we're not currently in the middle of a signup/login flow
+                    const isNewUser = sessionStorage.getItem('vanguard_processing_auth') === 'true';
+                    if (!isNewUser) {
+                        console.warn('Firebase user found but no local profile. Purging session.');
+                        signOut(auth);
+                        setUser(null);
+                        localStorage.removeItem('vanguard_session_currentUser');
+                    }
                 }
             } else {
-                // No Firebase user — logged out
                 setUser(null);
+                localStorage.removeItem('vanguard_session_currentUser');
             }
             setLoading(false);
         });
@@ -106,116 +158,192 @@ export const AuthProvider = ({ children }) => {
 
     // ─── SIGNUP ───────────────────────────────────────────────────────────────
     const signup = async (email, password, role, profileData) => {
-        // Create real Firebase user — this is what appears in Firebase Console
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const firebaseUser = userCredential.user;
+        sessionStorage.setItem('vanguard_processing_auth', 'true');
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const firebaseUser = userCredential.user;
+            const normalizedRole = role.toLowerCase();
 
-        const normalizedRole = role.toLowerCase();
+            // Extract core info
+            const name = profileData.fullName || profileData.incubatorName || profileData.name || email.split('@')[0];
 
-        // Build profile object (NO password stored)
-        const profile = {
-            uid: firebaseUser.uid,
-            name: profileData.fullName || profileData.incubatorName || email.split('@')[0],
-            email: firebaseUser.email,
-            role: normalizedRole,
-            ...profileData, // Spread profileData directly for SSOT (name, sector, expertise etc)
-            createdAt: new Date().toISOString()
-        };
+            // Role-specific Portal Data Initialization
+            let portalData = {};
 
-        // Save profile metadata to localStorage (role + profile only)
-        saveUserProfile(firebaseUser.uid, profile);
+            if (['founder', 'co-founder', 'cofounder'].includes(normalizedRole)) {
+                portalData = {
+                    startupName: profileData.startupName || 'My Startup',
+                    sector: profileData.sector || 'General',
+                    stage: profileData.stage || 'Idea',
+                    teamSize: parseInt(profileData.teamSize) || 1,
+                    lookingFor: profileData.lookingFor || '',
+                    problemStatement: profileData.problemStatement || '',
+                };
+            } else if (normalizedRole === 'mentor') {
+                portalData = {
+                    expertise: profileData.expertise || [],
+                    sector: profileData.sector || 'General',
+                    bio: profileData.bio || '',
+                    linkedin: profileData.linkedin || '',
+                };
+            } else if (normalizedRole === 'incubator') {
+                portalData = {
+                    incubatorName: profileData.incubatorName || name,
+                    website: profileData.website || '',
+                    location: profileData.location || '',
+                    description: profileData.description || '',
+                    sectorFocus: Array.isArray(profileData.sectorFocus) ? profileData.sectorFocus : [],
+                    stagePreference: profileData.stagePref || 'Early Stage',
+                    fundingSupport: profileData.funding === 'yes',
+                    batchSize: parseInt(profileData.cohortSize) || 20,
+                };
+            }
 
-        // If founder/co-founder: create a startup object
-        if (normalizedRole === 'founder' || normalizedRole === 'co-founder' || normalizedRole === 'cofounder') {
-            const startups = JSON.parse(localStorage.getItem(STARTUPS_KEY) || '[]');
-            // Capitalize stage to match roadmap (e.g. "idea" → "Idea")
-            const capitalizeStage = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Idea';
-            const newStartup = {
-                startupId: `s_${firebaseUser.uid}`,
-                founderId: firebaseUser.uid,
-                startupName: profileData.startupName || 'My Startup',
-                sector: profileData.sector || 'General',
-                stage: capitalizeStage(profileData.stage),
-                traction: '',
-                fundingGoal: '',
-                focusAreas: [],
-                teamSize: parseInt(profileData.teamSize) || 1,
-                activeUsers: 0,
-                burnRate: 0,
-                problemStatement: profileData.problemStatement || '',
-                // Map registration "looking for" field into the skill gap tracker
-                skillGap: profileData.lookingFor || '',
-                skillGapFilled: false,
-                primarySkills: profileData.primarySkills || '',
-                location: profileData.location || '',
-                commitment: profileData.commitment || '',
-                linkedin: profileData.linkedin || '',
-                equity: profileData.equity || '',
-                milestones: [],
-                mentorAssigned: null,
-                applications: [],
-                activity: [{
-                    id: Date.now().toString(),
-                    msg: 'Account created and startup initialized',
-                    type: 'milestone',
-                    time: 'Just now',
-                    timestamp: new Date().toISOString()
-                }],
+            const newUser = {
+                uid: firebaseUser.uid,
+                email,
+                role: normalizedRole,
+                name,
+                portalData,
                 createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                status: 'active'
+                ...profileData, // Keep flat props for compatibility with some legacy views if needed
             };
-            localStorage.setItem(STARTUPS_KEY, JSON.stringify([...startups, newStartup]));
+
+            saveUserProfile(firebaseUser.uid, newUser);
+            console.log("Profile created for UID:", firebaseUser.uid, "Key: profile_" + firebaseUser.uid);
+
+            // Relational: Initialize Startup record if founder
+            if (['founder', 'co-founder', 'cofounder'].includes(normalizedRole)) {
+                const allStartups = JSON.parse(localStorage.getItem(STARTUPS_KEY) || '[]');
+                const capitalizeStage = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Idea';
+
+                const newStartup = {
+                    startupId: `ST-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                    founderId: firebaseUser.uid,
+                    startupName: profileData.startupName || 'My Startup',
+                    sector: profileData.sector || 'General',
+                    stage: capitalizeStage(profileData.stage),
+                    oneLiner: '',
+                    traction: '',
+                    fundingGoal: '',
+                    teamSize: parseInt(profileData.teamSize) || 1,
+                    milestones: [],
+                    focusAreas: [],
+                    problemStatement: profileData.problemStatement || '',
+                    targetAudience: '',
+                    skillGap: profileData.lookingFor || '',
+                    primarySkills: profileData.primarySkills || '',
+                    location: profileData.location || '',
+                    commitment: profileData.commitment || '',
+                    linkedin: profileData.linkedin || '',
+                    equity: profileData.equity || '',
+                    website: '',
+                    executionScore: 0,
+                    createdAt: new Date().toISOString(),
+                    mentorAssigned: null,
+                    applications: [],
+                    activity: [{
+                        id: `act_${Date.now()}`,
+                        message: 'Venture profile initialized.',
+                        type: 'info',
+                        timestamp: new Date().toISOString()
+                    }],
+                    updatedAt: new Date().toISOString(),
+                    status: 'active'
+                };
+                localStorage.setItem(STARTUPS_KEY, JSON.stringify([...allStartups, newStartup]));
+            }
+
+            // Relational: Initialize Incubator record if incubator
+            if (normalizedRole === 'incubator') {
+                const INCUBATORS_KEY = 'vanguard_incubators';
+                const allIncubators = JSON.parse(localStorage.getItem(INCUBATORS_KEY) || '[]');
+                const newIncubator = {
+                    id: firebaseUser.uid,
+                    name: profileData.incubatorName || name,
+                    email: email,
+                    website: profileData.website || '',
+                    location: profileData.location || '',
+                    description: profileData.description || '',
+                    sectorFocus: Array.isArray(profileData.sectorFocus) ? profileData.sectorFocus : [],
+                    stagePreference: profileData.stagePref || 'Early Stage',
+                    fundingSupport: profileData.funding === 'yes',
+                    batchSize: parseInt(profileData.cohortSize) || 20,
+                    programHighlights: [],
+                    successStats: { graduated: 0, raised: '$0', active: 0 },
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                localStorage.setItem(INCUBATORS_KEY, JSON.stringify([...allIncubators, newIncubator]));
+            }
+
+            setUser(newUser);
+            navigate(ROLE_PATHS[normalizedRole] || '/founder');
+            return newUser;
+        } finally {
+            sessionStorage.removeItem('vanguard_processing_auth');
         }
-
-        // onAuthStateChanged will fire and set user state automatically
-        // But we also set it here for instant UI response
-        setUser(profile);
-
-        // Redirect based on role
-        const path = ROLE_PATHS[normalizedRole] || '/founder';
-        navigate(path);
-
-        return profile;
     };
 
     // ─── LOGIN ────────────────────────────────────────────────────────────────
-    const login = async (email, password) => {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const firebaseUser = userCredential.user;
+    const login = async (email, password, selectedRole = 'founder') => {
+        sessionStorage.setItem('vanguard_processing_auth', 'true');
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const firebaseUser = userCredential.user;
 
-        let profile = getUserProfile(firebaseUser.uid);
+            console.log("Firebase Auth success. UID:", firebaseUser.uid);
 
-        // Admin: may not have a stored profile (created manually in Firebase)
-        if (!profile && firebaseUser.email === ADMIN_EMAIL) {
-            profile = {
-                uid: firebaseUser.uid,
-                name: 'Admin',
-                email: firebaseUser.email,
-                role: 'admin',
-                createdAt: new Date().toISOString()
-            };
-            saveUserProfile(firebaseUser.uid, profile);
+            let profile = getUserProfile(firebaseUser.uid);
+
+            // SPECIAL: Auto-Healing if profile is missing
+            if (!profile) {
+                console.warn('Profile missing for UID:', firebaseUser.uid, '. Initiating auto-healing for role:', selectedRole);
+
+                // Create a minimal profile to allow access
+                profile = {
+                    uid: firebaseUser.uid,
+                    name: firebaseUser.displayName || email.split('@')[0],
+                    email: firebaseUser.email,
+                    role: selectedRole.toLowerCase(),
+                    portalData: {}, // Generic empty dashboard
+                    createdAt: new Date().toISOString()
+                };
+
+                // Add role-specific empty portal data if possible
+                if (profile.role === 'incubator') {
+                    profile.portalData = {
+                        incubatorName: profile.name,
+                        successStats: { graduated: 0, raised: '$0', active: 0 }
+                    };
+                }
+
+                saveUserProfile(firebaseUser.uid, profile);
+                console.log("Auto-healed profile created at Key: profile_" + firebaseUser.uid);
+            }
+
+            // Role match validation log
+            if (selectedRole && profile.role !== selectedRole.toLowerCase()) {
+                console.warn(`Role mismatch detected! Login selected ${selectedRole}, but profile is ${profile.role}`);
+            }
+
+            setUser(profile);
+            localStorage.setItem('vanguard_session_currentUser', JSON.stringify(profile));
+
+            const targetPath = ROLE_PATHS[profile.role] || '/founder';
+            console.log("Redirecting to:", targetPath);
+            navigate(targetPath);
+
+            return profile;
+        } finally {
+            sessionStorage.removeItem('vanguard_processing_auth');
         }
-
-        if (!profile) {
-            // Firebase auth succeeded but no profile — sign out and throw
-            await signOut(auth);
-            throw { code: 'auth/profile-not-found', message: 'Account data not found. Please sign up again.' };
-        }
-
-        setUser(profile);
-
-        const path = ROLE_PATHS[profile.role] || '/founder';
-        navigate(path);
-
-        return profile;
     };
 
-    // ─── LOGOUT ───────────────────────────────────────────────────────────────
     const logout = async () => {
         await signOut(auth);
         setUser(null);
+        localStorage.removeItem('vanguard_session_currentUser');
         navigate('/');
     };
 

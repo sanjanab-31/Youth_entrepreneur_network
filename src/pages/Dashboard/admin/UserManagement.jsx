@@ -17,7 +17,17 @@ const UserManagement = () => {
     const [filterRole, setFilterRole] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
 
-    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '{}');
+    const allUsersRaw = localStorage.getItem('vanguard_users');
+    let allUsers = {};
+    try {
+        allUsers = JSON.parse(allUsersRaw || '{}');
+        if (Array.isArray(allUsers)) {
+            allUsers = allUsers.reduce((acc, u) => {
+                if (u.uid || u.id) acc[u.uid || u.id] = u;
+                return acc;
+            }, {});
+        }
+    } catch (e) { allUsers = {}; }
     const users = Object.values(allUsers).map((u, idx) => ({
         id: u.uid,
         name: u.name || u.email.split('@')[0],

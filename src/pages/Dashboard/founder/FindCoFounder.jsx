@@ -40,15 +40,26 @@ const FindCoFounder = () => {
     // Load Data
     useEffect(() => {
         const refreshData = () => {
-            // Load Current User
-            const storedUser = localStorage.getItem('vanguard_currentUser');
+            // Load Current User (Auth SSOT)
+            const storedUser = localStorage.getItem('vanguard_session_currentUser');
             if (storedUser) {
                 setUser(JSON.parse(storedUser));
             }
 
             // Load Candidates (Users with role 'co-founder')
-            const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
-            const coFounders = allUsers
+            const allUsersRaw = localStorage.getItem('vanguard_users');
+            let allUsers = {};
+            try {
+                allUsers = JSON.parse(allUsersRaw || '{}');
+                if (Array.isArray(allUsers)) {
+                    allUsers = allUsers.reduce((acc, u) => {
+                        if (u.uid || u.id) acc[u.uid || u.id] = u;
+                        return acc;
+                    }, {});
+                }
+            } catch (e) { allUsers = {}; }
+
+            const coFounders = Object.values(allUsers)
                 .filter(u => u.role === 'co-founder')
                 .map(u => ({
                     id: u.id,

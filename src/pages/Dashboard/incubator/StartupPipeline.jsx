@@ -20,20 +20,30 @@ import {
     DollarSign,
     Milestone,
     Clock,
-    MapPin
+    MapPin,
+    Plus
 } from 'lucide-react';
 
 import { useIncubator } from '../../../context/IncubatorContext';
 
 const StartupPipeline = () => {
-    const { pipeline, toggleWatchlist, inviteToApply } = useIncubator();
+    const { pipeline, onboardStartup, inviteToApply } = useIncubator();
     const [selectedStartup, setSelectedStartup] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [showOnboardModal, setShowOnboardModal] = useState(false);
+    const [onboardData, setOnboardData] = useState({ name: '', sector: '', stage: '', oneLiner: '' });
+
+    const handleOnboardSubmit = (e) => {
+        e.preventDefault();
+        onboardStartup(onboardData);
+        setShowOnboardModal(false);
+        setOnboardData({ name: '', sector: '', stage: '', oneLiner: '' });
+    };
 
     const filteredStartups = pipeline.filter(s =>
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.sector.toLowerCase().includes(searchTerm.toLowerCase())
+        (s.startupName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.sector || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -45,6 +55,12 @@ const StartupPipeline = () => {
                     <p className="text-sm text-gray-400">Discover and evaluate high-potential ventures</p>
                 </div>
                 <div className="flex items-center gap-3 w-full md:w-auto">
+                    <button
+                        onClick={() => setShowOnboardModal(true)}
+                        className="flex items-center gap-2 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
+                    >
+                        <Plus size={16} /> Add Startup
+                    </button>
                     <div className="relative flex-1 md:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input
@@ -121,7 +137,7 @@ const StartupPipeline = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredStartups.map((startup, index) => (
                     <motion.div
-                        key={startup.id}
+                        key={startup.startupId || startup.id || index}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
@@ -133,7 +149,7 @@ const StartupPipeline = () => {
                                     <Rocket className="text-[#8B5CF6]" size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-white group-hover:text-[#8B5CF6] transition-colors">{startup.name}</h3>
+                                    <h3 className="font-bold text-white group-hover:text-[#8B5CF6] transition-colors">{startup.startupName || startup.name || 'Unnamed Venture'}</h3>
                                     <p className="text-xs text-gray-500 flex items-center gap-1">
                                         <Globe size={12} /> {startup.sector}
                                     </p>
@@ -219,7 +235,7 @@ const StartupPipeline = () => {
                                         <Rocket className="text-white" size={24} />
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-bold text-white tracking-tight">{selectedStartup.name}</h2>
+                                        <h2 className="text-xl font-bold text-white tracking-tight">{selectedStartup.startupName}</h2>
                                         <p className="text-xs text-gray-400 flex items-center gap-1">
                                             <MapPin size={12} /> {selectedStartup.location || 'Remote'}
                                         </p>
@@ -256,15 +272,15 @@ const StartupPipeline = () => {
                                             <Target size={14} /> The Problem
                                         </h3>
                                         <p className="text-sm text-gray-300 leading-relaxed bg-white/5 p-4 rounded-xl border border-white/5 font-medium italic">
-                                            "{selectedStartup.problem || 'Not specified'}"
+                                            "{selectedStartup.problemStatement || 'Not specified'}"
                                         </p>
                                     </div>
                                     <div className="space-y-3">
                                         <h3 className="text-sm font-black uppercase tracking-widest text-[#8B5CF6] flex items-center gap-2">
-                                            <Zap size={14} /> The Solution
+                                            <Zap size={14} /> The Mission
                                         </h3>
                                         <p className="text-sm text-gray-300 leading-relaxed bg-[#8B5CF6]/5 p-4 rounded-xl border border-[#8B5CF6]/10 font-medium">
-                                            {selectedStartup.solution || 'Not specified'}
+                                            {selectedStartup.oneLiner || 'Strategic mission in progress.'}
                                         </p>
                                     </div>
                                 </div>
@@ -339,6 +355,101 @@ const StartupPipeline = () => {
                             </div>
                         </motion.div>
                     </>
+                )}
+            </AnimatePresence>
+            {/* Onboarding Modal */}
+            <AnimatePresence>
+                {showOnboardModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowOnboardModal(false)}
+                            className="absolute inset-0 bg-[#0F0F14]/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-lg bg-[#1E1E2F] border border-white/10 rounded-3xl shadow-2xl p-8 overflow-hidden"
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h2 className="text-xl font-black text-white uppercase tracking-tight">Onboard New Venture</h2>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Manual ecosystem entry</p>
+                                </div>
+                                <button onClick={() => setShowOnboardModal(false)} className="text-gray-500 hover:text-white transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleOnboardSubmit} className="space-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#8B5CF6]">Startup Name</label>
+                                    <input
+                                        required
+                                        value={onboardData.name}
+                                        onChange={(e) => setOnboardData({ ...onboardData, name: e.target.value })}
+                                        className="w-full bg-[#0F0F14] border border-white/5 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all shadow-inner"
+                                        placeholder="e.g. Acme AI"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#8B5CF6]">Sector</label>
+                                        <select
+                                            required
+                                            value={onboardData.sector}
+                                            onChange={(e) => setOnboardData({ ...onboardData, sector: e.target.value })}
+                                            className="w-full bg-[#0F0F14] border border-white/5 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all"
+                                        >
+                                            <option value="">Select Sector</option>
+                                            <option value="Fintech">Fintech</option>
+                                            <option value="SaaS">SaaS</option>
+                                            <option value="AI/ML">AI/ML</option>
+                                            <option value="Healthtech">Healthtech</option>
+                                            <option value="Edtech">Edtech</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#8B5CF6]">Current Stage</label>
+                                        <select
+                                            required
+                                            value={onboardData.stage}
+                                            onChange={(e) => setOnboardData({ ...onboardData, stage: e.target.value })}
+                                            className="w-full bg-[#0F0F14] border border-white/5 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all"
+                                        >
+                                            <option value="">Select Stage</option>
+                                            <option value="Idea">Idea</option>
+                                            <option value="MVP">MVP</option>
+                                            <option value="Pre-Seed">Pre-Seed</option>
+                                            <option value="Seed">Seed</option>
+                                            <option value="Growth">Growth</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#8B5CF6]">One Liner</label>
+                                    <textarea
+                                        required
+                                        rows="3"
+                                        value={onboardData.oneLiner}
+                                        onChange={(e) => setOnboardData({ ...onboardData, oneLiner: e.target.value })}
+                                        className="w-full bg-[#0F0F14] border border-white/5 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all resize-none"
+                                        placeholder="Briefly describe what they do..."
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full py-4 bg-[#8B5CF6] hover:bg-[#7C3AED] text-sm font-black uppercase tracking-widest text-white rounded-2xl shadow-xl shadow-[#8B5CF6]/30 transition-all mt-4"
+                                >
+                                    Add to Ecosystem
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>

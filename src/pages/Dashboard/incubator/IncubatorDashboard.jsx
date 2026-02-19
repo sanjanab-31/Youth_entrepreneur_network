@@ -21,27 +21,35 @@ import {
 import { useIncubator } from '../../../context/IncubatorContext';
 
 const IncubatorDashboard = () => {
-    const { profile, analytics, alerts, activityFeed, pipeline } = useIncubator();
+    const { profile, analytics, alerts, activityFeed, pipeline, loading } = useIncubator();
+
+    if (loading || !profile) {
+        return (
+            <div className="flex items-center justify-center h-[60vh]">
+                <div className="w-12 h-12 border-4 border-[#8B5CF6] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
 
     const stats = [
         { label: 'Total Startups in Pipeline', value: analytics.totalStartups, icon: Users, trend: '+12% this month', color: 'from-blue-500 to-cyan-500' },
         { label: 'Active Applications', value: analytics.activeApps, icon: FileText, trend: '+8% from last month', color: 'from-purple-500 to-indigo-500' },
-        { label: 'Current Cohort Size', value: analytics.cohortSize, icon: Layers, trend: 'In progress', color: 'from-[#8B5CF6] to-[#7C3AED]' },
-        { label: 'Graduated Startups', value: analytics.graduated, icon: Star, trend: 'Next review in 2 days', color: 'from-amber-500 to-orange-500' },
+        { label: 'Application Acceptance Rate', value: analytics.acceptedRate, icon: Layers, trend: 'In progress', color: 'from-[#8B5CF6] to-[#7C3AED]' },
+        { label: 'Critical Pipeline Issues', value: alerts.length, icon: Star, trend: 'Execution Check', color: 'from-amber-500 to-orange-500' },
     ];
 
     const highPotentialStartups = pipeline
-        .sort((a, b) => b.executionScore - a.executionScore)
+        .sort((a, b) => (b.executionScore || 0) - (a.executionScore || 0))
         .slice(0, 3);
 
     return (
         <div className="space-y-8 pb-10">
             {/* Welcome Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">{profile.name}</h1>
+                <div className="z-10">
+                    <h1 className="text-3xl font-bold text-white mb-2">{profile.organizationName || profile.name}</h1>
                     <div className="flex flex-wrap gap-2">
-                        {profile.sectorFocus.map((sector, idx) => (
+                        {(profile.sectorFocus || []).map((sector, idx) => (
                             <span key={idx} className="px-3 py-1 bg-[#8B5CF6]/10 text-[#8B5CF6] text-xs font-bold rounded-full border border-[#8B5CF6]/20 tracking-wider uppercase">
                                 {sector}
                             </span>

@@ -2,47 +2,45 @@
 import React, { useState, useEffect } from 'react';
 import { User, Bell, Eye, Shield, CheckCircle2, ChevronRight, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../../context/AuthContext';
 
 const SETTINGS_KEY = 'vanguard_userSettings';
-const AUTH_KEY = 'vanguard_currentUser';
+const AUTH_SESSION_KEY = 'vanguard_session_currentUser';
 
 const Settings = ({ role: initialRole }) => {
+    const { user: authUser, updateProfile: authUpdate } = useAuth();
     const [user, setUser] = useState(null);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
 
-    // Initialization: seed from auth record, overlay saved settings on top
+    // Initialization: overlay saved local settings on top of Auth SSOT
     useEffect(() => {
-        // Get the real authenticated user (name + email from signup)
-        const authRaw = localStorage.getItem(AUTH_KEY);
-        const authUser = authRaw ? JSON.parse(authRaw) : null;
+        if (!authUser) return;
 
-        // Get any previously saved settings overrides
-        const savedSettings = localStorage.getItem(SETTINGS_KEY);
-        const saved = savedSettings ? JSON.parse(savedSettings) : {};
+        // Get any previously saved local preferences (notifications, etc)
+        const savedRaw = localStorage.getItem(`${SETTINGS_KEY}_${authUser.uid}`);
+        const saved = savedRaw ? JSON.parse(savedRaw) : {};
 
         const profile = {
-            // Real data from signup — never use hardcoded placeholders
-            fullName: saved.fullName ?? authUser?.name ?? '',
-            email: authUser?.email ?? '',
-            role: authUser?.role ?? initialRole ?? 'founder',
-            // Fields not collected at signup — empty until user fills them
-            commitmentLevel: saved.commitmentLevel ?? '',
-            bio: saved.bio ?? '',
+            fullName: authUser.name || '',
+            email: authUser.email || '',
+            role: authUser.role || initialRole || 'founder',
+            commitmentLevel: authUser.commitmentLevel || saved.commitmentLevel || '',
+            bio: authUser.bio || saved.bio || '',
             preferences: {
                 emailNotifications: true,
                 mentorAlerts: true,
-                ...(saved.preferences || {})
+                ...(authUser.preferences || saved.preferences || {})
             },
             visibility: {
                 profile: 'public',
                 startup: 'visible',
-                ...(saved.visibility || {})
+                ...(authUser.visibility || saved.visibility || {})
             }
         };
 
         setUser(profile);
-    }, [initialRole]);
+    }, [authUser, initialRole]);
 
     const triggerToast = (msg) => {
         setToastMessage(msg);
@@ -53,37 +51,27 @@ const Settings = ({ role: initialRole }) => {
     const updateField = (field, value) => {
         const newUser = { ...user, [field]: value };
         setUser(newUser);
-        // Save settings separately from auth record
-        const toSave = { ...newUser };
-        delete toSave.email; // email is read-only, don't duplicate
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(toSave));
-        // If name changed, sync back to auth record so it stays consistent
-        if (field === 'fullName') {
-            const authRaw = localStorage.getItem(AUTH_KEY);
-            if (authRaw) {
-                const authUser = JSON.parse(authRaw);
-                localStorage.setItem(AUTH_KEY, JSON.stringify({ ...authUser, name: value }));
-                // Also update in the users array
-                const users = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
-                const updatedUsers = users.map(u => u.id === authUser.id ? { ...u, name: value } : u);
-                localStorage.setItem('vanguard_users', JSON.stringify(updatedUsers));
-            }
-        }
+
+        // Sync with Auth SSOT
+        const updates = { [field]: value };
+        if (field === 'fullName') updates.name = value;
+        authUpdate(updates);
+
+        // Also persist local-only settings
+        localStorage.setItem(`${SETTINGS_KEY}_${authUser.uid}`, JSON.stringify(newUser));
         triggerToast("Changes Saved");
     };
 
     const updateNestedField = (section, field, value) => {
-        const newUser = {
-            ...user,
-            [section]: {
-                ...user[section],
-                [field]: value
-            }
-        };
+        const newSection = { ...user[section], [field]: value };
+        const newUser = { ...user, [section]: newSection };
         setUser(newUser);
-        const toSave = { ...newUser };
-        delete toSave.email;
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(toSave));
+
+        // Sync with Auth SSOT
+        authUpdate({ [section]: newSection });
+
+        // Also persist local-only settings
+        localStorage.setItem(`${SETTINGS_KEY}_${authUser.uid}`, JSON.stringify(newUser));
         triggerToast("Changes Saved");
     };
 

@@ -22,26 +22,30 @@ import {
 import { useIncubator } from '../../../context/IncubatorContext';
 
 const Mentors = () => {
-    const { mentors, pipeline, assignMentorToStartup, removeMentorAssignment, inviteMentor } = useIncubator();
+    const { mentors, pipeline, onboardMentor, assignMentorToStartup, removeMentorAssignment } = useIncubator();
     const [selectedMentor, setSelectedMentor] = useState(null);
     const [isAssigning, setIsAssigning] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [showOnboardModal, setShowOnboardModal] = useState(false);
+    const [onboardData, setOnboardData] = useState({ name: '', email: '', expertise: '', bio: '' });
+
+    const handleOnboardSubmit = (e) => {
+        e.preventDefault();
+        onboardMentor({
+            ...onboardData,
+            expertise: onboardData.expertise.split(',').map(s => s.trim())
+        });
+        setShowOnboardModal(false);
+        setOnboardData({ name: '', email: '', expertise: '', bio: '' });
+    };
 
     const filteredMentors = mentors.filter(m =>
-        m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.expertise.toLowerCase().includes(searchTerm.toLowerCase())
+        (m.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.expertise || '').toString().toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const getMentorMentees = (mentorId) => {
-        return pipeline.filter(s => s.mentorId === mentorId);
-    };
-
-    const handleInvite = () => {
-        const name = prompt("Enter Mentor Name:");
-        const expertise = prompt("Enter Expertise:");
-        if (name && expertise) {
-            inviteMentor({ name, expertise, company: 'New Expert', linkedin: '#' });
-        }
+        return pipeline.filter(s => s.mentorAssigned === mentorId);
     };
 
     return (
@@ -53,11 +57,11 @@ const Mentors = () => {
                 </div>
                 <div className="flex gap-3">
                     <button
-                        onClick={handleInvite}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 text-sm font-bold text-white transition-all focus:outline-none"
+                        onClick={() => setShowOnboardModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#8B5CF6] hover:bg-[#7C3AED] rounded-xl text-xs font-bold text-white uppercase tracking-widest transition-all focus:outline-none shadow-lg shadow-[#8B5CF6]/20"
                     >
                         <Plus size={18} />
-                        Invite Mentor
+                        Add Mentor
                     </button>
                 </div>
             </div>
@@ -75,12 +79,12 @@ const Mentors = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredMentors.map((mentor, index) => {
-                    const mentees = getMentorMentees(mentor.id);
+                    const mentees = getMentorMentees(mentor.uid || mentor.id);
                     const workload = (mentees.length / 5) * 100; // Assume max 5 for UI progress
 
                     return (
                         <motion.div
-                            key={mentor.id}
+                            key={mentor.uid || mentor.id || index}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
@@ -94,7 +98,7 @@ const Mentors = () => {
                             <div className="flex items-center gap-4 mb-6">
                                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#8B5CF6] to-[#7C3AED] p-0.5 shadow-lg">
                                     <div className="w-full h-full rounded-[14px] bg-[#1E1E2F] flex items-center justify-center font-bold text-xl text-white uppercase">
-                                        {mentor.name[0]}
+                                        {(mentor.name || 'M')[0]}
                                     </div>
                                 </div>
                                 <div className="flex-1">
@@ -196,11 +200,11 @@ const Mentors = () => {
                                             <Rocket size={16} /> Assign to Active Startup
                                         </h3>
                                         <div className="space-y-3">
-                                            {pipeline.filter(s => s.mentorId !== selectedMentor.id).map((s, i) => (
+                                            {pipeline.filter(s => (s.mentorId || s.mentorAssigned) !== selectedMentor.uid).map((s, i) => (
                                                 <button
                                                     key={i}
                                                     onClick={() => {
-                                                        assignMentorToStartup(selectedMentor.id, s.id);
+                                                        assignMentorToStartup(selectedMentor.uid, s.startupId);
                                                         setIsAssigning(false);
                                                         setSelectedMentor(null);
                                                     }}
@@ -208,10 +212,10 @@ const Mentors = () => {
                                                 >
                                                     <div className="flex items-center gap-4 text-left">
                                                         <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-bold text-gray-400 group-hover:text-[#8B5CF6] uppercase">
-                                                            {s.name[0]}
+                                                            {(s.startupName || 'V')[0]}
                                                         </div>
                                                         <div>
-                                                            <p className="font-bold text-white text-sm">{s.name}</p>
+                                                            <p className="font-bold text-white text-sm">{s.startupName || 'Unnamed Venture'}</p>
                                                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{s.stage} • {s.sector}</p>
                                                         </div>
                                                     </div>
@@ -228,28 +232,28 @@ const Mentors = () => {
                                         <div className="space-y-3">
                                             <h3 className="text-sm font-black uppercase tracking-widest text-[#8B5CF6]">Professional Profile</h3>
                                             <p className="text-sm text-gray-300 font-medium leading-relaxed bg-white/5 p-5 rounded-2xl border border-white/5 italic">
-                                                "{selectedMentor.about || 'Senior expert with deep experience in selected domains.'}"
+                                                "{selectedMentor.bio || selectedMentor.about || 'Senior expert with deep experience in selected domains.'}"
                                             </p>
                                         </div>
 
                                         <div className="space-y-4">
                                             <h3 className="text-sm font-black uppercase tracking-widest text-[#8B5CF6]">Active Assignments</h3>
                                             <div className="space-y-3">
-                                                {getMentorMentees(selectedMentor.id).map(s => (
-                                                    <div key={s.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group">
+                                                {getMentorMentees(selectedMentor.uid || selectedMentor.id).map(s => (
+                                                    <div key={s.startupId} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group">
                                                         <div className="flex items-center gap-3">
                                                             <Rocket size={16} className="text-[#8B5CF6]" />
-                                                            <span className="text-sm font-bold text-white">{s.name}</span>
+                                                            <span className="text-sm font-bold text-white">{s.startupName}</span>
                                                         </div>
                                                         <button
-                                                            onClick={() => removeMentorAssignment(selectedMentor.id, s.id)}
+                                                            onClick={() => removeMentorAssignment(selectedMentor.uid || selectedMentor.id, s.startupId)}
                                                             className="text-[10px] font-black uppercase text-rose-500 border border-rose-500/20 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white"
                                                         >
                                                             Unassign
                                                         </button>
                                                     </div>
                                                 ))}
-                                                {getMentorMentees(selectedMentor.id).length === 0 && (
+                                                {getMentorMentees(selectedMentor.uid || selectedMentor.id).length === 0 && (
                                                     <p className="text-xs text-gray-500 italic">No startups currently assigned.</p>
                                                 )}
                                             </div>
@@ -292,6 +296,90 @@ const Mentors = () => {
                             </div>
                         </motion.div>
                     </>
+                )}
+            </AnimatePresence>
+
+            {/* Onboarding Mentor Modal */}
+            <AnimatePresence>
+                {showOnboardModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowOnboardModal(false)}
+                            className="absolute inset-0 bg-[#0F0F14]/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-lg bg-[#1E1E2F] border border-white/10 rounded-3xl shadow-2xl p-8 overflow-hidden"
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h2 className="text-xl font-black text-white uppercase tracking-tight">Onboard New Mentor</h2>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Manual ecosystem entry</p>
+                                </div>
+                                <button onClick={() => setShowOnboardModal(false)} className="text-gray-500 hover:text-white transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleOnboardSubmit} className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#8B5CF6]">Full Name</label>
+                                        <input
+                                            required
+                                            value={onboardData.name}
+                                            onChange={(e) => setOnboardData({ ...onboardData, name: e.target.value })}
+                                            className="w-full bg-[#0F0F14] border border-white/5 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all shadow-inner"
+                                            placeholder="e.g. Dr. Sarah Chen"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#8B5CF6]">Official Email</label>
+                                        <input
+                                            type="email"
+                                            value={onboardData.email}
+                                            onChange={(e) => setOnboardData({ ...onboardData, email: e.target.value })}
+                                            className="w-full bg-[#0F0F14] border border-white/5 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all"
+                                            placeholder="sarah@experts.com"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#8B5CF6]">Expertise Areas (comma separated)</label>
+                                    <input
+                                        required
+                                        value={onboardData.expertise}
+                                        onChange={(e) => setOnboardData({ ...onboardData, expertise: e.target.value })}
+                                        className="w-full bg-[#0F0F14] border border-white/5 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all shadow-inner"
+                                        placeholder="e.g. Fintech, GTM, Seed Funding"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#8B5CF6]">Mentor Bio</label>
+                                    <textarea
+                                        required
+                                        rows="3"
+                                        value={onboardData.bio}
+                                        onChange={(e) => setOnboardData({ ...onboardData, bio: e.target.value })}
+                                        className="w-full bg-[#0F0F14] border border-white/5 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 transition-all resize-none"
+                                        placeholder="Professional background and focus..."
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full py-4 bg-[#8B5CF6] hover:bg-[#7C3AED] text-sm font-black uppercase tracking-widest text-white rounded-2xl shadow-xl shadow-[#8B5CF6]/30 transition-all mt-4"
+                                >
+                                    Add to Ecosystem
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>

@@ -202,10 +202,20 @@ const MentorDashboard = () => {
 
     const hydrateSession = (session) => {
         const allStartups = JSON.parse(localStorage.getItem('vanguard_startups') || '[]');
-        const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '[]');
+        const allUsersRaw = localStorage.getItem('vanguard_users');
+        let allUsers = {};
+        try {
+            allUsers = JSON.parse(allUsersRaw || '{}');
+            if (Array.isArray(allUsers)) {
+                allUsers = allUsers.reduce((acc, u) => {
+                    if (u.uid || u.id) acc[u.uid || u.id] = u;
+                    return acc;
+                }, {});
+            }
+        } catch (e) { allUsers = {}; }
 
         const startup = allStartups.find(s => s.startupId === session.startupId) || null;
-        const founder = allUsers.find(u => u.uid === startup?.founderId) || null;
+        const founder = startup ? allUsers[startup.founderId] : null;
         return {
             ...session,
             startupName: startup?.startupName || 'Unknown Startup',

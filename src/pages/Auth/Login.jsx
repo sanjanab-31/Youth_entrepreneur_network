@@ -30,6 +30,8 @@ const Login = () => {
             console.error(err);
             if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
                 setError('Invalid email or password. Please try again.');
+            } else if (err.code === 'auth/profile-not-found') {
+                setError('Account found but local profile data is missing. Please sign up again to restore your dashboard access.');
             } else if (err.code === 'auth/too-many-requests') {
                 setError('Too many failed attempts. Please try again later.');
             } else {

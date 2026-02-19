@@ -96,10 +96,10 @@ const Applications = () => {
                                     <td className="py-5 px-8">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-lg bg-[#8B5CF6]/10 flex items-center justify-center text-[#8B5CF6] font-bold border border-[#8B5CF6]/20 group-hover:scale-110 transition-transform">
-                                                {app.name[0]}
+                                                {(app.startupName || 'V')[0]}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-white">{app.name}</p>
+                                                <p className="font-bold text-white">{app.startupName || 'Unnamed Venture'}</p>
                                                 <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{app.sector}</p>
                                             </div>
                                         </div>
@@ -108,10 +108,10 @@ const Applications = () => {
                                         <span className="text-sm text-gray-300 font-medium">{app.sector}</span>
                                     </td>
                                     <td className="py-5 px-4">
-                                        <span className="text-sm font-bold text-white">{app.teamSize} Members</span>
+                                        <span className="text-sm font-bold text-white">{app.teamSize || 0} Members</span>
                                     </td>
                                     <td className="py-5 px-4 text-sm text-gray-500 font-medium tracking-tight">
-                                        {new Date(app.createdAt).toLocaleDateString()}
+                                        {app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A'}
                                     </td>
                                     <td className="py-5 px-4 text-sm">
                                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${getStatusColor(app.status)}`}>
@@ -158,10 +158,10 @@ const Applications = () => {
                             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#1E1E2F]/80 backdrop-blur-xl sticky top-0">
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-[#8B5CF6]/20">
-                                        {selectedApp.name[0]}
+                                        {(selectedApp.startupName || 'V')[0]}
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-bold text-white">{selectedApp.name}</h2>
+                                        <h2 className="text-xl font-bold text-white">{selectedApp.startupName}</h2>
                                         <p className="text-xs text-gray-400">{selectedApp.sector} • Application</p>
                                     </div>
                                 </div>
@@ -174,15 +174,9 @@ const Applications = () => {
                                 {/* Problem & Solution */}
                                 <section className="grid grid-cols-1 gap-6">
                                     <div className="space-y-3">
-                                        <h3 className="text-sm font-black uppercase tracking-widest text-[#8B5CF6]">The Problem</h3>
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-[#8B5CF6]">Pitch Overview</h3>
                                         <div className="p-5 bg-white/5 rounded-2xl border border-white/5 font-medium italic text-gray-300">
-                                            "{selectedApp.problem}"
-                                        </div>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <h3 className="text-sm font-black uppercase tracking-widest text-[#8B5CF6]">The Solution</h3>
-                                        <div className="p-5 bg-[#8B5CF6]/5 rounded-2xl border border-[#8B5CF6]/10 font-bold text-gray-100">
-                                            {selectedApp.solution}
+                                            "{selectedApp.problemStatement || 'No detail provided.'}"
                                         </div>
                                     </div>
                                 </section>
@@ -200,7 +194,7 @@ const Applications = () => {
                                                 className="w-full bg-[#0F0F14] border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#8B5CF6]"
                                             >
                                                 <option value="">Move to Pipeline Only</option>
-                                                {cohorts.filter(c => c.status === 'active').map(c => (
+                                                {cohorts.map(c => (
                                                     <option key={c.id} value={c.id}>{c.name}</option>
                                                 ))}
                                             </select>
@@ -215,7 +209,7 @@ const Applications = () => {
                                             >
                                                 <option value="">Assign Later</option>
                                                 {mentors.map(m => (
-                                                    <option key={m.id} value={m.id}>{m.name} ({m.expertise})</option>
+                                                    <option key={m.uid} value={m.uid}>{m.name} ({m.expertise || m.industry})</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -231,7 +225,7 @@ const Applications = () => {
                                                 <FileText size={18} className="text-rose-400" />
                                                 <span className="text-xs font-bold text-gray-300 truncate">{doc}</span>
                                             </div>
-                                        ))}
+                                        )) || <p className="text-xs text-gray-500 italic">No documents attached.</p>}
                                     </div>
                                 </section>
                             </div>
@@ -241,7 +235,7 @@ const Applications = () => {
                                     onClick={() => {
                                         acceptApplication(selectedApp.id, selectedCohort);
                                         if (selectedMentor) {
-                                            assignMentorToStartup(selectedMentor, selectedApp.id);
+                                            assignMentorToStartup(selectedMentor, selectedApp.startupId);
                                         }
                                         setSelectedApp(null);
                                     }}

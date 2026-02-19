@@ -44,7 +44,16 @@ const Signup = () => {
         setLoading(true);
         try {
             const { email, password, ...profileData } = formData;
-            await signup(email, password, role, profileData);
+
+            // Convert comma-separated strings to arrays for relational consistency
+            const processedProfileData = {
+                ...profileData,
+                sectorFocus: profileData.sectorFocus ? profileData.sectorFocus.split(',').map(s => s.trim()) : [],
+                primarySkills: profileData.primarySkills ? profileData.primarySkills.split(',').map(s => s.trim()) : [],
+                areas: profileData.areas ? profileData.areas.split(',').map(s => s.trim()) : []
+            };
+
+            await signup(email, password, role, processedProfileData);
         } catch (error) {
             console.error(error);
             if (error.code === 'auth/email-already-in-use') {

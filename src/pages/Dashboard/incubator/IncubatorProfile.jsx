@@ -21,14 +21,29 @@ import {
 import { useIncubator } from '../../../context/IncubatorContext';
 
 const IncubatorProfile = () => {
-    const { profile, updateProfile } = useIncubator();
+    const { profile, updateProfile, loading } = useIncubator();
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState(profile);
+    const [formData, setFormData] = useState(null);
+
+    // Initialize formData once profile is loaded
+    React.useEffect(() => {
+        if (profile && !formData) {
+            setFormData(profile);
+        }
+    }, [profile, formData]);
 
     const handleSave = () => {
         updateProfile(formData);
         setIsEditing(false);
     };
+
+    if (loading || !profile) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#8B5CF6]"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-5xl mx-auto space-y-10 pb-20">

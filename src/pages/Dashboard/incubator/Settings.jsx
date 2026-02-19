@@ -20,7 +20,12 @@ import { useIncubator } from '../../../context/IncubatorContext';
 
 const Settings = () => {
     const { settings, updateSettings } = useIncubator();
-    const [localSettings, setLocalSettings] = useState(settings);
+    const [localSettings, setLocalSettings] = useState(settings || { batchLimits: {}, notifications: {}, subAdmins: [] });
+
+    // Sync local state when settings finally load from context
+    React.useEffect(() => {
+        if (settings) setLocalSettings(settings);
+    }, [settings]);
 
     const toggleNotification = (key) => {
         const updated = {

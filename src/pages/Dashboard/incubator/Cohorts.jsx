@@ -120,7 +120,7 @@ const Cohorts = () => {
                                 <div className="flex -space-x-3 overflow-hidden">
                                     {cohortStartups.slice(0, 4).map((s, i) => (
                                         <div key={i} className="inline-block h-8 w-8 rounded-full border-2 border-[#1E1E2F] bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shadow-lg uppercase">
-                                            {s.name[0]}
+                                            {(s.startupName || 'V')[0]}
                                         </div>
                                     ))}
                                     {cohortStartups.length > 4 && (
@@ -269,12 +269,12 @@ const Cohorts = () => {
                                                         <div className="flex justify-between items-start">
                                                             <div className="flex items-center gap-4">
                                                                 <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center font-bold text-[#8B5CF6]">
-                                                                    {startup.name[0]}
+                                                                    {(startup.startupName || 'V')[0]}
                                                                 </div>
                                                                 <div>
-                                                                    <p className="font-bold text-white">{startup.name}</p>
+                                                                    <p className="font-bold text-white">{startup.startupName || 'Unnamed Venture'}</p>
                                                                     <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">
-                                                                        Mentor: {mentors.find(m => m.id === startup.mentorId)?.name || 'Assign Later'}
+                                                                        Mentor: {mentors.find(m => m.uid === startup.mentorId || m.uid === startup.mentorAssigned)?.name || 'Assign Later'}
                                                                     </p>
                                                                 </div>
                                                             </div>

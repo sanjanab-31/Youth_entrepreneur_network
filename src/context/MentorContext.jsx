@@ -314,12 +314,22 @@ export const MentorProvider = ({ children }) => {
     const buildActivity = () => {
         // Hydrate names from IDs — never rely on stale duplicated data
         const allStartups = JSON.parse(localStorage.getItem(KEYS.STARTUPS) || '[]');
-        const allUsers = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
+        const allUsersRaw = localStorage.getItem(KEYS.USERS);
+        let allUsers = {};
+        try {
+            allUsers = JSON.parse(allUsersRaw || '{}');
+            if (Array.isArray(allUsers)) {
+                allUsers = allUsers.reduce((acc, u) => {
+                    if (u.uid || u.id) acc[u.uid || u.id] = u;
+                    return acc;
+                }, {});
+            }
+        } catch (e) { allUsers = {}; }
 
         const getStartupName = (startupId) =>
             allStartups.find(s => s.startupId === startupId)?.startupName || 'Unknown Startup';
         const getFounderName = (founderId) => {
-            const u = allUsers.find(u => u.uid === founderId);
+            const u = allUsers[founderId];
             return u?.name || u?.email?.split('@')[0] || 'Unknown Founder';
         };
 
