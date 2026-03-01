@@ -120,15 +120,16 @@ export const MentorProvider = ({ children }) => {
             };
             return {
                 ...s,
-                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 20),
+                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 50),
                 updatedAt: new Date().toISOString()
             };
         });
 
         saveSystem(system);
+        refreshData();
     };
 
-    const scheduleSession = (startupId, date, time) => {
+    const scheduleSession = (startupId, date, time, topic = 'Mentorship Session') => {
         const system = getSystem();
         const newSession = {
             id: `ses_${Date.now()}`,
@@ -136,6 +137,7 @@ export const MentorProvider = ({ children }) => {
             startupId,
             date,
             time,
+            topic,
             status: 'upcoming',
             createdAt: new Date().toISOString()
         };
@@ -152,12 +154,13 @@ export const MentorProvider = ({ children }) => {
             };
             return {
                 ...s,
-                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 20),
+                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 50),
                 updatedAt: new Date().toISOString()
             };
         });
 
         saveSystem(system);
+        refreshData();
     };
 
     const confirmSessionRequest = (sessionId) => {
@@ -165,9 +168,8 @@ export const MentorProvider = ({ children }) => {
         const session = system.sessions.find(s => s.id === sessionId);
         if (!session) return;
 
-        system.sessions = system.sessions.map(s =>
-            s.id === sessionId ? { ...s, status: 'upcoming', updatedAt: new Date().toISOString() } : s
-        );
+        session.status = 'upcoming';
+        session.updatedAt = new Date().toISOString();
 
         // Log activity
         system.startups = system.startups.map(s => {
@@ -180,12 +182,75 @@ export const MentorProvider = ({ children }) => {
             };
             return {
                 ...s,
-                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 20),
+                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 50),
                 updatedAt: new Date().toISOString()
             };
         });
 
         saveSystem(system);
+        refreshData();
+    };
+
+    const declineSessionRequest = (sessionId) => {
+        const system = getSystem();
+        const session = system.sessions.find(s => s.id === sessionId);
+        if (!session) return;
+
+        session.status = 'declined';
+        session.updatedAt = new Date().toISOString();
+
+        // Log activity
+        system.startups = system.startups.map(s => {
+            if (s.startupId !== session.startupId) return s;
+            const activityEntry = {
+                id: `act_${Date.now()}`,
+                message: `Mentor declined your session request for ${session.date}`,
+                type: 'warning',
+                timestamp: new Date().toISOString()
+            };
+            return {
+                ...s,
+                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 50),
+                updatedAt: new Date().toISOString()
+            };
+        });
+
+        saveSystem(system);
+        refreshData();
+    };
+
+    const completeSession = (sessionId, feedback) => {
+        const system = getSystem();
+        const session = system.sessions.find(s => s.id === sessionId);
+        if (!session) return;
+
+        session.status = 'completed';
+        session.notes = feedback.advice;
+        session.actionItems = feedback.actionItems;
+        session.completedAt = new Date().toISOString();
+        session.updatedAt = new Date().toISOString();
+
+        // Log activity & boost execution score
+        system.startups = system.startups.map(s => {
+            if (s.startupId !== session.startupId) return s;
+            const activityEntry = {
+                id: `act_${Date.now()}`,
+                message: `Completed session with mentor. Feedback received.`,
+                type: 'success',
+                timestamp: new Date().toISOString()
+            };
+            const updated = {
+                ...s,
+                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 50),
+                updatedAt: new Date().toISOString()
+            };
+            // Recalculate execution score (it includes sessions already in StartupContext logic)
+            updated.executionScore = calculateExecutionScore(updated);
+            return updated;
+        });
+
+        saveSystem(system);
+        refreshData();
     };
 
     const addFocusArea = (startupId, area) => {
@@ -217,40 +282,43 @@ export const MentorProvider = ({ children }) => {
             if (s.startupId !== startupId) return s;
             return {
                 ...s,
-                focusAreas: (Array.isArray(s.focusAreas) ? s.focusAreas : []).filter(f => f !== area),
+                focusAreas: (s.focusAreas || []).filter(a => a !== area),
                 updatedAt: new Date().toISOString()
             };
         });
         saveSystem(system);
+        refreshData();
     };
 
-    const sendMessage = (startupId, messageText) => {
-        if (!messageText?.trim()) return;
+    const sendMessage = (startupId, text) => {
+        if (!user) return;
         const system = getSystem();
-        system.startups = system.startups.map(s => {
-            if (s.startupId !== startupId) return s;
-            const newMsg = {
-                id: `msg_${Date.now()}`,
-                senderId: user.uid,
-                senderName: user.name || 'Mentor',
-                senderRole: 'mentor',
-                message: messageText.trim(),
-                timestamp: new Date().toISOString()
-            };
-            const activityEntry = {
-                id: `act_${Date.now() + 1}`,
-                message: `Mentor sent you a message`,
-                type: 'mentor',
-                timestamp: new Date().toISOString()
-            };
-            return {
-                ...s,
-                messages: [newMsg, ...(Array.isArray(s.messages) ? s.messages : [])],
-                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 20),
-                updatedAt: new Date().toISOString()
-            };
-        });
+        const startup = system.startups.find(s => s.startupId === startupId);
+        if (!startup) return;
+
+        const newMessage = {
+            id: `msg_${Date.now()}`,
+            senderId: user.uid,
+            senderName: user.name || user.fullName || 'Mentor',
+            senderRole: 'mentor',
+            text,
+            channel: 'mentor',
+            timestamp: new Date().toISOString()
+        };
+
+        startup.messages = [...(startup.messages || []), newMessage];
+
+        // Mentor messages log activity to the startup
+        const activityEntry = {
+            id: `act_${Date.now()}`,
+            message: `Mentor sent a message`,
+            type: 'mentor',
+            timestamp: new Date().toISOString()
+        };
+        startup.activity = [activityEntry, ...(Array.isArray(startup.activity) ? startup.activity : [])].slice(0, 50);
+
         saveSystem(system);
+        refreshData();
     };
 
     // ── Derived data ───────────────────────────────────────────
@@ -326,6 +394,8 @@ export const MentorProvider = ({ children }) => {
         declineRequest,
         scheduleSession,
         confirmSessionRequest,
+        declineSessionRequest,
+        completeSession,
         addFocusArea,
         removeFocusArea,
         sendMessage,

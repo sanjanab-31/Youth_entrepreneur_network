@@ -29,6 +29,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
 import { calculateExecutionScore } from '../../../utils/executionScore';
+import { getSystem } from '../../../utils/system';
 
 const StatCard = ({ label, value, icon: Icon, color, subtext }) => {
     const colorMap = {
@@ -90,7 +91,7 @@ const QuickAction = ({ label, icon: Icon, onClick, variant = "default" }) => (
 
 const DashboardHome = ({ role: propsRole }) => {
     const { user } = useAuth();
-    const { startup, updateStartup, addMilestone, updateMilestone, deleteMilestone, addActivity, loading } = useStartup();
+    const { startup, loading, updateStartup, addMilestone, addActivity, joinRequests } = useStartup();
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
@@ -117,23 +118,14 @@ const DashboardHome = ({ role: propsRole }) => {
     const profileCompletion = startup.profileCompletion || 0;
 
     // Hydrate assigned mentor name from users object (SSOT)
-    const allUsersRaw = localStorage.getItem('vanguard_users');
-    let allUsers = {};
-    try {
-        allUsers = JSON.parse(allUsersRaw || '{}');
-        if (Array.isArray(allUsers)) {
-            allUsers = allUsers.reduce((acc, u) => {
-                if (u.uid || u.id) acc[u.uid || u.id] = u;
-                return acc;
-            }, {});
-        }
-    } catch (e) { allUsers = {}; }
+    const system = getSystem();
+    const allUsers = system.users || {};
 
     const assignedMentor = startup.mentorAssigned ? allUsers[startup.mentorAssigned] : null;
     const assignedMentorName = assignedMentor?.name || assignedMentor?.email?.split('@')[0] || null;
 
     // Founder sessions from shared sessions array
-    const allSessions = JSON.parse(localStorage.getItem('vanguard_sessions') || '[]');
+    const allSessions = system.sessions || [];
     const founderSessions = allSessions
         .filter(s => s.startupId === startup.startupId)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -189,11 +181,14 @@ const DashboardHome = ({ role: propsRole }) => {
         ];
     };
 
+    const pendingJoinRequests = (joinRequests || []).filter(r => r.status === 'pending');
+
     const alerts = [
         { t: 'No mentor assigned yet', condition: !startup.mentorAssigned, type: 'warning' },
         { t: 'Traction not updated in 14 days', condition: (new Date() - new Date(startup.lastTractionUpdate || 0)) > 14 * 24 * 60 * 60 * 1000, type: 'danger' },
         { t: 'Skill gap not filled', condition: startup.skillGap && !startup.skillGapFilled, type: 'warning' },
-        { t: 'Profile incomplete (< 70%)', condition: profileCompletion < 70, type: 'warning' }
+        { t: 'Profile incomplete (< 70%)', condition: profileCompletion < 70, type: 'warning' },
+        { t: `${pendingJoinRequests.length} Co-Founder Request(s) Pending`, condition: isFounder && pendingJoinRequests.length > 0, type: 'info', link: '/founder/co-founder-requests' }
     ].filter(a => a.condition);
 
     return (
@@ -455,8 +450,10 @@ const DashboardHome = ({ role: propsRole }) => {
                                             {act.type === 'milestone' ? <Zap size={10} className="text-white" /> : <MessageSquare size={10} className="text-white" />}
                                         </div>
                                         <div>
-                                            <p className="text-[13px] font-bold text-gray-300 leading-snug">{act.msg}</p>
-                                            <p className="text-[10px] text-gray-600 font-bold mt-1">{act.time}</p>
+                                            <p className="text-[13px] font-bold text-gray-300 leading-snug">{act.message}</p>
+                                            <p className="text-[10px] text-gray-600 font-bold mt-1">
+                                                {act.timestamp ? new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                                            </p>
                                         </div>
                                     </div>
                                 ))}

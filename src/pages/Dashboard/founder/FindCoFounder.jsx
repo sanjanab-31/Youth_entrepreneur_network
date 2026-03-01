@@ -1,552 +1,450 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-    UserPlus,
     Search,
-    Filter,
-    MapPin,
-    Award,
-    DollarSign,
+    UserPlus,
+    Users,
+    Rocket,
+    CheckCircle2,
     Clock,
-    ChevronRight,
+    XCircle,
+    Send,
     Briefcase,
     Zap,
+    Building,
+    ExternalLink,
+    MessageSquare,
+    ChevronRight,
+    SearchX,
+    ShieldCheck,
+    AlertCircle,
     X,
-    CheckCircle2,
-    Bookmark,
-    Building2,
-    Activity,
-    Info
+    Filter
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
+import { getSystem } from '../../../utils/system';
+import { Navigate } from 'react-router-dom';
 
 const FindCoFounder = () => {
-    const { startup } = useStartup();
-    const [user, setUser] = useState(null);
-    const [candidates, setCandidates] = useState([]);
-    const [connections, setConnections] = useState([]);
-    const [savedCandidates, setSavedCandidates] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filters, setFilters] = useState({
-        primarySkill: 'All',
-        equityRange: [],
-        commitment: 'All',
-        verifiedOnly: false
-    });
-    const [selectedCandidate, setSelectedCandidate] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+    const { user } = useAuth();
+    const { startup, loading, sendDirectInvitation, invitations: startupInvitations } = useStartup();
 
-    // Load Data
-    useEffect(() => {
-        const refreshData = () => {
-            // Load Current User (Auth SSOT)
-            const storedUser = localStorage.getItem('vanguard_session_currentUser');
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
-            }
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedSector, setSelectedSector] = useState('All');
+    const [selectedSkill, setSelectedSkill] = useState('All');
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [inviteMessage, setInviteMessage] = useState('');
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-            // Load Candidates (Users with role 'co-founder')
-            const allUsersRaw = localStorage.getItem('vanguard_users');
-            let allUsers = {};
-            try {
-                allUsers = JSON.parse(allUsersRaw || '{}');
-                if (Array.isArray(allUsers)) {
-                    allUsers = allUsers.reduce((acc, u) => {
-                        if (u.uid || u.id) acc[u.uid || u.id] = u;
-                        return acc;
-                    }, {});
-                }
-            } catch (e) { allUsers = {}; }
+    if (loading) return null;
+    if (!startup) return <Navigate to="/founder/my-startup" />;
 
-            const coFounders = Object.values(allUsers)
-                .filter(u => u.role === 'co-founder')
-                .map(u => ({
-                    id: u.id,
-                    name: u.name || u.profileData?.fullName || u.email.split('@')[0],
-                    primarySkill: u.profileData?.primarySkill || 'Generalist',
-                    skills: u.profileData?.skills || [],
-                    experienceTitle: u.profileData?.experienceTitle || 'Professional',
-                    location: u.profileData?.location || 'Remote',
-                    equityExpectation: u.profileData?.equityExpectation || 'Negotiable',
-                    commitmentType: u.profileData?.commitmentType || 'Full-time',
-                    verifiedStatus: u.profileData?.verified || true,
-                    shortBio: u.profileData?.shortBio || 'Ready to join a high-impact startup.',
-                    previousExperience: u.profileData?.previousExperience || ''
-                }));
-            setCandidates(coFounders);
+    // --- DATA FETCHING ---
+    const system = getSystem();
+    const allUsers = Object.values(system.users || {});
+    const allStartups = system.startups || [];
 
-            // Load Connections
-            const storedConnections = JSON.parse(localStorage.getItem('vanguard_connections') || '[]');
-            setConnections(storedConnections);
+    // Filter for unlinked co-founders
+    const unlinkedCoFounders = useMemo(() => {
+        return allUsers.filter(u => {
+            if (u.role !== 'co-founder' && u.role !== 'cofounder') return false;
+            if (u.uid === user.uid) return false;
+            // Check if already in a startup
+            const isJoined = allStartups.some(s =>
+                (Array.isArray(s.coFounders) && s.coFounders.includes(u.uid)) ||
+                (s.founderId === u.uid)
+            );
+            return !isJoined;
+        });
+    }, [allUsers, allStartups, user.uid]);
 
-            // Load Saved
-            const storedSaved = JSON.parse(localStorage.getItem('vanguard_savedCandidates') || '[]');
-            setSavedCandidates(storedSaved);
-        };
+    // --- MATCHING LOGIC ---
+    const getMatchScore = (cf) => {
+        let score = 0;
+        const startupSkillGap = startup.skillGap?.toLowerCase() || '';
+        const cfSkills = (cf.skills || []).map(s => s.toLowerCase());
+        const cfSummary = (cf.experienceSummary || '').toLowerCase();
 
-        refreshData();
-    }, []);
+        // 1. Skill Match (Weight: 50)
+        if (cfSkills.some(s => startupSkillGap.includes(s) || s.includes(startupSkillGap))) score += 40;
+        if (cfSummary.includes(startupSkillGap)) score += 10;
 
-    // Role-Aware Logic
-    if (user && user.role === 'co-founder') {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
-                <div className="w-20 h-20 bg-purple-500/10 rounded-3xl flex items-center justify-center text-purple-500">
-                    <Info size={40} />
-                </div>
-                <div>
-                    <h2 className="text-2xl font-black text-white mb-2">Access Restricted</h2>
-                    <p className="text-gray-400 max-w-sm">The "Find Co-Founder" portal is only available to Founder accounts looking for talent.</p>
-                </div>
-            </div>
-        );
-    }
+        // 2. Sector Match (Weight: 25)
+        if (cf.expertiseSector === startup.expertiseSector) score += 25;
 
-    // Dynamic Compatibility Score Calculation
-    const calculateScore = (candidatePrimarySkill) => {
-        if (!startup?.skillGap) return { score: 50, label: 'Medium Match' };
+        // 3. Stage Alignment (Weight: 25)
+        if (cf.preferredStage === startup.stage) score += 25;
 
-        const gap = startup.skillGap.toLowerCase();
-        const skill = (candidatePrimarySkill || '').toLowerCase();
-
-        if (gap === skill) return { score: 95, label: 'High Compatibility' };
-        if (gap.includes(skill) || (skill && skill.includes(gap))) return { score: 75, label: 'Strong Match' };
-
-        const gapWords = gap.split(' ');
-        const skillWords = skill.split(' ');
-        const overlap = gapWords.filter(w => skillWords.includes(w) && w.length > 3);
-
-        if (overlap.length > 0) return { score: 65, label: 'Partial Match' };
-
-        return { score: 35, label: 'Low Compatibility' };
+        return Math.min(score, 100);
     };
 
-    // Connection Logic
-    const handleConnect = (candidateId) => {
-        const newConnection = {
-            id: `conn_${Date.now()}`,
-            candidateId,
-            founderId: user?.id,
-            requestStatus: 'pending',
-            timestamp: new Date().toISOString()
-        };
+    const filteredTalent = useMemo(() => {
+        return unlinkedCoFounders
+            .map(cf => ({ ...cf, matchScore: getMatchScore(cf) }))
+            .filter(cf => {
+                const matchesSearch = cf.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    cf.skills?.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+                const matchesSector = selectedSector === 'All' || cf.expertiseSector === selectedSector;
+                const matchesSkill = selectedSkill === 'All' || cf.skills?.includes(selectedSkill);
+                return matchesSearch && matchesSector && matchesSkill;
+            })
+            .sort((a, b) => b.matchScore - a.matchScore);
+    }, [unlinkedCoFounders, searchQuery, selectedSector, selectedSkill, startup]);
 
-        const updatedConnections = [...connections, newConnection];
-        setConnections(updatedConnections);
-        localStorage.setItem('vanguard_connections', JSON.stringify(updatedConnections));
+    // Unique skills and sectors for filters
+    const availableSectors = ['All', ...new Set(unlinkedCoFounders.map(u => u.expertiseSector).filter(Boolean))];
+    const availableSkills = ['All', ...new Set(unlinkedCoFounders.flatMap(u => u.skills || []).filter(Boolean))];
+
+    // --- HANDLERS ---
+    const handleInvite = (cf) => {
+        setSelectedUser(cf);
+        setIsInviteModalOpen(true);
     };
 
-    // Saved Logic
-    const toggleSave = (candidateId) => {
-        let updatedSaved;
-        if (savedCandidates.includes(candidateId)) {
-            updatedSaved = savedCandidates.filter(id => id !== candidateId);
+    const confirmInvite = async (e) => {
+        e.preventDefault();
+        if (!selectedUser) return;
+
+        const result = sendDirectInvitation(selectedUser.uid, selectedUser.email, inviteMessage);
+        if (result.success) {
+            setIsInviteModalOpen(false);
+            setSelectedUser(null);
+            setInviteMessage('');
+            setShowSuccessToast(true);
+            setTimeout(() => setShowSuccessToast(false), 3000);
         } else {
-            updatedSaved = [...savedCandidates, candidateId];
+            alert(result.error || "Failed to send invitation");
         }
-        setSavedCandidates(updatedSaved);
-        localStorage.setItem('vanguard_savedCandidates', JSON.stringify(updatedSaved));
     };
 
-    // Filtering Logic
-    const filteredCandidates = useMemo(() => {
-        return candidates.filter(c => {
-            // Search filter
-            const matchesSearch = searchTerm === '' ||
-                c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (c.primarySkill && c.primarySkill.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (c.skills && c.skills.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()))) ||
-                (c.location && c.location.toLowerCase().includes(searchTerm.toLowerCase()));
-
-            // Skill filter
-            const matchesSkill = filters.primarySkill === 'All' || c.primarySkill === filters.primarySkill;
-
-            // Commitment filter
-            const matchesCommitment = filters.commitment === 'All' || c.commitmentType === filters.commitment;
-
-            // Verified filter
-            const matchesVerified = !filters.verifiedOnly || c.verifiedStatus;
-
-            // Equity filter
-            const matchesEquity = filters.equityRange.length === 0 || filters.equityRange.includes(c.equityExpectation);
-
-            return matchesSearch && matchesSkill && matchesCommitment && matchesVerified && matchesEquity;
-        });
-    }, [candidates, searchTerm, filters]);
-
-    const handleFilterChange = (key, value) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
-    };
-
-    const toggleEquityFilter = (range) => {
-        setFilters(prev => {
-            const next = prev.equityRange.includes(range)
-                ? prev.equityRange.filter(r => r !== range)
-                : [...prev.equityRange, range];
-            return { ...prev, equityRange: next };
-        });
-    };
-
-    const resetFilters = () => {
-        setFilters({
-            primarySkill: 'All',
-            equityRange: [],
-            commitment: 'All',
-            verifiedOnly: false
-        });
-        setSearchTerm('');
-    };
-
-    const openProfile = (candidate) => {
-        setSelectedCandidate(candidate);
-        setIsModalOpen(true);
+    // --- RENDER HELPERS ---
+    const InvitationStatus = ({ status }) => {
+        const styles = {
+            pending: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+            accepted: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+            rejected: 'bg-red-500/10 text-red-500 border-red-500/20',
+            declined: 'bg-red-500/10 text-red-500 border-red-500/20'
+        };
+        return (
+            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${styles[status]}`}>
+                {status}
+            </span>
+        );
     };
 
     return (
-        <div className="space-y-10 animate-in fade-in duration-500">
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Success Toast */}
+            <AnimatePresence>
+                {showSuccessToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        className="fixed bottom-8 right-8 z-[110] bg-emerald-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 font-black text-sm"
+                    >
+                        <ShieldCheck size={20} />
+                        Invitation Sent Successfully
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header */}
-            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
                 <div>
-                    <div className="flex items-center gap-2 md:gap-3 mb-3">
-                        <span className="px-3 py-1 bg-purple-500/20 text-purple-400 text-[8px] md:text-[10px] font-black uppercase tracking-widest rounded-full border border-purple-500/30">
-                            Founder Exclusive
-                        </span>
-                        <span className="w-1 h-1 bg-gray-700 rounded-full" />
-                        <span className="text-gray-400 text-[10px] md:text-sm font-medium">Talent Acquisition</span>
-                    </div>
-                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight">
-                        Find <span className="text-[#8B5CF6]">Co-Founder</span>
+                    <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
+                        Find <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">Co-Founder</span>
                     </h1>
+                    <p className="text-gray-500 mt-2 font-medium italic">Discover and recruit elite talent for <span className="text-white font-bold">{startup.startupName}</span>.</p>
                 </div>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:max-w-2xl">
-                    <div className="relative group flex-1">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#8B5CF6] transition-colors" size={20} />
+                <div className="flex items-center gap-4 bg-[#1E1E2F] p-4 rounded-2xl border border-white/5 shadow-inner">
+                    <div className="text-right">
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Team Size</p>
+                        <p className="text-xl font-black text-white">{1 + (startup.coFounders?.length || 0)} / 5</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-brand-purple/10 flex items-center justify-center text-brand-purple">
+                        <Users size={20} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Skill Gap Banner */}
+            <div className="bg-brand-purple/5 border border-brand-purple/20 p-6 rounded-3xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <Rocket size={80} />
+                </div>
+                <div className="flex flex-col md:flex-row md:items-center gap-6 relative z-10">
+                    <div className="w-14 h-14 bg-brand-purple/20 rounded-2xl flex items-center justify-center text-brand-purple shadow-lg">
+                        <Zap size={28} />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-black text-white mb-1 uppercase tracking-tight">Recruitment Target</h3>
+                        <div className="flex flex-wrap items-center gap-3 mt-2">
+                            <span className="px-3 py-1 bg-brand-purple/20 text-brand-purple text-[10px] font-black uppercase rounded-lg border border-brand-purple/30">
+                                {startup.skillGap || "General Skills"} Needed
+                            </span>
+                            <span className="px-3 py-1 bg-white/5 text-gray-400 text-[10px] font-black uppercase rounded-lg border border-white/10">
+                                {startup.expertiseSector}
+                            </span>
+                            <span className="px-3 py-1 bg-white/5 text-gray-400 text-[10px] font-black uppercase rounded-lg border border-white/10">
+                                {startup.stage} Stage
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filter Section */}
+            <div className="bg-[#1E1E2F] p-6 rounded-3xl border border-white/5 shadow-2xl space-y-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-brand-purple transition-colors" size={18} />
                         <input
                             type="text"
-                            placeholder="Search by skill, sector or name..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-[#1E1E2F] border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#8B5CF6]/50 transition-all font-medium"
+                            placeholder="Search by name, skills or keywords..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-[#0F0F14] border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-brand-purple/50 transition-all"
                         />
                     </div>
-                    <button
-                        onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-                        className="lg:hidden flex items-center justify-center gap-2 px-6 py-3.5 bg-[#1E1E2F] border border-white/5 rounded-2xl text-white font-bold transition-all hover:bg-white/5"
-                    >
-                        <Filter size={20} className={isFilterMenuOpen ? "text-[#8B5CF6]" : "text-gray-500"} />
-                        <span>Filters</span>
-                    </button>
+                    <div className="flex gap-4">
+                        <select
+                            value={selectedSector}
+                            onChange={(e) => setSelectedSector(e.target.value)}
+                            className="bg-[#0F0F14] border border-white/10 rounded-xl px-4 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 focus:outline-none focus:border-brand-purple/50"
+                        >
+                            {availableSectors.map(s => <option key={s} value={s}>{s === 'All' ? 'All Sectors' : s}</option>)}
+                        </select>
+                        <select
+                            value={selectedSkill}
+                            onChange={(e) => setSelectedSkill(e.target.value)}
+                            className="bg-[#0F0F14] border border-white/10 rounded-xl px-4 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 focus:outline-none focus:border-brand-purple/50"
+                        >
+                            {availableSkills.map(s => <option key={s} value={s}>{s === 'All' ? 'All Skills' : s}</option>)}
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                {/* Filter Panel */}
-                <div className={`${isFilterMenuOpen ? 'block' : 'hidden md:hidden lg:block'} lg:col-span-1 space-y-8 animate-in slide-in-from-top lg:animate-none`}>
-                    <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-black text-white flex items-center gap-2">
-                                <Filter size={18} className="text-[#8B5CF6]" /> Filters
-                            </h3>
-                            <button
-                                onClick={resetFilters}
-                                className="text-xs font-bold text-gray-500 hover:text-white transition-colors"
+            {/* Talent Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredTalent.length > 0 ? (
+                    filteredTalent.map((cf) => {
+                        const isPending = startupInvitations?.some(i => i.invitedUserId === cf.uid && i.status === 'pending');
+                        return (
+                            <motion.div
+                                key={cf.uid}
+                                whileHover={{ y: -5 }}
+                                className="bg-[#1E1E2F] rounded-3xl border border-white/5 overflow-hidden flex flex-col group hover:border-brand-purple/30 transition-all shadow-xl"
                             >
-                                Reset
-                            </button>
-                        </div>
-
-                        <div className="space-y-6">
-                            <div>
-                                <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-3 block">Primary Skill</label>
-                                <select
-                                    value={filters.primarySkill}
-                                    onChange={(e) => handleFilterChange('primarySkill', e.target.value)}
-                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-xl p-3 text-sm text-gray-300 focus:outline-none focus:border-[#8B5CF6]/50"
-                                >
-                                    <option value="All">All Categories</option>
-                                    <option value="Marketing / GTM">Marketing / GTM</option>
-                                    <option value="Backend Engineering">Backend Engineering</option>
-                                    <option value="Product Design">Product Design</option>
-                                    <option value="Sales / Operations">Sales / Operations</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-3 block">Equity Range</label>
-                                <div className="space-y-2">
-                                    {['5-10%', '10-20%', '20%+', 'Negotiable'].map((e, i) => (
-                                        <label key={i} className="flex items-center gap-3 cursor-pointer group">
-                                            <div
-                                                onClick={() => toggleEquityFilter(e)}
-                                                className={`w-5 h-5 rounded border border-white/10 flex items-center justify-center transition-all ${filters.equityRange.includes(e) ? 'bg-[#8B5CF6]/20 border-[#8B5CF6]' : 'group-hover:border-[#8B5CF6]/50'}`}
-                                            >
-                                                {filters.equityRange.includes(e) && <div className="w-2.5 h-2.5 bg-[#8B5CF6] rounded-sm" />}
+                                <div className="p-6 pb-2">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-purple to-indigo-600 flex items-center justify-center font-black text-white text-2xl shadow-lg shadow-brand-purple/20 group-hover:rotate-3 transition-transform">
+                                            {cf.name?.[0] || 'C'}
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="flex items-center gap-1 text-[10px] font-black text-brand-purple uppercase tracking-widest mb-1">
+                                                <Zap size={10} fill="currentColor" /> Match Score
                                             </div>
-                                            <span className={`text-sm font-medium transition-colors ${filters.equityRange.includes(e) ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}>{e}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-3 block">Commitment</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {['All', 'Full-time', 'Part-time', 'Contract'].map((c, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => handleFilterChange('commitment', c)}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter border transition-all ${filters.commitment === c ? 'bg-[#8B5CF6]/20 border-[#8B5CF6]/40 text-[#8B5CF6]' : 'bg-white/5 border-white/5 text-gray-500 hover:text-white'}`}
-                                        >
-                                            {c}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-[#1E1E2F] to-[#0F0F14] p-8 rounded-2xl border border-[#8B5CF6]/20 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 opacity-10"><Zap size={48} /></div>
-                        <h4 className="font-bold text-white text-sm mb-2">Vanguard Verified</h4>
-                        <p className="text-xs text-gray-500 font-medium mb-4">Show only candidates with verified execution history.</p>
-                        <div
-                            onClick={() => handleFilterChange('verifiedOnly', !filters.verifiedOnly)}
-                            className={`w-12 h-6 rounded-full relative cursor-pointer border transition-all duration-300 ${filters.verifiedOnly ? 'bg-[#8B5CF6]/40 border-[#8B5CF6]' : 'bg-gray-800 border-white/10'}`}
-                        >
-                            <div className={`absolute top-1 w-4 h-4 bg-[#8B5CF6] rounded-full shadow-[0_0_10px_rgba(139,92,246,0.5)] transition-all duration-300 ${filters.verifiedOnly ? 'right-1' : 'left-1'}`} />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Candidate List */}
-                <div className="lg:col-span-3 space-y-6">
-                    {filteredCandidates.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-20 bg-[#1E1E2F] rounded-2xl border border-white/5 text-center">
-                            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-6 text-gray-600">
-                                <Search size={32} />
-                            </div>
-                            <h3 className="text-xl font-black text-white mb-2">No Candidates Found</h3>
-                            <p className="text-gray-500 max-w-xs">No candidates match your filters. Try adjusting search criteria or resetting filters.</p>
-                            <button
-                                onClick={resetFilters}
-                                className="mt-8 px-6 py-2 bg-white/5 hover:bg-white/10 text-white text-xs font-black rounded-xl border border-white/10 transition-all"
-                            >
-                                Clear All Filters
-                            </button>
-                        </div>
-                    ) : (
-                        filteredCandidates.map((c, i) => {
-                            const comp = calculateScore(c.primarySkill);
-                            return (
-                                <div
-                                    key={c.id}
-                                    onClick={() => openProfile(c)}
-                                    className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 group hover:border-[#8B5CF6]/30 transition-all cursor-pointer relative overflow-hidden"
-                                >
-                                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#8B5CF6]/2 group-hover:bg-[#8B5CF6]/5 transition-all rounded-bl-[100px] flex items-start justify-end p-6">
-                                        <ChevronRight className="text-gray-700 group-hover:text-white transition-colors" />
+                                            <span className="text-2xl font-black text-white">{cf.matchScore}%</span>
+                                        </div>
                                     </div>
+                                    <h3 className="text-xl font-black text-white mb-1 truncate">{cf.name}</h3>
+                                    <div className="flex items-center gap-2 text-gray-500 text-xs font-bold mb-4">
+                                        <Briefcase size={12} />
+                                        {cf.expertiseSector} Specialist
+                                    </div>
+                                    <p className="text-gray-400 text-xs leading-relaxed line-clamp-2 h-8 font-medium italic mb-6">
+                                        "{cf.experienceSummary || 'Experienced co-founder ready for the next challenge.'}"
+                                    </p>
 
-                                    <div className="flex flex-col md:flex-row gap-8">
-                                        <div className="flex-shrink-0 relative">
-                                            <div className="w-20 h-20 rounded-[24px] bg-gradient-to-tr from-[#8B5CF6] to-indigo-600 p-0.5 shadow-lg group-hover:rotate-3 transition-transform">
-                                                <div className="w-full h-full bg-[#1E1E2F] rounded-[22px] flex items-center justify-center font-black text-2xl text-white">
-                                                    {c.name[0]}
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleSave(c.id);
-                                                }}
-                                                className={`absolute -top-2 -left-2 w-8 h-8 rounded-full border flex items-center justify-center backdrop-blur-md transition-all ${savedCandidates.includes(c.id) ? 'bg-[#8B5CF6] border-[#8B5CF6] text-white' : 'bg-[#1E1E2F]/80 border-white/10 text-gray-500 hover:text-white'}`}
-                                            >
-                                                <Bookmark size={14} fill={savedCandidates.includes(c.id) ? "currentColor" : "none"} />
-                                            </button>
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                                                <div className="space-y-2">
-                                                    <div className="flex flex-wrap items-center gap-3">
-                                                        <h3 className="text-xl md:text-2xl font-black text-white">{c.name}</h3>
-                                                        {c.verifiedStatus && (
-                                                            <div className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[8px] font-black uppercase tracking-widest rounded border border-green-500/20 flex items-center gap-1">
-                                                                <CheckCircle2 size={10} /> Verified hero
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-[#8B5CF6] font-bold text-xs md:text-sm">{c.primarySkill} • <span className="text-gray-500">{c.experienceTitle}</span></p>
-                                                </div>
-                                                <div className="flex items-center gap-3 self-end sm:self-center">
-                                                    <div className="flex flex-col items-end mr-2 md:mr-4">
-                                                        <span className="text-[10px] text-gray-500 font-black uppercase tracking-[0.1em]">Match</span>
-                                                        <span className="text-sm font-black text-[#8B5CF6]">{comp.score}% Score</span>
-                                                    </div>
-                                                    {c.connectionStatus === 'pending' ? (
-                                                        <button
-                                                            disabled
-                                                            className="px-4 py-2.5 bg-gray-500/10 text-gray-500 cursor-not-allowed text-xs font-black rounded-xl border border-white/5"
-                                                        >
-                                                            Pending
-                                                        </button>
-                                                    ) : c.connectionStatus === 'connected' ? (
-                                                        <button
-                                                            disabled
-                                                            className="px-4 py-2.5 bg-green-500/10 text-green-500 cursor-not-allowed text-xs font-black rounded-xl border border-green-500/20"
-                                                        >
-                                                            Applied ✅
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleConnect(c.id);
-                                                            }}
-                                                            className="px-6 py-2.5 bg-[#8B5CF6] text-white shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all text-xs font-black rounded-xl"
-                                                        >
-                                                            Connect
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                                <div className="flex items-center gap-2 text-gray-500">
-                                                    <MapPin size={14} /> <span className="text-xs font-bold text-gray-300">{c.location}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-gray-500">
-                                                    <DollarSign size={14} /> <span className="text-xs font-bold text-gray-300">{c.equityExpectation} Equity</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-gray-500">
-                                                    <Clock size={14} /> <span className="text-xs font-bold text-gray-300">{c.commitmentType}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-gray-500">
-                                                    <Award size={14} /> <span className="text-xs font-bold text-gray-300">{comp.label}</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-wrap gap-2">
-                                                {c.skills.map((s, idx) => (
-                                                    <span key={idx} className="px-3 py-1 bg-white/5 border border-white/5 rounded-full text-[10px] font-bold text-gray-400 group-hover:border-[#8B5CF6]/30 transition-all">{s}</span>
-                                                ))}
-                                            </div>
-                                        </div>
+                                    <div className="flex flex-wrap gap-2 mb-6">
+                                        {(cf.skills || []).slice(0, 3).map(skill => (
+                                            <span key={skill} className="px-2 py-1 bg-white/5 rounded-lg text-[10px] font-bold text-gray-300 border border-white/5 uppercase">
+                                                {skill}
+                                            </span>
+                                        ))}
                                     </div>
                                 </div>
-                            );
-                        })
-                    )}
-                </div>
-            </div>
 
-            {/* Profile Modal */}
-            {isModalOpen && selectedCandidate && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center md:p-4 bg-[#0F0F14]/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-[#1E1E2F] border border-white/10 md:rounded-[32px] w-full h-full md:h-auto md:max-w-2xl md:max-h-[90vh] overflow-y-auto relative shadow-2xl">
-                        <button
-                            onClick={() => setIsModalOpen(false)}
-                            className="absolute top-6 right-6 p-2 bg-white/5 border border-white/5 rounded-full text-gray-400 hover:text-white transition-all z-10"
-                        >
-                            <X size={24} />
-                        </button>
-
-                        <div className="p-6 md:p-10">
-                            <div className="flex flex-col md:flex-row gap-8 mb-10">
-                                <div className="w-24 h-24 md:w-32 md:h-32 rounded-[32px] md:rounded-[40px] bg-gradient-to-tr from-[#8B5CF6] to-indigo-600 p-1 flex-shrink-0 shadow-2xl mx-auto md:mx-0">
-                                    <div className="w-full h-full bg-[#1E1E2F] rounded-[30px] md:rounded-[38px] flex items-center justify-center font-black text-4xl md:text-5xl text-white">
-                                        {selectedCandidate.name[0]}
-                                    </div>
-                                </div>
-                                <div className="flex-1 space-y-4 text-center md:text-left">
-                                    <div className="flex flex-col md:flex-row items-center gap-4">
-                                        <h2 className="text-3xl md:text-4xl font-black text-white">{selectedCandidate.name}</h2>
-                                        {selectedCandidate.verifiedStatus && <div className="px-3 py-1 bg-green-500/10 text-green-500 text-[10px] font-black uppercase tracking-widest rounded border border-green-500/20">Verified Hero</div>}
-                                    </div>
-                                    <p className="text-lg md:text-xl text-[#8B5CF6] font-bold">{selectedCandidate.primarySkill}</p>
-                                    <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-4">
-                                        <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                                            <MapPin size={14} className="text-gray-500" />
-                                            <span className="text-xs font-bold text-gray-300">{selectedCandidate.location}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                                            <DollarSign size={14} className="text-gray-500" />
-                                            <span className="text-xs font-bold text-gray-300">{selectedCandidate.equityExpectation} Equity</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                                            <Clock size={14} className="text-gray-500" />
-                                            <span className="text-xs font-bold text-gray-300">{selectedCandidate.commitmentType}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                                <div className="col-span-2 space-y-8">
-                                    <div>
-                                        <h4 className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mb-4">About Candidate</h4>
-                                        <p className="text-gray-400 leading-relaxed font-medium">{selectedCandidate.shortBio}</p>
-                                    </div>
-                                    <div>
-                                        <h4 className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mb-4">Core Competencies</h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {selectedCandidate.skills.map((s, idx) => (
-                                                <span key={idx} className="px-4 py-2 bg-purple-500/5 border border-purple-500/10 rounded-xl text-sm font-bold text-purple-400">{s}</span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <h4 className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mb-4">Execution History</h4>
-                                        <div className="space-y-4">
-                                            <div className="flex items-start gap-4 p-4 bg-white/5 border border-white/5 rounded-2xl">
-                                                <Building2 size={20} className="text-gray-500 mt-1" />
-                                                <div>
-                                                    <p className="text-white font-bold">{selectedCandidate.experienceTitle}</p>
-                                                    <p className="text-xs text-gray-500 font-medium">{selectedCandidate.previousExperience}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="space-y-6">
-                                    <div className="p-6 bg-[#8B5CF6]/10 border border-[#8B5CF6]/20 rounded-3xl text-center space-y-3">
-                                        <Activity size={32} className="text-[#8B5CF6] mx-auto" />
-                                        <div>
-                                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Compatibility</p>
-                                            <p className="text-3xl font-black text-white">{calculateScore(selectedCandidate.primarySkill).score}%</p>
-                                        </div>
-                                        <p className="text-xs font-bold text-[#8B5CF6] bg-[#8B5CF6]/10 py-1 rounded-full px-3">{calculateScore(selectedCandidate.primarySkill).label}</p>
-                                    </div>
-
-                                    {candidates.find(cand => cand.id === selectedCandidate.id)?.connectionStatus === 'none' ? (
-                                        <button
-                                            onClick={() => handleConnect(selectedCandidate.id)}
-                                            className="w-full py-4 bg-[#8B5CF6] text-white font-black rounded-2xl shadow-[0_10px_30px_rgba(139,92,246,0.3)] hover:shadow-[0_15px_40px_rgba(139,92,246,0.5)] transition-all hover:-translate-y-1"
-                                        >
-                                            Send Connection Request
-                                        </button>
-                                    ) : (
-                                        <button
-                                            disabled
-                                            className="w-full py-4 bg-gray-800 text-gray-500 font-black rounded-2xl border border-white/5 cursor-not-allowed"
-                                        >
-                                            {candidates.find(cand => cand.id === selectedCandidate.id)?.connectionStatus === 'pending' ? 'Request Already Sent' : 'Already Connected'}
-                                        </button>
-                                    )}
-
+                                <div className="mt-auto p-4 bg-[#0F0F14]/30 border-t border-white/5">
                                     <button
-                                        onClick={() => toggleSave(selectedCandidate.id)}
-                                        className={`w-full py-4 font-black rounded-2xl border transition-all flex items-center justify-center gap-2 ${savedCandidates.includes(selectedCandidate.id) ? 'bg-[#8B5CF6]/20 border-[#8B5CF6] text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'}`}
+                                        onClick={() => handleInvite(cf)}
+                                        disabled={isPending}
+                                        className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${isPending
+                                                ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 cursor-default'
+                                                : 'bg-brand-purple text-white hover:shadow-lg hover:shadow-brand-purple/20 active:scale-95 shadow-lg'
+                                            }`}
                                     >
-                                        <Bookmark size={16} fill={savedCandidates.includes(selectedCandidate.id) ? "currentColor" : "none"} />
-                                        {savedCandidates.includes(selectedCandidate.id) ? 'Saved to Bookmarks' : 'Save for Later'}
+                                        {isPending ? (
+                                            <><Clock size={16} /> Invitation Pending</>
+                                        ) : (
+                                            <><UserPlus size={16} /> Invite to Join</>
+                                        )}
                                     </button>
                                 </div>
-                            </div>
+                            </motion.div>
+                        );
+                    })
+                ) : (
+                    <div className="col-span-full py-20 bg-[#1E1E2F] rounded-[3rem] border border-dashed border-white/10 flex flex-col items-center justify-center text-center">
+                        <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center text-gray-700 mb-6">
+                            <SearchX size={40} />
                         </div>
+                        <h3 className="text-xl font-black text-white mb-2">No Talent Found</h3>
+                        <p className="text-gray-500 max-w-xs font-medium italic">Try adjusting your filters or search keywords to find the perfect match.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Outgoing Invitations */}
+            <div className="bg-[#1E1E2F] rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
+                <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                    <div>
+                        <h3 className="text-xl font-black text-white flex items-center gap-3">
+                            <Send className="text-brand-purple" size={20} />
+                            Pending Invitations
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-1 font-medium">Track outgoing requests to potential co-founders.</p>
                     </div>
                 </div>
-            )}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-[#0F0F14]/50 border-b border-white/5">
+                                <th className="px-8 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Co-Founder</th>
+                                <th className="px-8 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Sent Date</th>
+                                <th className="px-8 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Status</th>
+                                <th className="px-8 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {(startupInvitations || []).length > 0 ? (
+                                [...startupInvitations].reverse().map((inv) => {
+                                    const invitedUser = (system.users || {})[inv.invitedUserId];
+                                    return (
+                                        <tr key={inv.id} className="group hover:bg-white/[0.02] transition-colors">
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-black text-gray-400 border border-white/5 text-sm uppercase">
+                                                        {invitedUser?.name?.[0] || inv.invitedEmail?.[0] || 'C'}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-white">{invitedUser?.name || inv.invitedEmail}</p>
+                                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{invitedUser?.expertiseSector || 'Specialist'}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <p className="text-xs font-bold text-gray-400">{new Date(inv.createdAt).toLocaleDateString()}</p>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <InvitationStatus status={inv.status} />
+                                            </td>
+                                            <td className="px-8 py-6 text-right">
+                                                <button className="p-2 text-gray-500 hover:text-white transition-colors">
+                                                    <ChevronRight size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            ) : (
+                                <tr>
+                                    <td colSpan="4" className="px-8 py-10 text-center">
+                                        <p className="text-xs text-gray-600 font-bold uppercase tracking-[0.2em] italic">No outgoing invitations yet</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Invite Modal */}
+            <AnimatePresence>
+                {isInviteModalOpen && selectedUser && (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                            onClick={() => setIsInviteModalOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-lg bg-[#1E1E2F] border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl overflow-hidden"
+                        >
+                            <div className="absolute top-0 right-0 p-8 opacity-5">
+                                <UserPlus size={100} />
+                            </div>
+
+                            <div className="flex justify-between items-start mb-8 relative z-10">
+                                <div>
+                                    <h2 className="text-2xl font-black text-white mb-2">Invite <span className="text-brand-purple">{selectedUser.name}</span></h2>
+                                    <p className="text-xs text-gray-500 font-medium italic">Recruit talent for your startup mission.</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsInviteModalOpen(false)}
+                                    className="p-3 bg-white/5 rounded-2xl text-gray-500 hover:text-white transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={confirmInvite} className="space-y-8 relative z-10">
+                                <div className="bg-[#0F0F14] border border-white/5 p-6 rounded-3xl">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="w-10 h-10 rounded-xl bg-brand-purple/20 flex items-center justify-center text-brand-purple">
+                                            <Building size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Inviting to Join</p>
+                                            <p className="text-sm font-black text-white">{startup.startupName}</p>
+                                        </div>
+                                    </div>
+                                    <div className="h-px bg-white/5 my-4" />
+                                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                                        <span className="text-gray-500">Matching Role:</span>
+                                        <span className="text-emerald-500">{startup.skillGap || 'Co-Founder'}</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] block mb-4">Personalized Message</label>
+                                    <textarea
+                                        value={inviteMessage}
+                                        onChange={(e) => setInviteMessage(e.target.value)}
+                                        placeholder="Hey! I saw your profile and your experience in fintech perfectly matches our mission to solve payments..."
+                                        className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl px-6 py-5 text-sm font-medium text-white focus:outline-none focus:border-brand-purple/50 h-40 resize-none placeholder:text-gray-700"
+                                    />
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsInviteModalOpen(false)}
+                                        className="flex-1 py-4 bg-white/5 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl border border-white/10 hover:bg-white/10 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-[2] py-4 bg-brand-purple text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-brand-purple/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                                    >
+                                        <Send size={18} /> Send Invitation
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

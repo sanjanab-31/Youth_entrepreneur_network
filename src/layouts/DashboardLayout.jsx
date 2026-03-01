@@ -35,7 +35,6 @@ const DashboardLayout = ({ children, role }) => {
     const { startup } = useStartup();
     const location = useLocation();
 
-    // Initial state based on screen width
     const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
@@ -47,83 +46,120 @@ const DashboardLayout = ({ children, role }) => {
                 setIsSidebarOpen(false);
                 setIsTablet(false);
             } else if (width < 1024) {
-                setIsSidebarOpen(false); // Collapsed for tablet
+                setIsSidebarOpen(false);
                 setIsTablet(true);
             } else {
-                setIsSidebarOpen(true); // Open for desktop
+                setIsSidebarOpen(true);
                 setIsTablet(false);
             }
         };
 
         window.addEventListener('resize', handleResize);
-        handleResize(); // Initial check
+        handleResize();
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const isFounder = role === 'founder';
-    const isCoFounder = role === 'co-founder';
+    const isCoFounder = role === 'co-founder' || role === 'cofounder';
     const isMentor = role === 'mentor';
     const isIncubator = role === 'incubator';
     const isAdmin = role === 'admin';
 
-    const menuItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: `/${role}/dashboard` },
-        ...(isAdmin ? [
-            { id: 'users', label: 'User Management', icon: Users, path: '/admin/users' },
-            { id: 'startups', label: 'Startup Management', icon: Rocket, path: '/admin/startups' },
-            { id: 'mentors', label: 'Mentor Management', icon: Briefcase, path: '/admin/mentors' },
-            { id: 'incubators', label: 'Incubator Management', icon: Building, path: '/admin/incubators' },
-            { id: 'applications', label: 'Applications Control', icon: ClipboardList, path: '/admin/applications' },
-            { id: 'reports', label: 'Reports & Moderation', icon: ShieldAlert, path: '/admin/reports' },
-            { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
-            { id: 'content', label: 'Content Management', icon: Megaphone, path: '/admin/content' },
-        ] : []),
-        ...(isIncubator ? [
-            { id: 'startup-pipeline', label: 'Startup Pipeline', icon: Rocket, path: `/${role}/startup-pipeline` },
-            { id: 'applications', label: 'Applications', icon: FileText, path: `/${role}/applications` },
-            { id: 'cohorts', label: 'Cohorts', icon: Users, path: `/${role}/cohorts` },
-            { id: 'mentors', label: 'Mentors', icon: Briefcase, path: `/${role}/mentors` },
-            { id: 'analytics', label: 'Analytics', icon: Activity, path: `/${role}/analytics` },
-            { id: 'profile', label: 'Profile', icon: User, path: `/${role}/profile` },
-        ] : []),
-        ...(isFounder ? [
-            { id: 'my-startup', label: 'My Startup', icon: Rocket, path: `/${role}/my-startup` },
-            { id: 'find-co-founder', label: 'Find Co-Founder', icon: UserPlus, path: `/${role}/find-co-founder` },
-            { id: 'sessions', label: 'Sessions', icon: Calendar, path: `/${role}/sessions` }
-        ] : []),
-        ...(isCoFounder ? [
-            { id: 'startup-overview', label: 'Startup Overview', icon: Rocket, path: `/${role}/startup-overview` },
-            { id: 'team-collaboration', label: 'Team Collaboration', icon: Users, path: `/${role}/team-collaboration` }
-        ] : []),
-        ...(!isIncubator && isMentor ? [
-            { id: 'founder-requests', label: 'Founder Requests', icon: Briefcase, path: `/${role}/founder-requests` },
-            { id: 'my-mentees', label: 'My Mentees', icon: Users, path: `/${role}/my-mentees` },
-            { id: 'sessions', label: 'Sessions', icon: Calendar, path: `/${role}/sessions` },
-        ] : []),
-        ...(!isMentor && !isIncubator && !isAdmin ? [
-            { id: 'mentors', label: 'Mentors', icon: Briefcase, path: `/${role}/mentors` },
-            { id: 'incubators', label: 'Incubators', icon: Building, path: `/${role}/incubators` },
-        ] : []),
-        ...(!isIncubator && !isAdmin ? (isMentor ? [
-            { id: 'activity-feed', label: 'Activity Feed', icon: Activity, path: `/${role}/activity-feed` },
-            { id: 'profile', label: 'Profile', icon: User, path: `/${role}/profile` },
-        ] : [
-            { id: 'messages', label: 'Messages', icon: MessageSquare, path: `/${role}/messages` },
-            { id: 'activity-feed', label: 'Activity Feed', icon: Activity, path: `/${role}/activity-feed` },
-        ]) : []),
-        { id: 'settings', label: 'Settings', icon: Settings, path: `/${role}/settings` },
-    ];
+    const getMenuItems = () => {
+        if (isAdmin) {
+            return [
+                { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
+                { id: 'users', label: 'User Management', icon: Users, path: '/admin/users' },
+                { id: 'startups', label: 'Startup Management', icon: Rocket, path: '/admin/startups' },
+                { id: 'mentors', label: 'Mentor Management', icon: Briefcase, path: '/admin/mentors' },
+                { id: 'incubators', label: 'Incubator Management', icon: Building, path: '/admin/incubators' },
+                { id: 'applications', label: 'Applications Control', icon: ClipboardList, path: '/admin/applications' },
+                { id: 'reports', label: 'Reports & Moderation', icon: ShieldAlert, path: '/admin/reports' },
+                { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
+                { id: 'content', label: 'Content Management', icon: Megaphone, path: '/admin/content' },
+                { id: 'settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
+            ];
+        }
 
+        if (isIncubator) {
+            return [
+                { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: `/${role}/dashboard` },
+                { id: 'startup-pipeline', label: 'Startup Pipeline', icon: Rocket, path: `/${role}/startup-pipeline` },
+                { id: 'applications', label: 'Applications', icon: FileText, path: `/${role}/applications` },
+                { id: 'cohorts', label: 'Cohorts', icon: Users, path: `/${role}/cohorts` },
+                { id: 'mentors', label: 'Mentors', icon: Briefcase, path: `/${role}/mentors` },
+                { id: 'analytics', label: 'Analytics', icon: Activity, path: `/${role}/analytics` },
+                { id: 'profile', label: 'Profile', icon: User, path: `/${role}/profile` },
+                { id: 'settings', label: 'Settings', icon: Settings, path: `/${role}/settings` },
+            ];
+        }
+
+        if (isMentor) {
+            return [
+                { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: `/${role}/dashboard` },
+                { id: 'founder-requests', label: 'Founder Requests', icon: Briefcase, path: `/${role}/founder-requests` },
+                { id: 'my-mentees', label: 'My Mentees', icon: Users, path: `/${role}/my-mentees` },
+                { id: 'sessions', label: 'Meetings', icon: Calendar, path: `/${role}/sessions` },
+                { id: 'messages', label: 'Messages', icon: MessageSquare, path: `/${role}/messages` },
+                { id: 'activity-feed', label: 'Activity Feed', icon: Activity, path: `/${role}/activity-feed` },
+                { id: 'profile', label: 'Profile', icon: User, path: `/${role}/profile` },
+                { id: 'settings', label: 'Settings', icon: Settings, path: `/${role}/settings` },
+            ];
+        }
+
+        if (isCoFounder) {
+            if (startup) {
+                return [
+                    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: `/${role}/dashboard` },
+                    { id: 'my-startup', label: 'My Startup', icon: Rocket, path: `/${role}/my-startup` },
+                    { id: 'my-applications', label: 'My Applications', icon: ClipboardList, path: `/${role}/my-applications` },
+                    { id: 'mentors', label: 'Startup Mentors', icon: Briefcase, path: `/${role}/mentors` },
+                    { id: 'team', label: 'Team', icon: Users, path: `/${role}/team` },
+                    { id: 'sessions', label: 'Meetings', icon: Calendar, path: `/${role}/sessions` },
+                    { id: 'messages', label: 'Messages', icon: MessageSquare, path: `/${role}/messages` },
+                    { id: 'profile', label: 'Profile', icon: User, path: `/${role}/profile` },
+                    { id: 'settings', label: 'Settings', icon: Settings, path: `/${role}/settings` },
+                ];
+            } else {
+                return [
+                    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: `/${role}/dashboard` },
+                    { id: 'discover-startups', label: 'Discover Startups', icon: Rocket, path: `/${role}/discover-startups` },
+                    { id: 'my-applications', label: 'My Applications', icon: ClipboardList, path: `/${role}/my-applications` },
+                    { id: 'sessions', label: 'Meetings', icon: Calendar, path: `/${role}/sessions` },
+                    { id: 'messages', label: 'Messages', icon: MessageSquare, path: `/${role}/messages` },
+                    { id: 'profile', label: 'Profile', icon: User, path: `/${role}/profile` },
+                    { id: 'settings', label: 'Settings', icon: Settings, path: `/${role}/settings` },
+                ];
+            }
+        }
+
+        if (isFounder) {
+            return [
+                { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: `/${role}/dashboard` },
+                { id: 'my-startup', label: 'My Startup', icon: Rocket, path: `/${role}/my-startup` },
+                { id: 'find-co-founder', label: 'Find Co-Founder', icon: UserPlus, path: `/${role}/find-co-founder` },
+                { id: 'co-founder-requests', label: 'Join Requests', icon: Users, path: `/${role}/co-founder-requests` },
+                { id: 'sessions', label: 'Meetings', icon: Calendar, path: `/${role}/sessions` },
+                { id: 'mentors', label: 'Mentors', icon: Briefcase, path: `/${role}/mentors` },
+                { id: 'incubators', label: 'Incubators', icon: Building, path: `/${role}/incubators` },
+                { id: 'messages', label: 'Messages', icon: MessageSquare, path: `/${role}/messages` },
+                { id: 'activity-feed', label: 'Activity Feed', icon: Activity, path: `/${role}/activity-feed` },
+                { id: 'settings', label: 'Settings', icon: Settings, path: `/${role}/settings` },
+            ];
+        }
+
+        return [];
+    };
+
+    const menuItems = getMenuItems();
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
     return (
         <div className="min-h-screen bg-[#0F0F14] text-white flex overflow-x-hidden">
-            {/* Sidebar Desktop & Tablet */}
             <aside
                 className={`fixed left-0 top-0 h-full bg-[#15151e] border-r border-white/5 transition-all duration-500 z-50 flex flex-col hidden md:flex
                     ${isSidebarOpen ? 'w-64' : 'w-20'}`}
             >
-                {/* Logo Section */}
                 <div className="p-6">
                     <Link to="/" className="flex items-center gap-3 group">
                         <div className="relative flex-shrink-0">
@@ -141,18 +177,29 @@ const DashboardLayout = ({ children, role }) => {
                                     Vanguard
                                 </span>
                                 <span className="text-[8px] font-bold text-brand-purple tracking-[0.2em] uppercase leading-none mt-1">
-                                    {isFounder ? 'Startup OS' : 'Ecosystem'}
+                                    {isFounder || (isCoFounder && startup) ? 'Startup OS' : (isCoFounder ? 'Opportunity Network' : 'Ecosystem')}
                                 </span>
                             </div>
                         )}
                     </Link>
                 </div>
 
-                {/* Navigation */}
                 <nav className="flex-1 px-3 space-y-1 mt-6 overflow-y-auto scrollbar-hide">
                     {menuItems.map((item) => {
                         const Icon = item.icon;
-                        const isActive = location.pathname === item.path || (item.id === 'dashboard' && location.pathname.includes('/dashboard'));
+
+                        // Robust Active Highlighting Logic
+                        const isDashboardRoot = item.id === 'dashboard' && (
+                            location.pathname === `/${role}` ||
+                            location.pathname === `/${role}/` ||
+                            location.pathname === `/${role}/dashboard` ||
+                            location.pathname.startsWith(`/${role}/dashboard/`)
+                        );
+
+                        const isActive = isDashboardRoot || (
+                            item.id !== 'dashboard' &&
+                            location.pathname.startsWith(item.path)
+                        );
 
                         return (
                             <Link
@@ -176,7 +223,6 @@ const DashboardLayout = ({ children, role }) => {
                     })}
                 </nav>
 
-                {/* User Profile Section */}
                 <div className="p-4 border-t border-white/5 space-y-2">
                     <Link
                         to={`/${role}/settings`}
@@ -202,7 +248,6 @@ const DashboardLayout = ({ children, role }) => {
                     </button>
                 </div>
 
-                {/* Sidebar Toggle Button - Visible on Tablet and Desktop */}
                 <button
                     onClick={toggleSidebar}
                     className="absolute -right-3 top-20 w-6 h-6 bg-brand-purple rounded-full flex items-center justify-center border-4 border-[#0F0F14] hover:scale-110 transition-transform flex shadow-lg shadow-purple-600/40 z-[60]"
@@ -211,7 +256,6 @@ const DashboardLayout = ({ children, role }) => {
                 </button>
             </aside>
 
-            {/* Mobile Header */}
             <header className="md:hidden fixed top-0 w-full bg-[#1E1E2F]/80 backdrop-blur-xl border-b border-white/5 p-4 z-40 flex justify-between items-center shadow-lg">
                 <Link to="/" className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg overflow-hidden bg-brand-purple/20 p-1.5 border border-brand-purple/30">
@@ -231,7 +275,6 @@ const DashboardLayout = ({ children, role }) => {
                 </button>
             </header>
 
-            {/* Mobile Sidebar Overlay */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <>
@@ -265,17 +308,34 @@ const DashboardLayout = ({ children, role }) => {
                                 </button>
                             </div>
                             <nav className="flex-1 space-y-2">
-                                {menuItems.map((item) => (
-                                    <Link
-                                        key={item.id}
-                                        to={item.path}
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-                                    >
-                                        <item.icon size={20} />
-                                        <span className="font-medium">{item.label}</span>
-                                    </Link>
-                                ))}
+                                {menuItems.map((item) => {
+                                    const isDashboardRoot = item.id === 'dashboard' && (
+                                        location.pathname === `/${role}` ||
+                                        location.pathname === `/${role}/` ||
+                                        location.pathname === `/${role}/dashboard` ||
+                                        location.pathname.startsWith(`/${role}/dashboard/`)
+                                    );
+
+                                    const isActive = isDashboardRoot || (
+                                        item.id !== 'dashboard' &&
+                                        location.pathname.startsWith(item.path)
+                                    );
+
+                                    return (
+                                        <Link
+                                            key={item.id}
+                                            to={item.path}
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all ${isActive
+                                                    ? 'bg-brand-purple text-white shadow-lg'
+                                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                                }`}
+                                        >
+                                            <item.icon size={20} />
+                                            <span className="font-medium">{item.label}</span>
+                                        </Link>
+                                    );
+                                })}
                             </nav>
                             <div className="pt-6 border-t border-white/5">
                                 <button
@@ -291,7 +351,6 @@ const DashboardLayout = ({ children, role }) => {
                 )}
             </AnimatePresence>
 
-            {/* Main Content Area */}
             <main className={`flex-1 min-h-screen transition-all duration-300 pt-20 md:pt-0 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-20'}`}>
                 <div className="w-full max-w-7xl mx-auto p-4 md:p-8 lg:p-10">
                     {children}

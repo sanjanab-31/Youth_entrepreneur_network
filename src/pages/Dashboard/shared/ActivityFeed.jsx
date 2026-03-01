@@ -39,8 +39,8 @@ const ActivityFeed = () => {
     };
 
     const activities = useMemo(() => {
-        if (!startup?.activity) return [
-            { id: 'initial', type: 'info', msg: 'Welcome to Vanguard. Your execution journey begins here.', time: 'Just now' }
+        if (!startup?.activity || startup.activity.length === 0) return [
+            { id: 'initial', type: 'info', message: 'Welcome to Vanguard. Your execution journey begins here.', timestamp: new Date().toISOString() }
         ];
         return startup.activity;
     }, [startup]);
@@ -82,11 +82,13 @@ const ActivityFeed = () => {
                                         <div className="flex-1">
                                             <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-2">
                                                 <div>
-                                                    <h3 className="text-base md:text-lg font-black text-white group-hover:text-[#8B5CF6] transition-colors">{act.msg}</h3>
+                                                    <h3 className="text-base md:text-lg font-black text-white group-hover:text-[#8B5CF6] transition-colors">{act.message}</h3>
                                                     <div className="flex items-center flex-wrap gap-2 md:gap-3 mt-1">
                                                         <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{act.type}</span>
                                                         <span className="hidden sm:block w-1 h-1 bg-gray-700 rounded-full" />
-                                                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-600 uppercase"><Clock size={10} /> {act.time}</span>
+                                                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-600 uppercase">
+                                                            <Clock size={10} /> {act.timestamp ? new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                                                        </span>
                                                     </div>
                                                 </div>
                                                 <button className="p-2 text-gray-700 hover:text-white transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100 flex self-end sm:self-auto"><MoreHorizontal size={20} /></button>

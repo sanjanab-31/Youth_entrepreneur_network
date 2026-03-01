@@ -18,11 +18,14 @@ import {
     CheckCircle2,
     RefreshCw,
     Target,
-    Users
+    Users,
+    Clock,
+    AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
+import { getSystem } from '../../../utils/system';
 
 const Incubators = () => {
     const { user } = useAuth();
@@ -56,18 +59,9 @@ const Incubators = () => {
         const refreshData = () => {
             setLoading(true);
             try {
-                // Fetch incubators from global users
-                const allUsersRaw = localStorage.getItem('vanguard_users');
-                let allUsers = {};
-                try {
-                    allUsers = JSON.parse(allUsersRaw || '{}');
-                    if (Array.isArray(allUsers)) {
-                        allUsers = allUsers.reduce((acc, u) => {
-                            if (u.uid || u.id) acc[u.uid || u.id] = u;
-                            return acc;
-                        }, {});
-                    }
-                } catch (e) { allUsers = {}; }
+                // Fetch incubators from global system
+                const system = getSystem();
+                const allUsers = system.users || {};
 
                 const incubatorsList = Object.values(allUsers)
                     .filter(u => u.role === 'incubator')
@@ -86,10 +80,6 @@ const Incubators = () => {
                         fundingCap: inc.profileData?.fundingCap || '$0'
                     }));
                 setIncubators(incubatorsList);
-
-                // Fetch applications for this founder
-                const allApps = JSON.parse(localStorage.getItem('vanguard_applications') || '[]');
-                setApplications(allApps.filter(a => a.founderId === user.uid));
             } catch (err) {
                 console.error("Error fetching incubators:", err);
             } finally {
@@ -383,10 +373,10 @@ const Incubators = () => {
                                                 disabled={hasApplied(inc.id) || !canApply}
                                                 onClick={() => setApplyingIncubator(inc)}
                                                 className={`hidden md:flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black border transition-all shadow-xl ${getAppStatus(inc.id) === 'accepted' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                                                        getAppStatus(inc.id) === 'rejected' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
-                                                            getAppStatus(inc.id) === 'pending' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' :
-                                                                !canApply ? 'bg-gray-800 text-gray-500 cursor-not-allowed border-transparent' :
-                                                                    'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-blue-500/20'
+                                                    getAppStatus(inc.id) === 'rejected' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
+                                                        getAppStatus(inc.id) === 'pending' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' :
+                                                            !canApply ? 'bg-gray-800 text-gray-500 cursor-not-allowed border-transparent' :
+                                                                'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-blue-500/20'
                                                     }`}
                                             >
                                                 {getAppStatus(inc.id) === 'accepted' ? (

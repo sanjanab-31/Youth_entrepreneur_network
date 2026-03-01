@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
 import AuthLayout from '../../layouts/AuthLayout';
 import { useAuth } from '../../context/AuthContext';
+import { getSystem } from '../../utils/system';
 
 const Signup = () => {
     const [searchParams] = useSearchParams();
@@ -32,11 +33,46 @@ const Signup = () => {
         setStep(prev => prev - 1);
     };
 
+    const getTotalSteps = () => {
+        if (['co-founder', 'cofounder'].includes(role)) {
+            if (formData.onboardingType === 'create') return 4;
+            if (formData.onboardingType === 'invite' || formData.onboardingType === 'look') return 3;
+            return 3; // Default steps for role selection and basic info
+        }
+        return 3;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
 
-        if (step < 3) {
+        const totalSteps = getTotalSteps();
+
+        if (step < totalSteps) {
+            // Case A validation: Check invite block before moving to completion
+            if (['co-founder', 'cofounder'].includes(role) && step === 3 && formData.onboardingType === 'invite') {
+                const system = getSystem();
+                const inv = system.invitations.find(i =>
+                    (i.id === formData.inviteCode || i.startupId === formData.inviteCode) && i.status === 'pending'
+                );
+
+                let valid = !!inv;
+                if (!valid) {
+                    // Fallback check by founder email
+                    const startupByEmail = system.startups.find(s => {
+                        const founder = system.users[s.founderId];
+                        return founder && founder.email.toLowerCase() === formData.inviteCode.toLowerCase();
+                    });
+                    valid = !!startupByEmail;
+                }
+
+                if (!valid) {
+                    setError('Invalid Invitation Code or Founder Email. Please check and try again.');
+                    return;
+                }
+            }
+
+            // Case C: If they chose 'create', they continue to step 3 and 4
             setStep(prev => prev + 1);
             return;
         }
@@ -44,6 +80,9 @@ const Signup = () => {
         setLoading(true);
         try {
             const { email, password, ...profileData } = formData;
+
+            // Ensure role selection persistence if they chose 'create' (it will be handled in AuthContext but good to be explicit here if needed)
+            const signupRole = role;
 
             // Convert comma-separated strings to arrays for relational consistency
             const processedProfileData = {
@@ -53,7 +92,7 @@ const Signup = () => {
                 areas: profileData.areas ? profileData.areas.split(',').map(s => s.trim()) : []
             };
 
-            await signup(email, password, role, processedProfileData);
+            await signup(email, password, signupRole, processedProfileData);
         } catch (error) {
             console.error(error);
             if (error.code === 'auth/email-already-in-use') {
@@ -71,10 +110,11 @@ const Signup = () => {
     // --- Render Helpers ---
 
     const renderStepIndicator = () => {
-        const totalSteps = 3;
+        const totalSteps = getTotalSteps();
+        const steps = Array.from({ length: totalSteps }, (_, i) => i + 1);
         return (
             <div className="flex items-center justify-between mb-8 max-w-xs mx-auto">
-                {[1, 2, 3].map((s) => (
+                {steps.map((s) => (
                     <div key={s} className="flex items-center">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${step === s
                             ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30'
@@ -85,7 +125,7 @@ const Signup = () => {
                             {step > s ? <CheckCircle size={18} /> : s}
                         </div>
                         {s < totalSteps && (
-                            <div className={`w-12 h-1 mx-2 rounded-full transition-colors duration-300 ${step > s ? 'bg-green-500' : 'bg-white/10'}`} />
+                            <div className={`w-10 h-1 mx-1 rounded-full transition-colors duration-300 ${step > s ? 'bg-green-500' : 'bg-white/10'}`} />
                         )}
                     </div>
                 ))}
@@ -217,6 +257,124 @@ const Signup = () => {
         }
     };
 
+    const renderCoFounderForm = () => {
+        switch (step) {
+            case 1:
+                return (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <h3 className="text-xl font-semibold text-white mb-4">Personal Details</h3>
+                        <input name="fullName" placeholder="Full Name" className="steps-input" onChange={handleInputChange} required />
+                        <input name="email" type="email" placeholder="Email Address" className="steps-input" onChange={handleInputChange} required />
+                        <input name="password" type="password" placeholder="Password" className="steps-input" onChange={handleInputChange} required />
+                        <div className="grid grid-cols-2 gap-4">
+                            <input name="location" placeholder="Location" className="steps-input" onChange={handleInputChange} required />
+                            <select name="commitment" className="steps-input" onChange={handleInputChange} required>
+                                <option value="">Commitment</option>
+                                <option value="full-time">Full-time</option>
+                                <option value="part-time">Part-time</option>
+                            </select>
+                        </div>
+                    </div>
+                );
+            case 2:
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <h3 className="text-xl font-semibold text-white mb-2">Joining Path</h3>
+                        <p className="text-sm text-gray-400 mb-6">How are you starting your journey in Vanguard today?</p>
+
+                        <div className="space-y-3">
+                            {[
+                                { id: 'invite', title: 'Yes, I have an invitation', desc: 'Joining an existing startup via code or email' },
+                                { id: 'look', title: 'No, I am looking to join one', desc: 'Create a profile and explore opportunities' },
+                                { id: 'create', title: 'I want to create a startup', desc: 'Register as Founder and build your venture' }
+                            ].map(opt => (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({ ...prev, onboardingType: opt.id }))}
+                                    className={`w-full p-4 rounded-xl border text-left transition-all ${formData.onboardingType === opt.id
+                                        ? 'bg-purple-600/20 border-purple-500 shadow-lg shadow-purple-500/10'
+                                        : 'bg-white/5 border-white/10 hover:border-white/20'
+                                        }`}
+                                >
+                                    <div className="font-bold text-white">{opt.title}</div>
+                                    <div className="text-xs text-gray-400 mt-1">{opt.desc}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                );
+            case 3:
+                if (formData.onboardingType === 'invite') {
+                    return (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                            <h3 className="text-xl font-semibold text-white mb-4">Validate Invitation</h3>
+                            <p className="text-sm text-gray-400 mb-2">Enter the invitation code, Startup ID, or the Founder's email address.</p>
+                            <input
+                                name="inviteCode"
+                                placeholder="Invitation Code / Startup ID / Founder Email"
+                                className="steps-input"
+                                onChange={handleInputChange}
+                                required
+                            />
+                        </div>
+                    );
+                }
+                if (formData.onboardingType === 'create') {
+                    return (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                            <h3 className="text-xl font-semibold text-white mb-4">Startup Information</h3>
+                            <input name="startupName" placeholder="Startup Name" className="steps-input" onChange={handleInputChange} required />
+                            <div className="grid grid-cols-2 gap-4">
+                                <select name="sector" className="steps-input" onChange={handleInputChange} required>
+                                    <option value="">Sector</option>
+                                    <option value="fintech">Fintech</option>
+                                    <option value="edtech">Edtech</option>
+                                    <option value="healthtech">Healthtech</option>
+                                    <option value="saas">SaaS</option>
+                                    <option value="ai">AI/ML</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <select name="stage" className="steps-input" onChange={handleInputChange} required>
+                                    <option value="">Stage</option>
+                                    <option value="idea">Idea</option>
+                                    <option value="validation">Validation</option>
+                                    <option value="mvp">MVP</option>
+                                    <option value="revenue">Revenue</option>
+                                </select>
+                            </div>
+                            <textarea name="problemStatement" placeholder="Short Problem Statement (max 150 words)" rows="3" className="steps-input resize-none" onChange={handleInputChange} maxLength={500} required />
+                        </div>
+                    );
+                }
+                // Case: 'look'
+                return (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <h3 className="text-xl font-semibold text-white mb-4">Skills & Profile</h3>
+                        <input name="primarySkills" placeholder="Your Primary Skills (comma separated)" className="steps-input" onChange={handleInputChange} required />
+                        <textarea name="bio" placeholder="Short Bio / Experience" rows="4" className="steps-input resize-none" onChange={handleInputChange} required />
+                    </div>
+                );
+            case 4:
+                // Only reached for 'create' path
+                return (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <h3 className="text-xl font-semibold text-white mb-4">Skills & Needs</h3>
+                        <input name="primarySkills" placeholder="Your Primary Skills (comma separated)" className="steps-input" onChange={handleInputChange} required />
+                        <input name="lookingFor" placeholder="Looking For (Skill Gap)" className="steps-input" onChange={handleInputChange} required />
+                        <select name="equity" className="steps-input" onChange={handleInputChange}>
+                            <option value="">Equity Range (Optional)</option>
+                            <option value="0-5">0-5%</option>
+                            <option value="5-10">5-10%</option>
+                            <option value="10-20">10-20%</option>
+                            <option value="negotiable">Negotiable</option>
+                        </select>
+                    </div>
+                );
+            default: return null;
+        }
+    };
+
     const renderIncubatorForm = () => {
         switch (step) {
             case 1:
@@ -320,7 +478,8 @@ const Signup = () => {
 
                     <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-between">
                         <div className="flex-1">
-                            {(role === 'founder' || role === 'co-founder' || role === 'cofounder') && renderFounderForm()}
+                            {role === 'founder' && renderFounderForm()}
+                            {['co-founder', 'cofounder'].includes(role) && renderCoFounderForm()}
                             {role === 'mentor' && renderMentorForm()}
                             {role === 'incubator' && renderIncubatorForm()}
                         </div>
@@ -344,10 +503,11 @@ const Signup = () => {
                                 </button>
                             )}
 
-                            {step < 3 ? (
+                            {step < getTotalSteps() ? (
                                 <button
                                     type="submit"
-                                    className="flex items-center bg-white text-brand-black px-6 py-2.5 rounded-xl font-bold hover:bg-gray-100 transition-all transform active:scale-95"
+                                    disabled={['co-founder', 'cofounder'].includes(role) && step === 2 && !formData.onboardingType}
+                                    className="flex items-center bg-white text-brand-black px-6 py-2.5 rounded-xl font-bold hover:bg-gray-100 transition-all transform active:scale-95 disabled:opacity-50"
                                 >
                                     Next Step <ArrowRight size={18} className="ml-2" />
                                 </button>

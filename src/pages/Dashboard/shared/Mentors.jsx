@@ -21,14 +21,14 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
+import { getSystem } from '../../../utils/system';
 
 const Mentors = () => {
     const { user } = useAuth();
-    const { startup, requestMentor } = useStartup();
+    const { startup, requestMentor, mentorRequests } = useStartup();
 
     // --- State Management ---
     const [mentors, setMentors] = useState([]);
-    const [requests, setRequests] = useState([]);
     const [selectedMentor, setSelectedMentor] = useState(null);
     const [requestingMentor, setRequestingMentor] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -54,23 +54,14 @@ const Mentors = () => {
         const refreshData = () => {
             setLoading(true);
             try {
-                // Fetch mentors from global users
-                const allUsersRaw = localStorage.getItem('vanguard_users');
-                let allUsers = {};
-                try {
-                    allUsers = JSON.parse(allUsersRaw || '{}');
-                    if (Array.isArray(allUsers)) {
-                        allUsers = allUsers.reduce((acc, u) => {
-                            if (u.uid || u.id) acc[u.uid || u.id] = u;
-                            return acc;
-                        }, {});
-                    }
-                } catch (e) { allUsers = {}; }
+                // Fetch mentors from global system
+                const system = getSystem();
+                const allUsers = system.users || {};
 
                 const mentorsList = Object.values(allUsers)
                     .filter(u => u.role === 'mentor')
-                    .map(m => ({
-                        id: m.uid,
+                    .map((m, idx) => ({
+                        id: m.uid || `mentor-${idx}`,
                         name: m.name || m.profileData?.fullName || m.email.split('@')[0],
                         initials: (m.name || m.email.split('@')[0]).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
                         title: m.profileData?.title || 'Expert Mentor',
@@ -87,10 +78,7 @@ const Mentors = () => {
                     }));
                 setMentors(mentorsList);
 
-                // Fetch requests for this founder
-                const allRequests = JSON.parse(localStorage.getItem('vanguard_mentorRequests') || '[]');
-                const founderRequests = allRequests.filter(r => r.founderId === user.uid);
-                setRequests(founderRequests);
+                setMentors(mentorsList);
             } catch (err) {
                 console.error("Error fetching mentors:", err);
             } finally {
@@ -103,23 +91,15 @@ const Mentors = () => {
 
     // --- Logic: Dynamic Response Rate ---
     // Hydrate assigned mentor name from users object (SSOT)
-    const allUsersRaw = localStorage.getItem('vanguard_users');
-    let allUsers = {};
-    try {
-        allUsers = JSON.parse(allUsersRaw || '{}');
-        if (Array.isArray(allUsers)) {
-            allUsers = allUsers.reduce((acc, u) => {
-                if (u.uid || u.id) acc[u.uid || u.id] = u;
-                return acc;
-            }, {});
-        }
-    } catch (e) { allUsers = {}; }
+    const system = getSystem();
+    const allUsers = system.users || {};
 
     const assignedMentor = startup?.mentorAssigned ? allUsers[startup.mentorAssigned] : null;
     const assignedMentorName = assignedMentor?.name || assignedMentor?.email?.split('@')[0] || null;
 
     const processedMentors = useMemo(() => {
-        const allRequests = JSON.parse(localStorage.getItem('vanguard_mentorRequests') || '[]');
+        const system = getSystem();
+        const allRequests = system.mentorRequests || [];
         return mentors.map(m => {
             const mentorRequests = allRequests.filter(r => r.mentorId === m.id);
             const acceptedRequests = mentorRequests.filter(r => r.status === 'accepted').length;
@@ -201,16 +181,12 @@ const Mentors = () => {
         const message = `Problem: ${requestForm.problem}\n\nTried: ${requestForm.tried}\n\nOutcome: ${requestForm.outcome}`;
         requestMentor(requestingMentor.id, message);
 
-        // Re-fetch requests
-        const allRequests = JSON.parse(localStorage.getItem('vanguard_mentorRequests') || '[]');
-        setRequests(allRequests.filter(r => r.founderId === user.uid));
-
         setRequestForm({ problem: '', tried: '', outcome: '' });
         setRequestingMentor(null);
     };
 
     const hasRequested = (mentorId) => {
-        return requests.some(r => r.mentorId === mentorId);
+        return (mentorRequests || []).some(r => r.mentorId === mentorId);
     };
 
     const isAccessRestricted = !['founder', 'co-founder'].includes(user?.role);
@@ -258,10 +234,10 @@ const Mentors = () => {
                     </div>
                 </div>
 
-                {requests.length > 0 && (
+                {(mentorRequests || []).length > 0 && (
                     <div className="flex items-center gap-2 px-4 py-3 bg-[#1E1E2F] rounded-xl border border-white/5 self-start sm:self-auto">
                         <MessageSquare size={16} className="text-[#8B5CF6]" />
-                        <span className="text-xs md:text-sm font-bold text-white">{requests.length} Requests Sent</span>
+                        <span className="text-xs md:text-sm font-bold text-white">{(mentorRequests || []).length} Requests Sent</span>
                     </div>
                 )}
             </div>
@@ -318,7 +294,7 @@ const Mentors = () => {
                             <div>
                                 <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block">Startup Stage</label>
                                 <div className="space-y-3">
-                                    {['Idea', 'MVP', 'Revenue'].map((st) => (
+                                    {['Idea', 'MVP', 'Pre-Seed', 'Seed', 'Series A'].map(st => (
                                         <div
                                             key={st}
                                             className="flex items-center gap-3 group cursor-pointer"
@@ -447,7 +423,7 @@ const Mentors = () => {
                             ))}
 
                             {/* Empty Slot */}
-                            <div className="border border-dashed border-white/5 rounded-2xl flex items-center justify-center p-8 group hover:border-[#8B5CF6]/20 transition-all cursor-pointer">
+                            <div key="request-new-sector" className="border border-dashed border-white/5 rounded-2xl flex items-center justify-center p-8 group hover:border-[#8B5CF6]/20 transition-all cursor-pointer">
                                 <div className="text-center">
                                     <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                                         <Plus size={24} className="text-gray-600 group-hover:text-[#8B5CF6]" />

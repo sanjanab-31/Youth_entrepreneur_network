@@ -8,7 +8,9 @@ export const getSystem = () => {
         applications: [],
         cohorts: [],
         mentorRequests: [],
-        sessions: []
+        sessions: [],
+        invitations: [],
+        joinRequests: []
     };
 
     try {
@@ -38,7 +40,9 @@ export const getSystem = () => {
                 applications: parsed.applications || [],
                 cohorts: parsed.cohorts || [],
                 mentorRequests: parsed.mentorRequests || [],
-                sessions: parsed.sessions || []
+                sessions: parsed.sessions || [],
+                invitations: parsed.invitations || [],
+                joinRequests: parsed.joinRequests || []
             };
         } else {
             // MIGRATION LOGIC

@@ -1,17 +1,19 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Landing from './pages/Landing';
 import RoleSelection from './pages/Auth/RoleSelection';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import Dashboard from './pages/Dashboard/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import StartupWorkspaceGuard from './components/StartupWorkspaceGuard';
 
 // Dashboard Sub-page Imports
 import Messages from './pages/Dashboard/shared/Messages';
 import ActivityFeed from './pages/Dashboard/shared/ActivityFeed';
-import SessionsFounder from './pages/Dashboard/founder/Sessions';
+import Sessions from './pages/Dashboard/shared/Sessions';
 import Settings from './pages/Dashboard/shared/Settings';
+import CoFounderDashboard from './pages/Dashboard/co-founder/CoFounderDashboard';
 import StartupOverview from './pages/Dashboard/co-founder/StartupOverview';
 import TeamCollaboration from './pages/Dashboard/co-founder/TeamCollaboration';
 import Mentors from './pages/Dashboard/shared/Mentors';
@@ -19,12 +21,14 @@ import Incubators from './pages/Dashboard/shared/Incubators';
 import DashboardHome from './pages/Dashboard/shared/DashboardHome';
 import MyStartup from './pages/Dashboard/founder/MyStartup';
 import FindCoFounder from './pages/Dashboard/founder/FindCoFounder';
+import DiscoverStartups from './pages/Dashboard/co-founder/DiscoverStartups';
+import MyApplications from './pages/Dashboard/co-founder/MyApplications';
+import JoinRequests from './pages/Dashboard/shared/JoinRequests';
 
 // Mentor Dashboard Sub-page Imports
 import MentorDashboard from './pages/Dashboard/mentor/MentorDashboard';
 import FounderRequests from './pages/Dashboard/mentor/FounderRequests';
 import MyMentees from './pages/Dashboard/mentor/MyMentees';
-import Sessions from './pages/Dashboard/mentor/Sessions';
 import MentorProfile from './pages/Dashboard/mentor/MentorProfile';
 import MentorActivityFeed from './pages/Dashboard/mentor/MentorActivityFeed';
 
@@ -68,8 +72,9 @@ const AppRoutes = () => {
                     <Route path="dashboard" element={<DashboardHome role="founder" />} />
                     <Route path="my-startup" element={<MyStartup />} />
                     <Route path="find-co-founder" element={<FindCoFounder />} />
+                    <Route path="co-founder-requests" element={<JoinRequests />} />
                     <Route path="mentors" element={<Mentors />} />
-                    <Route path="sessions" element={<SessionsFounder />} />
+                    <Route path="sessions" element={<Sessions />} />
                     <Route path="incubators" element={<Incubators />} />
                     <Route path="messages" element={<Messages />} />
                     <Route path="activity-feed" element={<ActivityFeed />} />
@@ -77,23 +82,29 @@ const AppRoutes = () => {
                 </Route>
             </Route>
 
-            {/* Co-Founder Dashboard Routes */}
+            {/* Co-Founder Dashboard Routes (Aliased for both variants) */}
             <Route element={<ProtectedRoute allowedRoles={['co-founder', 'cofounder']} />}>
-                <Route path="/cofounder" element={<Dashboard role="cofounder" />}>
-                    <Route index element={<DashboardHome role="co-founder" />} />
-                    <Route path="dashboard" element={<DashboardHome role="co-founder" />} />
-                    <Route path="startup-overview" element={<StartupOverview />} />
-                    <Route path="team-collaboration" element={<TeamCollaboration />} />
-                    <Route path="mentors" element={<Mentors />} />
-                    <Route path="incubators" element={<Incubators />} />
-                    <Route path="messages" element={<Messages />} />
-                    <Route path="activity-feed" element={<ActivityFeed />} />
-                    <Route path="settings" element={<Settings role="co-founder" />} />
-                </Route>
-                <Route path="/co-founder" element={<Dashboard role="co-founder" />}>
-                    <Route index element={<DashboardHome role="co-founder" />} />
-                    <Route path="dashboard" element={<DashboardHome role="co-founder" />} />
-                </Route>
+                {['/cofounder', '/co-founder'].map(path => (
+                    <Route key={path} path={path} element={<Dashboard role="cofounder" />}>
+                        <Route index element={<CoFounderDashboard />} />
+                        <Route path="dashboard" element={<CoFounderDashboard />} />
+                        <Route path="discover-startups" element={<DiscoverStartups />} />
+                        <Route path="find-co-founder" element={<DiscoverStartups />} />
+                        <Route path="my-applications" element={<MyApplications />} />
+                        <Route path="profile" element={<Settings role="co-founder" />} />
+                        <Route path="settings" element={<Settings role="co-founder" />} />
+
+                        {/* Guarded Workspace Routes */}
+                        <Route element={<StartupWorkspaceGuard />}>
+                            <Route path="my-startup" element={<MyStartup />} />
+                            <Route path="mentors" element={<Mentors />} />
+                            <Route path="team" element={<TeamCollaboration />} />
+                            <Route path="meetings" element={<Sessions />} />
+                            <Route path="sessions" element={<Sessions />} />
+                            <Route path="messages" element={<Messages />} />
+                        </Route>
+                    </Route>
+                ))}
             </Route>
 
             {/* Mentor Dashboard Routes */}
@@ -104,6 +115,7 @@ const AppRoutes = () => {
                     <Route path="founder-requests" element={<FounderRequests />} />
                     <Route path="my-mentees" element={<MyMentees />} />
                     <Route path="sessions" element={<Sessions />} />
+                    <Route path="messages" element={<Messages />} />
                     <Route path="activity-feed" element={<MentorActivityFeed />} />
                     <Route path="profile" element={<MentorProfile />} />
                     <Route path="settings" element={<Settings role="mentor" />} />
@@ -140,10 +152,10 @@ const AppRoutes = () => {
                     <Route path="content" element={<ContentManagement />} />
                     <Route path="settings" element={<AdminSettings />} />
                 </Route>
-                <Route path="/admin-dashboard" element={<Dashboard role="admin" />}>
-                    <Route index element={<AdminDashboard />} />
-                </Route>
             </Route>
+
+            {/* Catch-all and Redirects */}
+            <Route path="/founder/find-cofounder" element={<Navigate to="/founder/find-co-founder" replace />} />
         </Routes>
     );
 };

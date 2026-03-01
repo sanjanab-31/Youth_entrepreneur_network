@@ -142,6 +142,37 @@ export const AuthProvider = ({ children }) => {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const firebaseUser = userCredential.user;
             const normalizedRole = role.toLowerCase();
+            const system = getSystem();
+
+            // ─── Pre-Signup Invitation Handling ───────────────────
+            let invitedStartupId = null;
+            const existingInvitation = system.invitations.find(inv =>
+                inv.invitedEmail.toLowerCase() === email.toLowerCase() &&
+                inv.status === 'pending'
+            );
+
+            if (existingInvitation) {
+                invitedStartupId = existingInvitation.startupId;
+                existingInvitation.status = 'accepted';
+                existingInvitation.invitedUserId = firebaseUser.uid;
+
+                // Attach to startup
+                const startup = system.startups.find(s => s.startupId === invitedStartupId);
+                if (startup) {
+                    startup.coFounders = startup.coFounders || [];
+                    if (!startup.coFounders.includes(firebaseUser.uid)) {
+                        startup.coFounders.push(firebaseUser.uid);
+                    }
+                }
+                saveSystem(system);
+            }
+            // ──────────────────────────────────────────────────────
+
+            // Case C: Co-Founder wants to create startup -> Promote to Founder
+            let finalRole = normalizedRole;
+            if (['co-founder', 'cofounder'].includes(normalizedRole) && profileData.onboardingType === 'create') {
+                finalRole = 'founder';
+            }
 
             // Extract core info
             const name = profileData.fullName || profileData.incubatorName || profileData.name || email.split('@')[0];
@@ -181,7 +212,7 @@ export const AuthProvider = ({ children }) => {
             const newUser = {
                 uid: firebaseUser.uid,
                 email,
-                role: normalizedRole,
+                role: finalRole,
                 name,
                 portalData,
                 createdAt: new Date().toISOString(),
@@ -190,10 +221,9 @@ export const AuthProvider = ({ children }) => {
 
             saveUserProfile(firebaseUser.uid, newUser);
 
-            const system = getSystem();
-
-            // Relational: Initialize Startup record if founder
-            if (['founder', 'co-founder', 'cofounder'].includes(normalizedRole)) {
+            // Relational: Initialize Startup record
+            // RULE: Auto-create only for Founder (including promoted co-founders)
+            if (finalRole === 'founder') {
                 const capitalizeStage = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Idea';
 
                 const newStartup = {
@@ -233,32 +263,42 @@ export const AuthProvider = ({ children }) => {
                 system.startups.push(newStartup);
             }
 
-            // Relational: Initialize Incubator record if incubator
-            if (normalizedRole === 'incubator') {
-                const newIncubator = {
-                    id: firebaseUser.uid,
-                    name: profileData.incubatorName || name,
-                    email: email,
-                    website: profileData.website || '',
-                    location: profileData.location || '',
-                    description: profileData.description || '',
-                    sectorFocus: Array.isArray(profileData.sectorFocus) ? profileData.sectorFocus : [],
-                    stagePreference: profileData.stagePref || 'Early Stage',
-                    fundingSupport: profileData.funding === 'yes',
-                    batchSize: parseInt(profileData.cohortSize) || 20,
-                    programHighlights: [],
-                    successStats: { graduated: 0, raised: '$0', active: 0 },
-                    applicationsReceived: [],
-                    activeCohorts: [],
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
-                system.incubators.push(newIncubator);
+            // Case A: Manual invite linking (was handled partially by pre-signup but check again if they provided code)
+            if (['co-founder', 'cofounder'].includes(normalizedRole) && profileData.onboardingType === 'invite') {
+                const invitation = system.invitations.find(inv =>
+                    (inv.id === profileData.inviteCode || inv.startupId === profileData.inviteCode) &&
+                    inv.status === 'pending'
+                );
+
+                if (invitation) {
+                    invitation.status = 'accepted';
+                    invitation.invitedUserId = firebaseUser.uid;
+                    const startup = system.startups.find(s => s.startupId === invitation.startupId);
+                    if (startup) {
+                        startup.coFounders = startup.coFounders || [];
+                        if (!startup.coFounders.includes(firebaseUser.uid)) {
+                            startup.coFounders.push(firebaseUser.uid);
+                        }
+                    }
+                } else if (profileData.inviteCode) {
+                    // Search by founder email if invite code didn't match
+                    const startupByEmail = system.startups.find(s => {
+                        const founder = system.users[s.founderId];
+                        return founder && founder.email.toLowerCase() === profileData.inviteCode.toLowerCase();
+                    });
+
+                    if (startupByEmail) {
+                        startupByEmail.coFounders = startupByEmail.coFounders || [];
+                        if (!startupByEmail.coFounders.includes(firebaseUser.uid)) {
+                            startupByEmail.coFounders.push(firebaseUser.uid);
+                        }
+                    }
+                }
             }
 
             saveSystem(system);
             setUser(newUser);
-            navigate(ROLE_PATHS[normalizedRole] || '/founder');
+            navigate(ROLE_PATHS[finalRole] || '/founder');
             return newUser;
         } finally {
             sessionStorage.removeItem('vanguard_processing_auth');
