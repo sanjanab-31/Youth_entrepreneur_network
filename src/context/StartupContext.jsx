@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { useMessaging } from './MessagingContext';
 import { getSystem, saveSystem } from '../utils/system';
 
 const StartupContext = createContext();
@@ -508,25 +509,15 @@ export const StartupProvider = ({ children }) => {
         syncData();
     };
 
+    // Redirection to new Messaging System
+    const messaging = useMessaging();
     const sendMessage = (text, channel = 'team') => {
-        if (!startup || !user) return;
-        const newMessage = {
-            id: `msg_${Date.now()}`,
-            senderId: user.uid,
-            senderName: user.name || user.fullName || 'User',
-            senderRole: user.role,
-            text,
-            channel, // 'team' or 'mentor'
-            timestamp: new Date().toISOString()
-        };
-
-        const updatedMessages = [...(startup.messages || []), newMessage];
-        updateStartup({ messages: updatedMessages });
-
-        // Optional activity for mentor channel
-        if (channel === 'mentor' && user.role === 'founder') {
-            // No automated activity for basic chat to avoid spam
-        }
+        if (!startup) return;
+        messaging.sendMessage({
+            startupId: startup.startupId,
+            conversationType: channel === 'mentor' ? 'mentor' : 'startup',
+            message: text
+        });
     };
 
     const removeJoinRequest = (requestId) => {

@@ -28,12 +28,16 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useStartup } from '../context/StartupContext';
+import { useMessaging } from '../context/MessagingContext';
 import logo from '../assets/logo.jpg';
 
 const DashboardLayout = ({ children, role }) => {
     const { user, logout } = useAuth();
     const { startup } = useStartup();
+    const { conversations } = useMessaging();
     const location = useLocation();
+
+    const totalUnread = conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -213,6 +217,12 @@ const DashboardLayout = ({ children, role }) => {
                                 <Icon size={20} className={isActive ? 'text-white' : 'group-hover:text-white transition-colors'} />
                                 {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">{item.label}</span>}
 
+                                {item.id === 'messages' && totalUnread > 0 && (
+                                    <span className={`absolute ${isSidebarOpen ? 'right-4' : 'right-2 -top-1'} bg-red-500 text-white text-[10px] font-black px-1.5 rounded-full h-5 min-w-5 flex items-center justify-center shadow-lg border-2 border-[#15151e] animate-pulse-slow`}>
+                                        {totalUnread}
+                                    </span>
+                                )}
+
                                 {!isSidebarOpen && (
                                     <div className="absolute left-full ml-4 px-3 py-1.5 bg-[#1E1E2F] border border-white/10 rounded-lg text-xs font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                                         {item.label}
@@ -327,8 +337,8 @@ const DashboardLayout = ({ children, role }) => {
                                             to={item.path}
                                             onClick={() => setIsMobileMenuOpen(false)}
                                             className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all ${isActive
-                                                    ? 'bg-brand-purple text-white shadow-lg'
-                                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                                ? 'bg-brand-purple text-white shadow-lg'
+                                                : 'text-gray-400 hover:text-white hover:bg-white/5'
                                                 }`}
                                         >
                                             <item.icon size={20} />

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { calculateExecutionScore } from '../context/StartupContext';
+import { useMessaging } from './MessagingContext';
 import { getSystem, saveSystem } from '../utils/system';
 
 
@@ -290,35 +291,13 @@ export const MentorProvider = ({ children }) => {
         refreshData();
     };
 
+    const messaging = useMessaging();
     const sendMessage = (startupId, text) => {
-        if (!user) return;
-        const system = getSystem();
-        const startup = system.startups.find(s => s.startupId === startupId);
-        if (!startup) return;
-
-        const newMessage = {
-            id: `msg_${Date.now()}`,
-            senderId: user.uid,
-            senderName: user.name || user.fullName || 'Mentor',
-            senderRole: 'mentor',
-            text,
-            channel: 'mentor',
-            timestamp: new Date().toISOString()
-        };
-
-        startup.messages = [...(startup.messages || []), newMessage];
-
-        // Mentor messages log activity to the startup
-        const activityEntry = {
-            id: `act_${Date.now()}`,
-            message: `Mentor sent a message`,
-            type: 'mentor',
-            timestamp: new Date().toISOString()
-        };
-        startup.activity = [activityEntry, ...(Array.isArray(startup.activity) ? startup.activity : [])].slice(0, 50);
-
-        saveSystem(system);
-        refreshData();
+        messaging.sendMessage({
+            startupId,
+            conversationType: 'mentor',
+            message: text
+        });
     };
 
     // ── Derived data ───────────────────────────────────────────
