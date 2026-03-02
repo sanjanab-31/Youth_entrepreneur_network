@@ -92,6 +92,7 @@ const DashboardLayout = ({ children, role }) => {
                 { id: 'applications', label: 'Applications', icon: FileText, path: `/${role}/applications` },
                 { id: 'cohorts', label: 'Cohorts', icon: Users, path: `/${role}/cohorts` },
                 { id: 'mentors', label: 'Mentors', icon: Briefcase, path: `/${role}/mentors` },
+                { id: 'messages', label: 'Messages', icon: MessageSquare, path: `/${role}/messages` },
                 { id: 'analytics', label: 'Analytics', icon: Activity, path: `/${role}/analytics` },
                 { id: 'profile', label: 'Profile', icon: User, path: `/${role}/profile` },
                 { id: 'settings', label: 'Settings', icon: Settings, path: `/${role}/settings` },

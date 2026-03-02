@@ -132,6 +132,7 @@ const AppRoutes = () => {
                     <Route path="cohorts" element={<Cohorts />} />
                     <Route path="mentors" element={<IncubatorMentors />} />
                     <Route path="analytics" element={<Analytics />} />
+                    <Route path="messages" element={<Messages />} />
                     <Route path="profile" element={<IncubatorProfile />} />
                     <Route path="settings" element={<IncubatorSettings />} />
                 </Route>
