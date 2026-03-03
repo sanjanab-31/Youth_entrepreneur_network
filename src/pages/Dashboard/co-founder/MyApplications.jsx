@@ -20,16 +20,14 @@ import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const MyApplications = () => {
-    const { startup, joinRequests, allStartups, withdrawJoinRequest, removeJoinRequest } = useStartup();
+    const { startup, joinRequests, allStartups, withdrawJoinRequest, removeJoinRequest, isUserLinked } = useStartup();
     const { user } = useAuth();
+    const linked = isUserLinked();
     const navigate = useNavigate();
 
-    // --- REDIRECT LOGIC ---
-    useEffect(() => {
-        if (startup) {
-            navigate('/cofounder/dashboard');
-        }
-    }, [startup, navigate]);
+    // --- REDIRECT LOGIC REMOVED ---
+    // Co-Founder can view My Applications even when linked to a startup.
+
     const [filter, setFilter] = useState('All');
 
     const myRequests = joinRequests.filter(r => r.requesterId === user?.uid);
@@ -71,11 +69,19 @@ const MyApplications = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                    <div className="flex items-center gap-3 mb-4">
-                        <span className="px-3 py-1 bg-[#8B5CF6]/10 text-[#8B5CF6] text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border border-[#8B5CF6]/20 shadow-sm">
-                            Co-Founder Portal
-                        </span>
-                    </div>
+                    {linked ? (
+                        <div className="flex items-center gap-3 mb-4">
+                            <span className="px-3 py-1 bg-blue-500/10 text-blue-500 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border border-blue-500/20 shadow-sm">
+                                Active in {startup?.startupName}
+                            </span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3 mb-4">
+                            <span className="px-3 py-1 bg-[#8B5CF6]/10 text-[#8B5CF6] text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border border-[#8B5CF6]/20 shadow-sm">
+                                Co-Founder Portal
+                            </span>
+                        </div>
+                    )}
                     <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
                         My <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">Applications</span>
                     </h1>

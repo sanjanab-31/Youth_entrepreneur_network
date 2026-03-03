@@ -52,6 +52,10 @@ const Messages = () => {
     const filteredConvos = conversations.filter(c =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
+    // Role-based filtering: mentors should only see mentor (and direct) conversations
+    const roleFilteredConvos = user.role === 'mentor'
+        ? filteredConvos.filter(c => c.type === 'mentor' || c.type === 'direct')
+        : filteredConvos;
 
     const activeMessages = selectedConvo
         ? messages.filter(m =>
@@ -108,13 +112,13 @@ const Messages = () => {
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                        {filteredConvos.map((convo) => (
+                        {roleFilteredConvos.map((convo) => (
                             <button
                                 key={`${convo.id}_${convo.type}`}
                                 onClick={() => setSelectedConvo(convo)}
                                 className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all group border ${selectedConvo?.id === convo.id && selectedConvo?.type === convo.type
-                                        ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/20 shadow-lg'
-                                        : 'hover:bg-white/5 border-transparent opacity-80 hover:opacity-100'
+                                    ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/20 shadow-lg'
+                                    : 'hover:bg-white/5 border-transparent opacity-80 hover:opacity-100'
                                     }`}
                             >
                                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-white shadow-lg border border-white/10 transition-transform group-hover:scale-110 ${selectedConvo?.id === convo.id && selectedConvo?.type === convo.type ? 'bg-[#8B5CF6]' : 'bg-white/5'

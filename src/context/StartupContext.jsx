@@ -268,6 +268,35 @@ export const StartupProvider = ({ children }) => {
         setStartup(null);
     };
 
+    // Helper to determine if the current user is linked to a startup
+    const isUserLinked = () => {
+        return !!startup;
+    };
+
+    // Resignation system for co-founders
+    const resignFromStartup = () => {
+        if (!startup || !user) return;
+        const system = getSystem();
+        system.startups = system.startups.map(s => {
+            if (s.startupId === startup.startupId) {
+                const newCoFounders = (s.coFounders || []).filter(uid => uid !== user.uid);
+                // Log activity
+                const activityMsg = `Co-Founder ${user.name || user.email} resigned from the team`;
+                s.activity = [{
+                    id: `act_${Date.now()}`,
+                    message: activityMsg,
+                    type: 'info',
+                    timestamp: new Date().toISOString()
+                }, ...(s.activity || [])].slice(0, 50);
+                return { ...s, coFounders: newCoFounders };
+            }
+            return s;
+        });
+        saveSystem(system);
+        setStartup(null);
+        syncData();
+    };
+
     // --- INVITATIONS ---
     const sendInvitation = (invitedEmail) => {
         if (!startup) return;
@@ -394,7 +423,10 @@ export const StartupProvider = ({ children }) => {
         const targetStartup = system.startups.find(s => s.startupId === startupId);
         if (!targetStartup) return { error: "Startup not found" };
 
-        // Prevention: Check if already applied
+        // Prevention: Check if already applied or already linked elsewhere
+        if (isUserLinked()) {
+            return { error: "User must resign from current startup before applying" };
+        }
         const existing = (system.joinRequests || []).find(r => r.startupId === startupId && r.requesterId === user.uid && r.status === 'pending');
         if (existing) return { error: "Request already pending" };
 
@@ -432,6 +464,11 @@ export const StartupProvider = ({ children }) => {
         const system = getSystem();
         const req = (system.joinRequests || []).find(r => r.id === requestId);
         if (!req) return;
+
+        // Prevent accepting if user is already linked to a startup
+        if (isUserLinked()) {
+            return { error: "User must resign from current startup first." };
+        }
 
         req.status = 'accepted';
         req.updatedAt = new Date().toISOString();
@@ -532,6 +569,8 @@ export const StartupProvider = ({ children }) => {
         loading,
         updateStartup,
         addMilestone,
+        isUserLinked,
+        resignFromStartup,
         updateMilestone,
         deleteMilestone,
         addDocument,

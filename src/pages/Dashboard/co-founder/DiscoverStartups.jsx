@@ -28,14 +28,12 @@ import { getSystem } from '../../../utils/system';
 const DiscoverStartups = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const { startup, sendJoinRequest, joinRequests: myRequests } = useStartup();
+    const { startup, sendJoinRequest, joinRequests: myRequests, isUserLinked } = useStartup();
+    const linked = isUserLinked();
 
     // --- REDIRECT LOGIC ---
-    useEffect(() => {
-        if (startup) {
-            navigate('/cofounder/dashboard');
-        }
-    }, [startup, navigate]);
+    // --- REDIRECT LOGIC REMOVED ---
+    // A Co-Founder can now browse startups even after joining one.
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedSector, setSelectedSector] = useState('All');
@@ -120,10 +118,17 @@ const DiscoverStartups = () => {
                     </h1>
                     <p className="text-gray-500 mt-2 font-medium italic">Find high-potential ventures looking for your <span className="text-white font-bold">Expertise</span>.</p>
                 </div>
-                <div className="flex items-center gap-3 px-4 py-2 bg-brand-purple/10 border border-brand-purple/20 rounded-xl">
-                    <div className="w-2 h-2 rounded-full bg-brand-purple animate-pulse" />
-                    <span className="text-[10px] font-black text-brand-purple uppercase tracking-widest">Unlinked Mode Active</span>
-                </div>
+                {linked ? (
+                    <div className="flex items-center gap-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Active in {startup?.startupName}</span>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-3 px-4 py-2 bg-brand-purple/10 border border-brand-purple/20 rounded-xl">
+                        <div className="w-2 h-2 rounded-full bg-brand-purple animate-pulse" />
+                        <span className="text-[10px] font-black text-brand-purple uppercase tracking-widest">Unlinked Mode Active</span>
+                    </div>
+                )}
             </div>
 
             {/* Sub-Header / Filters */}
@@ -208,14 +213,19 @@ const DiscoverStartups = () => {
                                 <div className="mt-auto p-6 bg-[#0F0F14]/30 border-t border-white/5 grid grid-cols-1 gap-3">
                                     <button
                                         onClick={() => handleRequestToJoin(s)}
-                                        disabled={isPending}
+                                        disabled={isPending || linked}
+                                        title={linked ? "You must resign from your current startup before applying" : ""}
                                         className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${isPending
                                             ? 'bg-brand-purple/20 text-brand-purple border border-brand-purple/30 cursor-default'
-                                            : 'bg-brand-purple text-white hover:shadow-lg hover:shadow-brand-purple/20 active:scale-95'
+                                            : linked
+                                                ? 'bg-gray-800 text-gray-400 border border-white/5 cursor-not-allowed opacity-50'
+                                                : 'bg-brand-purple text-white hover:shadow-lg hover:shadow-brand-purple/20 active:scale-95'
                                             }`}
                                     >
                                         {isPending ? (
                                             <><Clock size={14} /> Request Pending</>
+                                        ) : linked ? (
+                                            <><ShieldCheck size={14} /> Active in Another Startup</>
                                         ) : (
                                             <><UserPlus size={14} /> Request to Join</>
                                         )}
