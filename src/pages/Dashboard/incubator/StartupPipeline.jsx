@@ -144,12 +144,36 @@ const StartupPipeline = () => {
                         className="bg-[#1E1E2F] border border-white/5 rounded-2xl p-6 hover:border-[#8B5CF6]/30 transition-all group flex flex-col h-full"
                     >
                         <div className="flex justify-between items-start mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-gradient-to-br from-[#8B5CF6]/20 to-[#7C3AED]/20 rounded-xl flex items-center justify-center border border-[#8B5CF6]/20">
+                            <div className="flex items-start gap-3">
+                                <div className="w-12 h-12 bg-gradient-to-br from-[#8B5CF6]/20 to-[#7C3AED]/20 rounded-xl flex items-center justify-center border border-[#8B5CF6]/20 shrink-0 mt-1">
                                     <Rocket className="text-[#8B5CF6]" size={24} />
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-white group-hover:text-[#8B5CF6] transition-colors">{startup.startupName || startup.name || 'Unnamed Venture'}</h3>
+                                <div className="space-y-1.5">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <h3 className="font-bold text-white group-hover:text-[#8B5CF6] transition-colors leading-tight">
+                                            {startup.startupName || startup.name || 'Unnamed Venture'}
+                                        </h3>
+                                        {startup.mentorAssigned && (
+                                            <span className="px-1.5 py-0.5 bg-purple-500/10 text-purple-400 text-[9px] font-black uppercase tracking-widest rounded border border-purple-500/20" title="Mentor Assigned">
+                                                Mentor
+                                            </span>
+                                        )}
+                                        {startup.executionScore >= 80 && (
+                                            <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 text-[9px] font-black uppercase tracking-widest rounded border border-emerald-500/20" title="High Execution Score">
+                                                Top
+                                            </span>
+                                        )}
+                                        {startup.updatedAt && (new Date() - new Date(startup.updatedAt) < 48 * 60 * 60 * 1000) && (
+                                            <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 text-[9px] font-black uppercase tracking-widest rounded border border-blue-500/20" title="Updated Recently">
+                                                New
+                                            </span>
+                                        )}
+                                        {startup.coFounders && startup.coFounders.length > 0 && (
+                                            <span className="px-1.5 py-0.5 bg-gray-500/10 text-gray-400 text-[9px] font-black uppercase tracking-widest rounded border border-gray-500/20">
+                                                {startup.coFounders.length} Co‑Founder{startup.coFounders.length > 1 ? 's' : ''}
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-xs text-gray-500 flex items-center gap-1">
                                         <Globe size={12} /> {startup.sector}
                                     </p>
@@ -290,7 +314,7 @@ const StartupPipeline = () => {
                                     <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center transition-all hover:bg-white/10">
                                         <UsersIcon className="mx-auto mb-2 text-blue-400" size={20} />
                                         <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Team Size</p>
-                                        <p className="text-lg font-bold text-white">{selectedStartup.team?.split(',')[0] || selectedStartup.teamSize || 'N/A'}</p>
+                                        <p className="text-lg font-bold text-white">{selectedStartup.teamSize || 'N/A'}</p>
                                     </div>
                                     <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center transition-all hover:bg-white/10">
                                         <DollarSign className="mx-auto mb-2 text-emerald-400" size={20} />
