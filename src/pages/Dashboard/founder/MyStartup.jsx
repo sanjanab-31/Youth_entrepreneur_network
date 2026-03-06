@@ -26,6 +26,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStartup, calculateExecutionScore } from '../../../context/StartupContext';
+import { useAuth } from '../../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { getSystem } from '../../../utils/system';
+import { MessageSquare, UserCheck } from 'lucide-react';
 
 const SectionHeader = ({ icon: Icon, title, children }) => (
     <div className="flex items-center justify-between mb-6">
@@ -76,12 +80,21 @@ const MyStartup = () => {
         renameDocument,
         loading
     } = useStartup();
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const role = user?.role === 'co-founder' ? 'co-founder' : 'founder';
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [toast, setToast] = useState({ visible: false, message: "" });
     const [editingSection, setEditingSection] = useState(null); // 'problem', 'solution', 'audience'
     const [editValue, setEditValue] = useState("");
     const fileInputRef = useRef(null);
+
+    // Hydrate mentor details from SSOT
+    const system = getSystem();
+    const allUsers = system.users || {};
+    const mentor = startup?.mentorAssigned ? allUsers[startup.mentorAssigned] : null;
+    const mentorName = mentor?.name || mentor?.email?.split('@')[0] || 'Unknown Mentor';
 
     const showToast = (message) => {
         setToast({ visible: true, message });
@@ -159,7 +172,6 @@ const MyStartup = () => {
                                     stage: formData.get('stage'),
                                     fundingGoal: formData.get('fundingGoal'),
                                     activeUsers: parseInt(formData.get('activeUsers')),
-                                    teamSize: parseInt(formData.get('teamSize')),
                                     burnRate: parseInt(formData.get('burnRate'))
                                 };
                                 handleUpdate(data, "Updated Successfully");
@@ -175,8 +187,8 @@ const MyStartup = () => {
                                         <option value="Idea">Idea</option>
                                         <option value="Validation">Validation</option>
                                         <option value="MVP">MVP</option>
-                                        <option value="Early Traction">Early Traction</option>
-                                        <option value="Scaling">Scaling</option>
+                                        <option value="Revenue">Revenue</option>
+                                        <option value="Scale">Scale</option>
                                     </select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -189,15 +201,9 @@ const MyStartup = () => {
                                         <input type="number" name="activeUsers" defaultValue={startup.activeUsers} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Team Size</label>
-                                        <input type="number" name="teamSize" defaultValue={startup.teamSize} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Burn Rate ($)</label>
-                                        <input type="number" name="burnRate" defaultValue={startup.burnRate} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
-                                    </div>
+                                <div>
+                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Burn Rate ($)</label>
+                                    <input type="number" name="burnRate" defaultValue={startup.burnRate} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
                                 </div>
                                 <button type="submit" className="w-full py-4 bg-[#8B5CF6] text-white font-black rounded-xl shadow-lg shadow-[#8B5CF6]/20 hover:bg-[#7C3AED] transition-all flex items-center justify-center gap-2 mt-4">
                                     <Save size={20} /> Save Changes
@@ -460,6 +466,44 @@ const MyStartup = () => {
                                 <span className="px-2 py-0.5 bg-[#8B5CF6]/20 text-[#8B5CF6] text-[8px] font-black uppercase tracking-widest rounded border border-[#8B5CF6]/30">Collaborative</span>
                             </div>
                         </SectionHeader>
+
+                        {mentor ? (
+                            <div className="mb-8 p-6 bg-[#8B5CF6]/5 rounded-2xl border border-[#8B5CF6]/20 flex items-center gap-6">
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#8B5CF6] to-indigo-600 flex items-center justify-center text-2xl font-black text-white shadow-xl flex-shrink-0">
+                                    {mentorName[0]}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="text-white font-black text-lg">{mentorName}</h4>
+                                        <span className="px-2 py-0.5 bg-green-500/10 text-green-400 text-[8px] font-black uppercase tracking-widest rounded border border-green-500/20">Active Mentor</span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 font-medium line-clamp-1">{mentor.expertise || 'General Strategy'} • {mentor.sector || 'Expert'}</p>
+                                    <div className="flex items-center gap-4 mt-3">
+                                        <button
+                                            onClick={() => navigate(`/${role}/messages`, { state: { openChat: { startupId: startup.startupId, type: 'mentor' } } })}
+                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#8B5CF6] hover:text-[#7C3AED] transition-all"
+                                        >
+                                            <MessageSquare size={12} /> Message Mentor
+                                        </button>
+                                        <div className="h-3 w-px bg-white/10" />
+                                        <button
+                                            onClick={() => navigate(`/${role}/mentors#my-mentor`)}
+                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all"
+                                        >
+                                            View Profile
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="mb-8 p-6 bg-yellow-500/5 rounded-2xl border border-yellow-500/10 flex items-center gap-4">
+                                <AlertCircle className="text-yellow-500 flex-shrink-0" size={24} />
+                                <div>
+                                    <p className="text-white font-bold text-sm">No mentor assigned yet</p>
+                                    <p className="text-[10px] text-gray-500 font-medium">Request a mentor in the Discover Network to accelerate your growth.</p>
+                                </div>
+                            </div>
+                        )}
 
                         <p className="text-xs text-gray-500 font-medium mb-6 leading-relaxed">
                             These focus areas are set in collaboration with your mentor to guide your current execution sprint.

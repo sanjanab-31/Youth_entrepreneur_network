@@ -83,7 +83,7 @@ export const MentorProvider = ({ children }) => {
             if (s.startupId !== request.startupId) return s;
             const activityEntry = {
                 id: `act_${Date.now()}`,
-                message: `Mentor accepted your request`,
+                message: `Mentor ${user.name || 'Advisor'} accepted your request`,
                 type: 'mentor',
                 timestamp: new Date().toISOString()
             };
@@ -99,6 +99,7 @@ export const MentorProvider = ({ children }) => {
         });
 
         saveSystem(system);
+        refreshData();
     };
 
     const declineRequest = (requestId) => {
@@ -115,7 +116,7 @@ export const MentorProvider = ({ children }) => {
             if (s.startupId !== request.startupId) return s;
             const activityEntry = {
                 id: `act_${Date.now()}`,
-                message: `Mentor declined your request`,
+                message: `Mentor ${user.name || 'Advisor'} declined your request`,
                 type: 'warning',
                 timestamp: new Date().toISOString()
             };

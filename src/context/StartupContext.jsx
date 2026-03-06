@@ -9,10 +9,29 @@ export const useStartup = () => useContext(StartupContext);
 
 // --- Calculation Helpers (Can be moved to a separate utils file later) ---
 export const calculateExecutionScore = (startup) => {
-    if (!startup || !startup.milestones || startup.milestones.length === 0) return 30;
-    const completed = startup.milestones.filter(m => m.status === 'completed').length;
-    const progress = Math.round((completed / startup.milestones.length) * 70);
-    return 30 + progress;
+    let baseScore = 20; // Start at 20 unconditionally
+    if (!startup || !startup.milestones || startup.milestones.length === 0) return baseScore;
+
+    // Advanced Execution Logic
+    // Stage multipliers (harder stages = more score points)
+    const stageWeights = { 'Idea': 1, 'Validation': 1.5, 'MVP': 2, 'Revenue': 3, 'Scale': 4 };
+
+    let earnedPoints = 0;
+    let totalPossiblePoints = 0;
+
+    startup.milestones.forEach(m => {
+        const weight = stageWeights[m.stage] || 1;
+        totalPossiblePoints += weight;
+        if (m.status === 'completed') {
+            earnedPoints += weight;
+        }
+    });
+
+    const progressRatio = totalPossiblePoints > 0 ? (earnedPoints / totalPossiblePoints) : 0;
+
+    // Add up to 80 points based on weighted completion
+    const finalScore = baseScore + Math.round(progressRatio * 80);
+    return Math.min(finalScore, 100);
 };
 
 export const StartupProvider = ({ children }) => {
@@ -52,12 +71,16 @@ export const StartupProvider = ({ children }) => {
             userStartup.executionScore = calculateExecutionScore(userStartup);
 
             let completion = 0;
-            if (userStartup.startupName) completion += 20;
-            if (userStartup.problemStatement) completion += 20;
-            if (userStartup.targetAudience?.length > 0) completion += 20;
+            if (userStartup.startupName) completion += 15;
+            if (userStartup.problemStatement) completion += 15;
+            if (userStartup.targetAudience?.length > 0) completion += 15;
+            if (userStartup.sector) completion += 15;
             if (userStartup.milestones?.length > 0) completion += 20;
-            if (userStartup.sector) completion += 20;
-            userStartup.profileCompletion = completion;
+            if (userStartup.documents?.length > 0) completion += 20;
+            userStartup.profileCompletion = Math.min(completion, 100);
+
+            // Dynamically compute team size
+            userStartup.teamSize = 1 + (Array.isArray(userStartup.coFounders) ? userStartup.coFounders.length : 0);
 
             setStartup({ ...userStartup });
         } else {
@@ -81,21 +104,28 @@ export const StartupProvider = ({ children }) => {
             s.startupId === updatedStartup.startupId ? updatedStartup : s
         );
         saveSystem(system);
-        setStartup({ ...updatedStartup });
+        syncData();
     };
 
     const updateStartup = (updates) => {
         if (!startup) return;
+        const system = getSystem();
+        const currentStartup = system.startups.find(s => s.startupId === startup.startupId) || startup;
         const updated = {
-            ...startup,
+            ...currentStartup,
             ...updates,
             updatedAt: new Date().toISOString()
         };
+        if (updates.activeUsers !== undefined && updates.activeUsers !== currentStartup.activeUsers) {
+            updated.lastTractionUpdate = new Date().toISOString();
+        }
         updateSystem(updated);
     };
 
     const addActivity = (message, type = 'info') => {
         if (!startup) return;
+        const system = getSystem();
+        const currentStartup = system.startups.find(s => s.startupId === startup.startupId) || startup;
         const newAct = {
             id: `act_${Date.now()}`,
             message,
@@ -103,44 +133,51 @@ export const StartupProvider = ({ children }) => {
             timestamp: new Date().toISOString()
         };
         updateStartup({
-            activity: [newAct, ...(startup.activity || [])].slice(0, 50)
+            activity: [newAct, ...(currentStartup.activity || [])].slice(0, 50)
         });
     };
 
     // --- MILESTONES ---
-    const addMilestone = (title) => {
+    const addMilestone = (title, description = '', stage = 'Idea', deadline = '') => {
         if (!startup) return;
+        const system = getSystem();
+        const currentStartup = system.startups.find(s => s.startupId === startup.startupId) || startup;
         const newMilestone = {
             id: Date.now(),
             title,
+            description,
+            stage,
+            deadline,
             status: 'pending',
-            createdAt: new Date().toISOString()
-        };
-        const updated = {
-            ...startup,
-            milestones: [...(startup.milestones || []), newMilestone],
+            createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
-        updateSystem(updated);
+        updateStartup({
+            milestones: [...(currentStartup.milestones || []), newMilestone]
+        });
         addActivity(`Added milestone: ${title}`, 'milestone');
     };
 
     const updateMilestone = (id, updates) => {
         if (!startup) return;
-        const updatedMilestones = startup.milestones.map(m =>
+        const system = getSystem();
+        const currentStartup = system.startups.find(s => s.startupId === startup.startupId) || startup;
+        const updatedMilestones = currentStartup.milestones.map(m =>
             m.id === id ? { ...m, ...updates, updatedAt: new Date().toISOString() } : m
         );
         updateStartup({ milestones: updatedMilestones });
         if (updates.status === 'completed') {
-            const m = startup.milestones.find(ms => ms.id === id);
-            addActivity(`Completed milestone: ${m?.title}`, 'success');
+            const m = currentStartup.milestones.find(ms => ms.id === id);
+            addActivity(`Milestone completed: ${m?.title || 'Task'}`, 'success');
         }
     };
 
     const deleteMilestone = (id) => {
         if (!startup) return;
+        const system = getSystem();
+        const currentStartup = system.startups.find(s => s.startupId === startup.startupId) || startup;
         updateStartup({
-            milestones: startup.milestones.filter(m => m.id !== id)
+            milestones: currentStartup.milestones.filter(m => m.id !== id)
         });
     };
 
@@ -191,7 +228,30 @@ export const StartupProvider = ({ children }) => {
 
     const requestMentorship = (mentorId, message) => {
         if (!startup || !user) return;
+
+        // Guard 1: Already assigned a mentor
+        if (startup.mentorAssigned) {
+            addActivity('You already have an assigned mentor.', 'warning');
+            return;
+        }
+
         const system = getSystem();
+        system.mentorRequests = system.mentorRequests || [];
+
+        // Guard 2: Already requested this mentor
+        const existingRequest = system.mentorRequests.find(r =>
+            r.startupId === startup.startupId &&
+            r.mentorId === mentorId &&
+            r.status === 'pending'
+        );
+        if (existingRequest) {
+            addActivity('Mentorship request already pending for this mentor.', 'warning');
+            return;
+        }
+
+        const mentor = system.users[mentorId] || system.users?.find?.(u => u.uid === mentorId);
+        const mentorName = mentor?.name || mentor?.email?.split('@')[0] || 'Mentor';
+
         const newRequest = {
             id: `mreq_${Date.now()}`,
             mentorId,
@@ -201,10 +261,9 @@ export const StartupProvider = ({ children }) => {
             status: 'pending',
             createdAt: new Date().toISOString()
         };
-        system.mentorRequests = system.mentorRequests || [];
         system.mentorRequests.push(newRequest);
         saveSystem(system);
-        addActivity(`Requested mentorship from mentor`, 'mentor');
+        addActivity(`Mentorship request sent to ${mentorName}`, 'mentor');
     };
 
     const requestSession = (date, time, topic) => {
@@ -225,10 +284,7 @@ export const StartupProvider = ({ children }) => {
         if (!system.sessions) system.sessions = [];
         system.sessions.push(newSession);
 
-        addActivity({
-            message: `Requested session for ${date}`,
-            type: 'info'
-        });
+        addActivity(`Requested session for ${date}`, 'info');
 
         saveSystem(system);
         syncData();
@@ -399,18 +455,86 @@ export const StartupProvider = ({ children }) => {
             if (inv) {
                 inv.status = 'accepted';
                 inv.invitedUserId = user.uid;
+                inv.updatedAt = new Date().toISOString();
             }
 
             system.startups = system.startups.map(s => {
                 if (s.startupId === startupId) {
                     const coFounders = s.coFounders || [];
                     if (!coFounders.includes(user.uid)) {
-                        return { ...s, coFounders: [...coFounders, user.uid] };
+                        const newCoFounders = [...coFounders, user.uid];
+
+                        // Log Activity
+                        const activityMsg = `${user.name || user.email || 'A Co-Founder'} joined the team via invitation`;
+                        const newAct = {
+                            id: `act_${Date.now()}`,
+                            message: activityMsg,
+                            type: 'success',
+                            timestamp: new Date().toISOString()
+                        };
+
+                        return {
+                            ...s,
+                            coFounders: newCoFounders,
+                            activity: [newAct, ...(s.activity || [])].slice(0, 50),
+                            teamSize: newCoFounders.length + 1 // founder + cofounders
+                        };
                     }
                 }
                 return s;
             });
             saveSystem(system);
+            syncData();
+            return true;
+        }
+        return false;
+    };
+
+    const declineInvitation = (invitationId) => {
+        if (!user) return false;
+        const system = getSystem();
+        const inv = system.invitations.find(i => i.id === invitationId && i.status === 'pending');
+
+        if (inv) {
+            inv.status = 'declined';
+            inv.updatedAt = new Date().toISOString();
+
+            // Log activity for the startup
+            system.startups = system.startups.map(s => {
+                if (s.startupId === inv.startupId) {
+                    const activityMsg = `Invitation declined by ${user.name || user.email || 'candidate'}`;
+                    const newAct = {
+                        id: `act_${Date.now()}`,
+                        message: activityMsg,
+                        type: 'warning',
+                        timestamp: new Date().toISOString()
+                    };
+                    return { ...s, activity: [newAct, ...(s.activity || [])].slice(0, 50) };
+                }
+                return s;
+            });
+
+            saveSystem(system);
+            syncData();
+            return true;
+        }
+        return false;
+    };
+
+    const cancelInvitation = (invitationId) => {
+        if (!startup) return false;
+        const system = getSystem();
+
+        // Remove the invitation entirely or mark it as cancelled. 
+        // We'll filter it out to cleanly drop it from the pending table and allow re-invites.
+        const originalLength = (system.invitations || []).length;
+        system.invitations = (system.invitations || []).filter(i => i.id !== invitationId);
+
+        if (system.invitations.length < originalLength) {
+            saveSystem(system);
+
+            // Log activity
+            addActivity(`Cancelled outgoing invitation`, 'info');
             syncData();
             return true;
         }
@@ -576,15 +700,25 @@ export const StartupProvider = ({ children }) => {
         addDocument,
         deleteDocument,
         renameDocument,
+
         applyToIncubator,
+
         requestMentorship,
         requestSession,
         cancelSession,
         leaveStartup,
+
+        isUserLinked,
+        resignFromStartup,
+
+        // Invites / Join Requests
         sendInvitation,
         sendDirectInvitation,
         validateInvitation,
         acceptInvitation,
+        declineInvitation,
+        cancelInvitation,
+
         sendJoinRequest,
         acceptJoinRequest,
         rejectJoinRequest,

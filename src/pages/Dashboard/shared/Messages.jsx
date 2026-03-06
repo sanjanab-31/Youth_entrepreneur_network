@@ -12,16 +12,27 @@ import {
     Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useMessaging } from '../../../context/MessagingContext';
 
 const Messages = () => {
     const { user } = useAuth();
+    const location = useLocation();
     const { conversations, messages, sendMessage, markAsRead, loading } = useMessaging();
     const [selectedConvo, setSelectedConvo] = useState(null);
     const [messageText, setMessageText] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const scrollRef = useRef(null);
+
+    // Auto-select chat from navigation state
+    useEffect(() => {
+        if (!loading && location.state?.openChat) {
+            const { startupId, type } = location.state.openChat;
+            const convo = conversations.find(c => c.startupId === startupId && c.type === type);
+            if (convo) setSelectedConvo(convo);
+        }
+    }, [loading, location.state, conversations]);
 
     // Auto-scroll on new messages or selection change
     useEffect(() => {

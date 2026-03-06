@@ -28,6 +28,7 @@ import { useIncubator } from '../../../context/IncubatorContext';
 
 const StartupPipeline = () => {
     const { pipeline, onboardStartup, inviteToApply } = useIncubator();
+    const { mentors } = useIncubator(); // Available in context
     const [selectedStartup, setSelectedStartup] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -274,6 +275,63 @@ const StartupPipeline = () => {
                             </div>
 
                             <div className="p-8 space-y-10">
+                                {/* Mentor & Advisory Tracking */}
+                                <section className="p-6 bg-[#8B5CF6]/5 rounded-[2rem] border border-[#8B5CF6]/10">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-[#8B5CF6] flex items-center gap-2">
+                                            <User size={16} /> Mentor & Advisory
+                                        </h3>
+                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 px-2 py-1 rounded">SSOT Verified</span>
+                                    </div>
+
+                                    {selectedStartup.mentorAssigned ? (() => {
+                                        const system = JSON.parse(localStorage.getItem('vanguard_system') || '{}');
+                                        const mentor = (system.users || {})[selectedStartup.mentorAssigned];
+                                        const mentorName = mentor?.name || mentor?.email?.split('@')[0] || 'Unknown Mentor';
+                                        const startupSessions = (system.sessions || []).filter(s => s.startupId === selectedStartup.startupId);
+                                        const completedSessions = startupSessions.filter(s => s.status === 'completed');
+
+                                        return (
+                                            <div className="space-y-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-xl bg-[#8B5CF6] flex items-center justify-center text-white font-black text-xl shadow-lg">
+                                                        {mentorName[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-white font-bold">{mentorName}</p>
+                                                        <p className="text-[10px] text-gray-500 font-medium uppercase tracking-widest">{mentor?.expertise || 'Strategic Advisor'}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                                                        <p className="text-[9px] text-gray-500 font-black uppercase mb-1">Advisory Calls</p>
+                                                        <p className="text-xs font-bold text-white">{startupSessions.length} total</p>
+                                                    </div>
+                                                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                                                        <p className="text-[9px] text-gray-500 font-black uppercase mb-1">Feedback Log</p>
+                                                        <p className="text-xs font-bold text-white">{completedSessions.length} sessions</p>
+                                                    </div>
+                                                </div>
+
+                                                {completedSessions.length > 0 && (
+                                                    <div className="space-y-3">
+                                                        <p className="text-[9px] text-[#8B5CF6] font-black uppercase tracking-widest">Latest Feedback</p>
+                                                        <div className="p-4 bg-black/20 rounded-xl border border-white/5 italic text-xs text-gray-400 leading-relaxed">
+                                                            "{completedSessions.sort((a, b) => new Date(b.date) - new Date(a.date))[0]?.notes || 'No notes recorded.'}"
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })() : (
+                                        <div className="text-center py-4">
+                                            <p className="text-xs text-gray-600 font-bold italic">No mentor assigned yet.</p>
+                                            <p className="text-[9px] text-gray-700 uppercase font-black mt-2">Startups can request mentors via Discovery</p>
+                                        </div>
+                                    )}
+                                </section>
+
                                 {/* Badges */}
                                 <div className="flex flex-wrap gap-2">
                                     <span className="px-3 py-1 bg-white/5 text-gray-400 text-xs font-bold rounded-full border border-white/10">
@@ -327,6 +385,33 @@ const StartupPipeline = () => {
                                         <p className="text-lg font-bold text-white">{selectedStartup.growth || selectedStartup.traction || 'N/A'}</p>
                                     </div>
                                 </div>
+
+                                {/* Mentorship */}
+                                {selectedStartup.mentorAssigned && (
+                                    <div className="space-y-4">
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-[#8B5CF6] flex items-center gap-2">
+                                            <Shield size={16} /> Mentorship Status
+                                        </h3>
+                                        <div className="p-4 bg-purple-500/5 rounded-2xl border border-purple-500/10 flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-[#8B5CF6]/20 flex items-center justify-center text-[#8B5CF6] font-black">
+                                                    {Object.values(getSystem().users || {}).find(u => u.uid === selectedStartup.mentorAssigned)?.name?.[0] || 'M'}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white">
+                                                        {Object.values(getSystem().users || {}).find(u => u.uid === selectedStartup.mentorAssigned)?.name || 'Strategic Advisor'}
+                                                    </p>
+                                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Active Partner</p>
+                                                </div>
+                                            </div>
+                                            <div className="h-8 w-px bg-white/10" />
+                                            <div className="text-right">
+                                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Collaboration</p>
+                                                <p className="text-xs font-bold text-emerald-400">High Engagement</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Execution Checklist */}
                                 <div className="space-y-4">

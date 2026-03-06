@@ -145,9 +145,14 @@ const DashboardHome = ({ role: propsRole }) => {
 
     const handleAddMilestone = (e) => {
         e.preventDefault();
-        const title = e.target.milestoneTitle.value;
+        const formData = new FormData(e.target);
+        const title = formData.get('milestoneTitle');
+        const description = formData.get('milestoneDescription');
+        const stage = formData.get('milestoneStage');
+        const deadline = formData.get('milestoneDeadline');
+
         if (title) {
-            addMilestone(title);
+            addMilestone(title, description, stage, deadline);
             e.target.reset();
             setIsMilestoneModalOpen(false);
             triggerToast();
@@ -188,6 +193,7 @@ const DashboardHome = ({ role: propsRole }) => {
         { t: 'Traction not updated in 14 days', condition: (new Date() - new Date(startup.lastTractionUpdate || 0)) > 14 * 24 * 60 * 60 * 1000, type: 'danger' },
         { t: 'Skill gap not filled', condition: startup.skillGap && !startup.skillGapFilled, type: 'warning' },
         { t: 'Profile incomplete (< 70%)', condition: profileCompletion < 70, type: 'warning' },
+        { t: 'Missing milestones', condition: !startup.milestones || startup.milestones.length === 0, type: 'warning' },
         { t: `${pendingJoinRequests.length} Co-Founder Request(s) Pending`, condition: isFounder && pendingJoinRequests.length > 0, type: 'info', link: '/founder/co-founder-requests' }
     ].filter(a => a.condition);
 
@@ -383,8 +389,9 @@ const DashboardHome = ({ role: propsRole }) => {
                                                 {ms.status === 'completed' ? <CheckCircle2 size={18} /> : (ms.status === 'in-progress' ? <Zap size={18} /> : <Clock size={18} />)}
                                             </button>
                                             <div>
-                                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{ms.status}</p>
+                                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{ms.stage} • {ms.status}</p>
                                                 <p className={`text-sm font-bold truncate max-w-[150px] ${ms.status === 'completed' ? 'text-gray-500 line-through' : 'text-white'}`}>{ms.title}</p>
+                                                {ms.deadline && <p className="text-[9px] text-gray-400 mt-1">Due: {new Date(ms.deadline).toLocaleDateString()}</p>}
                                             </div>
                                         </div>
                                         <button
@@ -529,7 +536,7 @@ const DashboardHome = ({ role: propsRole }) => {
                                 <div className="text-center">
                                     <p className="text-[11px] text-gray-500 font-bold mb-4">No mentor assigned yet. Request one to accelerate growth.</p>
                                     <button
-                                        onClick={() => alert("Redirecting to Mentor Network...")}
+                                        onClick={() => navigate(`/${role}/mentors`)}
                                         className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-black hover:bg-white/10 transition-all"
                                     >
                                         Browse Mentor Network
@@ -563,7 +570,7 @@ const DashboardHome = ({ role: propsRole }) => {
                         )}
                     </div>
 
-                    {/* Pro Upgrade Card */}
+                    {/* Pro Upgrade Card
                     <div className="p-8 rounded-3xl bg-gradient-to-br from-[#8B5CF6] to-indigo-600 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-4 opacity-20 transform translate-x-4 -translate-y-4 group-hover:translate-x-2 group-hover:-translate-y-2 transition-transform">
                             <Rocket size={100} />
@@ -573,7 +580,7 @@ const DashboardHome = ({ role: propsRole }) => {
                         <button className="px-6 py-3 bg-white text-[#8B5CF6] text-xs font-black rounded-xl relative z-10 hover:shadow-2xl hover:scale-105 transition-all shadow-lg flex items-center gap-2">
                             Upgrade Plan <ArrowUpRight size={14} />
                         </button>
-                    </div>
+                    </div> */}
                 </div>
             </div>
             {/* Dashboard Modals */}
@@ -593,8 +600,7 @@ const DashboardHome = ({ role: propsRole }) => {
                                     startupName: formData.get('startupName'),
                                     stage: formData.get('stage'),
                                     activeUsers: parseInt(formData.get('activeUsers')),
-                                    burnRate: parseInt(formData.get('burnRate')),
-                                    teamSize: parseInt(formData.get('teamSize'))
+                                    burnRate: parseInt(formData.get('burnRate'))
                                 });
                                 setIsEditModalOpen(false);
                                 triggerToast();
@@ -615,15 +621,9 @@ const DashboardHome = ({ role: propsRole }) => {
                                         <input name="activeUsers" type="number" defaultValue={startup.activeUsers} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6]" />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Burn Rate ($)</label>
-                                        <input name="burnRate" type="number" defaultValue={startup.burnRate} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6]" />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Team Size</label>
-                                        <input name="teamSize" type="number" defaultValue={startup.teamSize} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6]" />
-                                    </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Burn Rate ($)</label>
+                                    <input name="burnRate" type="number" defaultValue={startup.burnRate} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6]" />
                                 </div>
                                 <button type="submit" className="w-full mt-6 py-4 bg-[#8B5CF6] text-white font-black rounded-xl shadow-lg flex items-center justify-center gap-2">
                                     <Save size={20} /> Deploy Changes
@@ -643,8 +643,24 @@ const DashboardHome = ({ role: propsRole }) => {
                             </div>
                             <form className="space-y-6" onSubmit={handleAddMilestone}>
                                 <div>
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Milestone Objective</label>
-                                    <textarea name="milestoneTitle" required placeholder="e.g., Finalize Series A Pitch Deck" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] h-32" />
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Milestone Title</label>
+                                    <input name="milestoneTitle" type="text" required placeholder="e.g., Finalize Series A Pitch Deck" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6]" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Stage</label>
+                                        <select name="milestoneStage" defaultValue={startup.stage} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6]">
+                                            {stages.map(s => <option key={s.id} value={s.id} className="bg-[#1E1E2F]">{s.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Target Deadline (Optional)</label>
+                                        <input name="milestoneDeadline" type="date" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] color-scheme-dark" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Detailed Description</label>
+                                    <textarea name="milestoneDescription" placeholder="What exactly needs to be done?" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] h-24" />
                                 </div>
                                 <button type="submit" className="w-full py-4 bg-[#8B5CF6] text-white font-black rounded-xl shadow-lg flex items-center justify-center gap-2">
                                     <Check size={20} /> Add to Roadmap

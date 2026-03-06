@@ -17,6 +17,7 @@ import {
     MoreVertical
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
 import { useMentor } from '../../../context/MentorContext';
@@ -215,6 +216,7 @@ const PostSessionUpdate = ({ session, onSave, onBack }) => {
 // Main Sessions Component
 const Sessions = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const isMentor = user.role === 'mentor';
 
     // Hooks for context based on role
@@ -331,8 +333,8 @@ const Sessions = () => {
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={`px-6 py-3 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab
-                                        ? 'bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20'
-                                        : 'text-gray-500 hover:text-white hover:bg-white/5'
+                                    ? 'bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20'
+                                    : 'text-gray-500 hover:text-white hover:bg-white/5'
                                     }`}
                             >
                                 {tab}
@@ -449,7 +451,13 @@ const Sessions = () => {
                                             </div>
                                         )}
 
-                                        <button className="w-full py-4 bg-white/5 text-gray-500 hover:text-white text-[10px] font-black uppercase rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-2">
+                                        <button
+                                            onClick={() => navigate(
+                                                `/${user.role === 'cofounder' ? 'co-founder' : user.role}/messages`,
+                                                { state: { openChat: { startupId: session.startupId, type: 'mentor' } } }
+                                            )}
+                                            className="w-full py-4 bg-white/5 text-gray-500 hover:text-white text-[10px] font-black uppercase rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-2"
+                                        >
                                             <MessageSquare size={16} /> View Chat
                                         </button>
                                     </div>

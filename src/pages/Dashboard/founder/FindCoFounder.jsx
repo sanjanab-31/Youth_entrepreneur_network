@@ -28,7 +28,7 @@ import { Navigate } from 'react-router-dom';
 
 const FindCoFounder = () => {
     const { user } = useAuth();
-    const { startup, loading, sendDirectInvitation, invitations: startupInvitations } = useStartup();
+    const { startup, loading, sendDirectInvitation, cancelInvitation, invitations: startupInvitations } = useStartup();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedSector, setSelectedSector] = useState('All');
@@ -51,14 +51,23 @@ const FindCoFounder = () => {
         return allUsers.filter(u => {
             if (u.role !== 'co-founder' && u.role !== 'cofounder') return false;
             if (u.uid === user.uid) return false;
+
             // Check if already in a startup
             const isJoined = allStartups.some(s =>
                 (Array.isArray(s.coFounders) && s.coFounders.includes(u.uid)) ||
                 (s.founderId === u.uid)
             );
-            return !isJoined;
+            if (isJoined) return false;
+
+            // Check if they already have an invitation from THIS startup 
+            // We omit them if there's any invitation record (pending, accepted, declined) 
+            // to prevent spam or re-inviting someone who declined.
+            const hasInvitation = startupInvitations?.some(inv => inv.invitedUserId === u.uid);
+            if (hasInvitation) return false;
+
+            return true;
         });
-    }, [allUsers, allStartups, user.uid]);
+    }, [allUsers, allStartups, user.uid, startupInvitations]);
 
     // --- MATCHING LOGIC ---
     const getMatchScore = (cf) => {
@@ -241,17 +250,21 @@ const FindCoFounder = () => {
                             >
                                 <div className="p-6 pb-2">
                                     <div className="flex justify-between items-start mb-4">
-                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-purple to-indigo-600 flex items-center justify-center font-black text-white text-2xl shadow-lg shadow-brand-purple/20 group-hover:rotate-3 transition-transform">
+                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-purple to-indigo-600 flex items-center justify-center font-black text-white text-2xl shadow-lg shadow-brand-purple/20 group-hover:rotate-3 transition-transform relative">
                                             {cf.name?.[0] || 'C'}
+                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#1E1E2F]" title="Available" />
                                         </div>
                                         <div className="text-right">
-                                            <div className="flex items-center gap-1 text-[10px] font-black text-brand-purple uppercase tracking-widest mb-1">
+                                            <div className="flex items-center gap-1 justify-end text-[10px] font-black text-brand-purple uppercase tracking-widest mb-1">
                                                 <Zap size={10} fill="currentColor" /> Match Score
                                             </div>
                                             <span className="text-2xl font-black text-white">{cf.matchScore}%</span>
                                         </div>
                                     </div>
-                                    <h3 className="text-xl font-black text-white mb-1 truncate">{cf.name}</h3>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="text-xl font-black text-white truncate">{cf.name}</h3>
+                                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase rounded border border-emerald-500/20">Available</span>
+                                    </div>
                                     <div className="flex items-center gap-2 text-gray-500 text-xs font-bold mb-4">
                                         <Briefcase size={12} />
                                         {cf.expertiseSector} Specialist
@@ -274,8 +287,8 @@ const FindCoFounder = () => {
                                         onClick={() => handleInvite(cf)}
                                         disabled={isPending}
                                         className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${isPending
-                                                ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 cursor-default'
-                                                : 'bg-brand-purple text-white hover:shadow-lg hover:shadow-brand-purple/20 active:scale-95 shadow-lg'
+                                            ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 cursor-default'
+                                            : 'bg-brand-purple text-white hover:shadow-lg hover:shadow-brand-purple/20 active:scale-95 shadow-lg'
                                             }`}
                                     >
                                         {isPending ? (
@@ -344,9 +357,20 @@ const FindCoFounder = () => {
                                                 <InvitationStatus status={inv.status} />
                                             </td>
                                             <td className="px-8 py-6 text-right">
-                                                <button className="p-2 text-gray-500 hover:text-white transition-colors">
-                                                    <ChevronRight size={18} />
-                                                </button>
+                                                {inv.status === 'pending' ? (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (confirm("Cancel this invitation?")) {
+                                                                cancelInvitation(inv.id);
+                                                            }
+                                                        }}
+                                                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors border border-red-500/20"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-[10px] text-gray-500 font-bold italic uppercase">Archived</span>
+                                                )}
                                             </td>
                                         </tr>
                                     );
