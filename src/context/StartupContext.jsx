@@ -688,10 +688,58 @@ export const StartupProvider = ({ children }) => {
         syncData();
     };
 
+    const createStartup = (startupData) => {
+        if (!user || user.role !== 'founder') return;
+        const system = getSystem();
+
+        const capitalizeStage = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Idea';
+
+        const newStartup = {
+            startupId: `ST-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+            founderId: user.uid,
+            startupName: startupData.startupName || 'My Startup',
+            sector: startupData.sector || 'General',
+            stage: capitalizeStage(startupData.stage),
+            oneLiner: startupData.oneLiner || '',
+            traction: '',
+            fundingGoal: '',
+            teamSize: parseInt(startupData.teamSize) || 1,
+            milestones: [],
+            focusAreas: [],
+            problemStatement: startupData.problemStatement || '',
+            targetAudience: [],
+            skillGap: startupData.lookingFor || '',
+            primarySkills: startupData.primarySkills || '',
+            location: startupData.location || '',
+            commitment: startupData.commitment || '',
+            linkedin: startupData.linkedin || '',
+            equity: startupData.equity || '',
+            website: '',
+            executionScore: 0,
+            createdAt: new Date().toISOString(),
+            mentorAssigned: null,
+            applications: [],
+            activity: [{
+                id: `act_${Date.now()}`,
+                message: 'Venture profile initialized.',
+                type: 'info',
+                timestamp: new Date().toISOString()
+            }],
+            updatedAt: new Date().toISOString(),
+            status: 'active'
+        };
+
+        system.startups.push(newStartup);
+        saveSystem(system);
+        syncData();
+        return newStartup;
+    };
+
     const value = {
         startup,
         loading,
         updateStartup,
+        createStartup,
         addMilestone,
         isUserLinked,
         resignFromStartup,

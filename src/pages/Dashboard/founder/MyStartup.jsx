@@ -78,6 +78,7 @@ const MyStartup = () => {
         addDocument,
         deleteDocument,
         renameDocument,
+        createStartup,
         loading
     } = useStartup();
     const { user } = useAuth();
@@ -101,11 +102,87 @@ const MyStartup = () => {
         setTimeout(() => setToast({ visible: false, message: "" }), 3000);
     };
 
-    if (loading || !startup) return (
+    if (loading) return (
         <div className="h-full w-full flex items-center justify-center">
             <Loader2 className="text-[#8B5CF6] animate-spin" size={48} />
         </div>
     );
+
+    if (!startup && role === 'founder') {
+        return (
+            <div className="max-w-4xl mx-auto py-10 px-6">
+                <div className="bg-[#1E1E2F] rounded-3xl border border-white/10 p-10 shadow-2xl">
+                    <div className="flex items-center gap-6 mb-10 pb-6 border-b border-white/5">
+                        <div className="w-16 h-16 rounded-2xl bg-[#8B5CF6]/20 flex items-center justify-center border border-[#8B5CF6]/30">
+                            <Rocket className="text-[#8B5CF6]" size={32} />
+                        </div>
+                        <div>
+                            <h2 className="text-3xl font-black text-white">Let's Build Your Venture</h2>
+                            <p className="text-gray-400 font-medium">Initialize your Startup OS to unlock the full founder experience.</p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.target);
+                        const data = Object.fromEntries(formData.entries());
+                        createStartup(data);
+                    }} className="space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Startup Name</label>
+                                <input name="startupName" required placeholder="Vanguard OS" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Primary Sector</label>
+                                <select name="sector" required className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all">
+                                    <option value="" className="bg-[#1E1E2F]">Select Sector</option>
+                                    <option value="fintech" className="bg-[#1E1E2F]">Fintech</option>
+                                    <option value="edtech" className="bg-[#1E1E2F]">Edtech</option>
+                                    <option value="healthtech" className="bg-[#1E1E2F]">Healthtech</option>
+                                    <option value="saas" className="bg-[#1E1E2F]">SaaS</option>
+                                    <option value="ai" className="bg-[#1E1E2F]">AI/ML</option>
+                                    <option value="other" className="bg-[#1E1E2F]">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Venture Mission (Problem Statement)</label>
+                            <textarea name="problemStatement" required placeholder="What problem are you solving? (max 150 words)" rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all resize-none" />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Current Stage</label>
+                                <select name="stage" required className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all">
+                                    <option value="Idea" className="bg-[#1E1E2F]">Idea</option>
+                                    <option value="Validation" className="bg-[#1E1E2F]">Validation</option>
+                                    <option value="MVP" className="bg-[#1E1E2F]">MVP</option>
+                                    <option value="Revenue" className="bg-[#1E1E2F]">Revenue</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Team Size</label>
+                                <input name="teamSize" type="number" min="1" defaultValue="1" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Key Skill Gaps</label>
+                                <input name="lookingFor" placeholder="e.g., CTO, Marketing" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                            </div>
+                        </div>
+
+                        <button type="submit" className="w-full py-5 bg-[#8B5CF6] text-white font-black rounded-xl shadow-xl shadow-[#8B5CF6]/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                            <Rocket size={20} />
+                            Launch Startup OS
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
+    if (!startup) return null;
 
     const handleUpdate = (data, message = "Changes saved") => {
         updateStartup(data);

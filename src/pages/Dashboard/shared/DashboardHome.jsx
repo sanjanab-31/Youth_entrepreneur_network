@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Users,
     Flame,
@@ -91,7 +92,8 @@ const QuickAction = ({ label, icon: Icon, onClick, variant = "default" }) => (
 
 const DashboardHome = ({ role: propsRole }) => {
     const { user } = useAuth();
-    const { startup, loading, updateStartup, addMilestone, addActivity, joinRequests } = useStartup();
+    const { startup, loading, updateStartup, addMilestone, addActivity, joinRequests, createStartup } = useStartup();
+    const navigate = useNavigate();
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
@@ -102,7 +104,35 @@ const DashboardHome = ({ role: propsRole }) => {
     const role = user?.role || propsRole;
     const isFounder = role === 'founder';
 
-    if (loading || !startup) return null;
+    if (loading) return (
+        <div className="min-h-[400px] flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B5CF6]" />
+        </div>
+    );
+
+    if (!startup && isFounder) {
+        return (
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="bg-[#1E1E2F] p-12 rounded-3xl border border-white/5 text-center">
+                    <div className="w-20 h-20 bg-[#8B5CF6]/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-[#8B5CF6]/20">
+                        <Rocket className="text-[#8B5CF6]" size={40} />
+                    </div>
+                    <h2 className="text-3xl font-black text-white mb-4">Initialize Your Startup OS</h2>
+                    <p className="text-gray-400 max-w-md mx-auto mb-8 font-medium">
+                        It looks like your startup profile isn't fully set up yet. Initialize your workspace to start tracking milestones and growing your team.
+                    </p>
+                    <button
+                        onClick={() => navigate('/founder/my-startup')}
+                        className="px-8 py-4 bg-[#8B5CF6] text-white font-black rounded-xl shadow-lg shadow-[#8B5CF6]/20 hover:scale-105 active:scale-95 transition-all"
+                    >
+                        Setup My Startup
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!startup) return null;
 
     const stages = [
         { id: 'Idea', label: 'Idea' },
