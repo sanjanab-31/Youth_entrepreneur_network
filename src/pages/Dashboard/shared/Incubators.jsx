@@ -64,21 +64,26 @@ const Incubators = () => {
                 const allUsers = system.users || {};
 
                 const incubatorsList = Object.values(allUsers)
-                    .filter(u => u.role === 'incubator')
-                    .map(inc => ({
-                        id: inc.uid,
-                        name: inc.name || inc.profileData?.fullName || inc.email.split('@')[0],
-                        location: inc.profileData?.location || 'India',
-                        supportedStages: inc.profileData?.supportedStages || ['Idea', 'MVP', 'Revenue'],
-                        focus: inc.profileData?.sector || 'General',
-                        timeline: inc.profileData?.timeline || 'Rolling Admissions',
-                        metrics: inc.profileData?.metrics || 'N/A',
-                        initials: (inc.name || inc.email.split('@')[0]).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
-                        verified: inc.profileData?.verified || true,
-                        shortBio: inc.profileData?.shortBio || 'Incubator supporting early-stage startups.',
-                        totalStartups: inc.profileData?.totalStartups || 0,
-                        fundingCap: inc.profileData?.fundingCap || '$0'
-                    }));
+                    .filter(u => u.role?.toLowerCase() === 'incubator')
+                    .map(inc => {
+                        const portalData = inc.portalData || {};
+                        const profileData = inc.profileData || portalData;
+
+                        return {
+                            id: inc.uid,
+                            name: inc.name || profileData?.incubatorName || inc.email.split('@')[0],
+                            location: profileData?.location || 'India',
+                            supportedStages: profileData?.supportedStages || profileData?.stagePreference || ['Idea', 'MVP', 'Revenue'],
+                            focus: profileData?.sector || profileData?.sectorFocus?.[0] || 'General',
+                            timeline: profileData?.timeline || 'Rolling Admissions',
+                            metrics: profileData?.metrics || 'N/A',
+                            initials: (inc.name || inc.email.split('@')[0]).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+                            verified: profileData?.verified !== undefined ? profileData.verified : true,
+                            shortBio: profileData?.shortBio || profileData?.description || 'Incubator supporting early-stage startups.',
+                            totalStartups: profileData?.totalStartups || 0,
+                            fundingCap: profileData?.fundingCap || (profileData?.fundingSupport ? 'Varies' : '$0')
+                        };
+                    });
                 setIncubators(incubatorsList);
             } catch (err) {
                 console.error("Error fetching incubators:", err);

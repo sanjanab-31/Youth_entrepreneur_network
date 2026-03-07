@@ -49,7 +49,8 @@ const FindCoFounder = () => {
     // Filter for unlinked co-founders
     const unlinkedCoFounders = useMemo(() => {
         return allUsers.filter(u => {
-            if (u.role !== 'co-founder' && u.role !== 'cofounder') return false;
+            const role = u.role?.toLowerCase() || '';
+            if (role !== 'co-founder' && role !== 'cofounder') return false;
             if (u.uid === user.uid) return false;
 
             // Check if already in a startup

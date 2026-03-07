@@ -589,8 +589,9 @@ export const StartupProvider = ({ children }) => {
         const req = (system.joinRequests || []).find(r => r.id === requestId);
         if (!req) return;
 
-        // Prevent accepting if user is already linked to a startup
-        if (isUserLinked()) {
+        // Prevent accepting if user is already linked to a startup - BUT ONLY IF THEY ARE A CO-FOUNDER
+        // Founders are ALWAYS linked to their own startup.
+        if (['co-founder', 'cofounder'].includes(user.role) && isUserLinked()) {
             return { error: "User must resign from current startup first." };
         }
 
