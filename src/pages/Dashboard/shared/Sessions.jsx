@@ -27,12 +27,13 @@ const SessionFormModal = ({ onClose, onSubmit, role, mentees = [] }) => {
     const [date, setDate] = useState('');
     const [time, setTime] = useState('');
     const [topic, setTopic] = useState('');
+    const [meetingLink, setMeetingLink] = useState('');
     const [selectedStartupId, setSelectedStartupId] = useState(mentees[0]?.startupId || '');
 
     const handleSubmit = (e) => {
         e.preventDefault();
         if (role === 'mentor') {
-            onSubmit(selectedStartupId, date, time, topic);
+            onSubmit(selectedStartupId, date, time, topic, meetingLink);
         } else {
             onSubmit(date, time, topic);
         }
@@ -116,6 +117,20 @@ const SessionFormModal = ({ onClose, onSubmit, role, mentees = [] }) => {
                         />
                     </div>
 
+                    {role === 'mentor' && (
+                        <div>
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3 block">Meeting Link</label>
+                            <input
+                                required
+                                type="url"
+                                value={meetingLink}
+                                onChange={e => setMeetingLink(e.target.value)}
+                                placeholder="https://meet.google.com/..."
+                                className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-5 text-white font-bold focus:outline-none focus:border-[#8B5CF6]/50 transition-all placeholder:text-gray-800"
+                            />
+                        </div>
+                    )}
+
                     <div className="flex gap-4 pt-4">
                         <button
                             type="submit"
@@ -125,6 +140,101 @@ const SessionFormModal = ({ onClose, onSubmit, role, mentees = [] }) => {
                             {role === 'mentor' ? 'Schedule Now' : 'Send Request'}
                         </button>
                     </div>
+                </form>
+            </motion.div>
+        </motion.div>
+    );
+};
+
+const ConfirmRequestModal = ({ session, onClose, onConfirm }) => {
+    const [date, setDate] = useState(session?.date || '');
+    const [time, setTime] = useState(session?.time || '');
+    const [topic, setTopic] = useState(session?.topic || 'Mentorship Session');
+    const [meetingLink, setMeetingLink] = useState(session?.meetingLink || '');
+
+    const submit = (e) => {
+        e.preventDefault();
+        onConfirm({ date, time, topic, meetingLink });
+        onClose();
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+        >
+            <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="bg-[#1E1E2F] w-full max-w-lg rounded-[2.5rem] border border-white/10 shadow-2xl p-10"
+            >
+                <div className="flex justify-between items-start mb-10">
+                    <div>
+                        <h2 className="text-3xl font-black text-white mb-1">Confirm Session Request</h2>
+                        <p className="text-[#8B5CF6] font-bold text-sm tracking-wide uppercase italic">
+                            Set exact time and meeting link for founder
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5">
+                        <X size={20} className="text-gray-400" />
+                    </button>
+                </div>
+
+                <form onSubmit={submit} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3 block">Date</label>
+                            <input
+                                required
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-5 text-white font-bold focus:outline-none focus:border-[#8B5CF6]/50 transition-all"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3 block">Time</label>
+                            <input
+                                required
+                                type="time"
+                                value={time}
+                                onChange={(e) => setTime(e.target.value)}
+                                className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-5 text-white font-bold focus:outline-none focus:border-[#8B5CF6]/50 transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3 block">Topic / Agenda</label>
+                        <input
+                            required
+                            value={topic}
+                            onChange={(e) => setTopic(e.target.value)}
+                            className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-5 text-white font-bold focus:outline-none focus:border-[#8B5CF6]/50 transition-all placeholder:text-gray-800"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3 block">Meeting Link</label>
+                        <input
+                            required
+                            type="url"
+                            value={meetingLink}
+                            onChange={(e) => setMeetingLink(e.target.value)}
+                            placeholder="https://meet.google.com/..."
+                            className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-5 text-white font-bold focus:outline-none focus:border-[#8B5CF6]/50 transition-all placeholder:text-gray-800"
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        className="w-full py-5 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2"
+                    >
+                        <CheckCircle2 size={18} /> Confirm Request
+                    </button>
                 </form>
             </motion.div>
         </motion.div>
@@ -226,6 +336,7 @@ const Sessions = () => {
     const [activeTab, setActiveTab] = useState('upcoming');
     const [completingSession, setCompletingSession] = useState(null);
     const [showFormModal, setShowFormModal] = useState(false);
+    const [sessionToConfirm, setSessionToConfirm] = useState(null);
 
     // Get relevant data & functions
     const sessions = isMentor ? mentorCtx.sessions : startupCtx.sessions;
@@ -397,6 +508,16 @@ const Sessions = () => {
                                             <p className="text-gray-400 text-sm font-medium leading-relaxed italic">
                                                 "{session.topic || "Regular advisory session and progress review."}"
                                             </p>
+                                            {session.meetingLink && (
+                                                <a
+                                                    href={session.meetingLink}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="mt-3 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#8B5CF6] hover:text-white transition-colors"
+                                                >
+                                                    <ExternalLink size={12} /> Meeting Link Added
+                                                </a>
+                                            )}
                                         </div>
                                     </div>
 
@@ -405,7 +526,7 @@ const Sessions = () => {
                                         {isMentor && session.status === 'pending_confirmation' && (
                                             <div className="grid grid-cols-2 gap-2">
                                                 <button
-                                                    onClick={() => mentorCtx.confirmSessionRequest(session.id)}
+                                                    onClick={() => setSessionToConfirm(session)}
                                                     className="p-4 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-2xl border border-emerald-500/20 transition-all flex items-center justify-center"
                                                 >
                                                     <CheckCircle2 size={18} />
@@ -438,9 +559,20 @@ const Sessions = () => {
                                         )}
 
                                         {session.status === 'upcoming' && (
-                                            <button className="w-full py-4 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-2">
-                                                <Video size={16} /> Join Meeting
-                                            </button>
+                                            session.meetingLink ? (
+                                                <a
+                                                    href={session.meetingLink}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="w-full py-4 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <Video size={16} /> Join Meeting
+                                                </a>
+                                            ) : (
+                                                <button disabled className="w-full py-4 bg-white/5 text-gray-600 text-[10px] font-black uppercase tracking-widest rounded-2xl border border-white/10 cursor-not-allowed flex items-center justify-center gap-2">
+                                                    <AlertCircle size={16} /> Link Pending
+                                                </button>
+                                            )
                                         )}
 
                                         {session.status === 'completed' && (
@@ -544,6 +676,13 @@ const Sessions = () => {
                         mentees={mentees}
                         onClose={() => setShowFormModal(false)}
                         onSubmit={isMentor ? mentorCtx.scheduleSession : startupCtx.requestSession}
+                    />
+                )}
+                {sessionToConfirm && (
+                    <ConfirmRequestModal
+                        session={sessionToConfirm}
+                        onClose={() => setSessionToConfirm(null)}
+                        onConfirm={(schedule) => mentorCtx.confirmSessionRequest(sessionToConfirm.id, schedule)}
                     />
                 )}
             </AnimatePresence>

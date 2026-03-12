@@ -131,7 +131,7 @@ export const MentorProvider = ({ children }) => {
         refreshData();
     };
 
-    const scheduleSession = (startupId, date, time, topic = 'Mentorship Session') => {
+    const scheduleSession = (startupId, date, time, topic = 'Mentorship Session', meetingLink = '') => {
         const system = getSystem();
         const newSession = {
             id: `ses_${Date.now()}`,
@@ -140,6 +140,7 @@ export const MentorProvider = ({ children }) => {
             date,
             time,
             topic,
+            meetingLink,
             status: 'upcoming',
             createdAt: new Date().toISOString()
         };
@@ -150,7 +151,7 @@ export const MentorProvider = ({ children }) => {
             if (s.startupId !== startupId) return s;
             const activityEntry = {
                 id: `act_${Date.now()}`,
-                message: `Mentor scheduled a session for ${date}`,
+                message: `Mentor scheduled a session for ${date} at ${time}`,
                 type: 'mentor',
                 timestamp: new Date().toISOString()
             };
@@ -165,12 +166,23 @@ export const MentorProvider = ({ children }) => {
         refreshData();
     };
 
-    const confirmSessionRequest = (sessionId) => {
+    const confirmSessionRequest = (sessionId, schedule) => {
         const system = getSystem();
         const session = system.sessions.find(s => s.id === sessionId);
         if (!session) return;
 
+        const resolvedDate = schedule?.date || session.date;
+        const resolvedTime = schedule?.time || session.time;
+        const resolvedMeetingLink = schedule?.meetingLink?.trim();
+        const resolvedTopic = schedule?.topic || session.topic;
+
+        if (!resolvedDate || !resolvedTime || !resolvedMeetingLink) return;
+
         session.status = 'upcoming';
+        session.date = resolvedDate;
+        session.time = resolvedTime;
+        session.topic = resolvedTopic;
+        session.meetingLink = resolvedMeetingLink;
         session.updatedAt = new Date().toISOString();
 
         // Log activity
@@ -178,7 +190,7 @@ export const MentorProvider = ({ children }) => {
             if (s.startupId !== session.startupId) return s;
             const activityEntry = {
                 id: `act_${Date.now()}`,
-                message: `Mentor confirmed your session request for ${session.date}`,
+                message: `Mentor confirmed your session request for ${resolvedDate} at ${resolvedTime}`,
                 type: 'mentor',
                 timestamp: new Date().toISOString()
             };

@@ -42,6 +42,9 @@ const Mentors = () => {
     const [requestingMentor, setRequestingMentor] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const closeProfileModal = () => setSelectedMentor(null);
+    const closeRequestModal = () => setRequestingMentor(null);
+
     // Sync active tab with location hash
     useEffect(() => {
         if (location.hash === '#my-mentor' && startup?.mentorAssigned) {
@@ -75,6 +78,30 @@ const Mentors = () => {
         }
     }, [requestingMentor]);
 
+    // Keep modal exits consistent across desktop and mobile.
+    useEffect(() => {
+        const onEsc = (event) => {
+            if (event.key !== 'Escape') return;
+
+            if (requestingMentor) {
+                closeRequestModal();
+                return;
+            }
+
+            if (selectedMentor) {
+                closeProfileModal();
+            }
+        };
+
+        if (selectedMentor || requestingMentor) {
+            window.addEventListener('keydown', onEsc);
+        }
+
+        return () => {
+            window.removeEventListener('keydown', onEsc);
+        };
+    }, [selectedMentor, requestingMentor]);
+
     // Request Form State
     const [requestForm, setRequestForm] = useState({
         problem: '',
@@ -91,25 +118,84 @@ const Mentors = () => {
                 const system = getSystem();
                 const allUsers = system.users || {};
 
+                const toArray = (value) => {
+                    if (Array.isArray(value)) return value.filter(Boolean);
+                    if (typeof value === 'string') {
+                        return value
+                            .split(',')
+                            .map((item) => item.trim())
+                            .filter(Boolean);
+                    }
+                    return [];
+                };
+
+                const industryLabel = (value) => {
+                    const normalized = (value || '').toString().trim().toLowerCase();
+                    const map = {
+                        tech: 'Technology',
+                        technology: 'Technology',
+                        finance: 'Finance',
+                        fintech: 'Fintech',
+                        marketing: 'Marketing',
+                        operations: 'Operations',
+                        general: 'General'
+                    };
+                    if (map[normalized]) return map[normalized];
+                    if (!normalized) return 'General';
+                    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+                };
+
+                const stageLabel = (value) => {
+                    const normalized = (value || '').toString().trim().toLowerCase();
+                    const map = {
+                        idea: 'Idea',
+                        validation: 'Validation',
+                        mvp: 'MVP',
+                        revenue: 'Revenue',
+                        scale: 'Scale'
+                    };
+                    return map[normalized] || null;
+                };
+
                 const mentorsList = Object.values(allUsers)
                     .filter(u => u.role === 'mentor')
                     .map((m, idx) => ({
+                        // Prefer mentor signup fields from user profile before generic defaults.
+                        ...(() => {
+                            const rawFocusAreas = toArray(m.profileData?.focusAreas || m.areas || m.expertise || m.primarySkills);
+                            const normalizedStage = stageLabel(m.profileData?.stageSupport || m.stageSupport || m.stage);
+                            const stages = Array.isArray(m.profileData?.supportedStages)
+                                ? m.profileData.supportedStages
+                                : normalizedStage
+                                    ? [normalizedStage]
+                                    : ['Idea', 'MVP', 'Revenue'];
+
+                            const experienceYears = Number(m.profileData?.yearsExp || m.yearsExp);
+                            const experienceText = Number.isFinite(experienceYears) && experienceYears > 0
+                                ? `${experienceYears}+ Years of Mentorship`
+                                : (m.profileData?.experience || m.experience || 'Experienced Startup Mentor');
+
+                            return {
+                                focusAreas: rawFocusAreas.length > 0 ? rawFocusAreas : ['Strategy', 'Product', 'Fundraising'],
+                                supportedStages: stages,
+                                expertiseSector: industryLabel(m.profileData?.expertiseSector || m.expertiseSector || m.industry),
+                                shortBio: m.profileData?.shortBio || m.bio || 'Professional mentor helping startups scale.',
+                                experience: experienceText,
+                                title: m.profileData?.title || m.title || 'Expert Mentor'
+                            };
+                        })(),
                         id: m.uid || `mentor-${idx}`,
                         name: m.name || m.profileData?.fullName || m.email.split('@')[0],
                         initials: (m.name || m.email.split('@')[0]).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
-                        title: m.profileData?.title || 'Expert Mentor',
-                        expertiseSector: m.profileData?.expertiseSector || 'General Tech',
                         mentorshipFocus: m.profileData?.mentorshipFocus || 'Scaling & Growth',
-                        focusAreas: m.profileData?.focusAreas || ['Strategy', 'Product', 'Fundraising'],
-                        supportedStages: m.profileData?.supportedStages || ['Idea', 'MVP', 'Revenue'],
                         responseRate: m.profileData?.responseRate || 95,
                         verified: m.profileData?.verified ?? true,
-                        sessionType: m.profileData?.sessionType || 'one-on-one',
+                        sessionType: ['group', 'both', 'one-on-one'].includes((m.profileData?.sessionType || m.sessionType || '').toLowerCase())
+                            ? (m.profileData?.sessionType || m.sessionType || '').toLowerCase()
+                            : 'one-on-one',
                         availabilityStatus: m.profileData?.availabilityStatus || 'available',
-                        shortBio: m.profileData?.shortBio || 'Professional mentor helping startups scale.',
                         totalMentees: m.profileData?.totalMentees || 0,
                         rating: m.profileData?.rating || 5.0,
-                        experience: m.profileData?.experience || '12+ Years in Tech Leadership',
                         mentorshipStyle: m.profileData?.mentorshipStyle || 'Direct & Strategic with a focus on measurable KPIs.',
                         mentorshipHistory: m.profileData?.mentorshipHistory || [
                             { company: 'Nexus AI', result: 'Seed to Series A', stage: 'Scaling' },
@@ -732,6 +818,9 @@ const Mentors = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) closeProfileModal();
+                        }}
                         className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[150] flex items-center justify-center md:p-10"
                     >
                         <motion.div
@@ -739,7 +828,7 @@ const Mentors = () => {
                             initial={{ scale: 0.9, opacity: 0, y: 50 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 50 }}
-                            className="bg-[#1E1E2F] w-full h-full md:h-auto md:max-w-4xl md:rounded-[3rem] border border-white/10 overflow-hidden shadow-2xl overflow-y-auto relative"
+                            className="bg-[#1E1E2F] w-full h-[100dvh] md:h-auto md:max-h-[90vh] md:max-w-4xl md:rounded-[3rem] border border-white/10 overflow-y-auto overflow-x-hidden shadow-2xl relative"
                         >
                             {/* Modal Header Decorations */}
                             <div className="absolute top-0 right-0 w-96 h-96 bg-[#8B5CF6]/5 blur-[120px] -mr-48 -mt-48 pointer-events-none" />
@@ -766,7 +855,7 @@ const Mentors = () => {
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => setSelectedMentor(null)}
+                                        onClick={closeProfileModal}
                                         className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-gray-500 hover:text-white transition-all border border-white/10 group sticky top-0 bg-[#1E1E2F]/80 backdrop-blur-md z-20"
                                     >
                                         <X size={24} className="group-hover:rotate-90 transition-transform duration-500" />
@@ -909,6 +998,9 @@ const Mentors = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) closeRequestModal();
+                        }}
                         className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[160] flex items-center justify-center md:p-10"
                     >
                         <motion.div
@@ -916,7 +1008,7 @@ const Mentors = () => {
                             initial={{ scale: 0.9, opacity: 0, y: 30 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 30 }}
-                            className="bg-[#1E1E2F] w-full h-full md:h-auto md:max-w-3xl md:rounded-[3rem] border border-white/10 overflow-hidden shadow-2xl overflow-y-auto"
+                            className="bg-[#1E1E2F] w-full h-[100dvh] md:h-auto md:max-h-[90vh] md:max-w-3xl md:rounded-[3rem] border border-white/10 overflow-y-auto overflow-x-hidden shadow-2xl"
                         >
                             <div className="p-12 md:p-16">
                                 <div className="flex justify-between items-start mb-12">
@@ -930,7 +1022,7 @@ const Mentors = () => {
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => setRequestingMentor(null)}
+                                        onClick={closeRequestModal}
                                         className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5"
                                     >
                                         <X size={24} />
@@ -991,7 +1083,7 @@ const Mentors = () => {
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => setRequestingMentor(null)}
+                                            onClick={closeRequestModal}
                                             className="flex-1 bg-white/5 text-gray-500 font-black py-6 rounded-[1.5rem] hover:text-white hover:bg-white/10 transition-all border border-white/10 text-[10px] uppercase tracking-[0.2em]"
                                         >
                                             Abort
