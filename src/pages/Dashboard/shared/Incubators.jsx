@@ -1,18 +1,13 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Building,
     MapPin,
     Calendar,
     TrendingUp,
-    Award,
     Search,
     Filter,
     ChevronRight,
-    ArrowRight,
     Globe,
     Zap,
-    Plus,
     X,
     Shield,
     CheckCircle2,
@@ -20,130 +15,275 @@ import {
     Target,
     Users,
     Clock,
-    AlertCircle
+    AlertCircle,
+    Layers,
+    CircleDot
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
-import { getSystem } from '../../../utils/system';
+import { getSystem, saveSystem } from '../../../utils/system';
+
+const normalizeToArray = (value) => {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === 'string') {
+        return value
+            .split(',')
+            .map(item => item.trim())
+            .filter(Boolean);
+    }
+    if (!value) return [];
+    return [String(value)];
+};
+
+const parseDate = (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date : null;
+};
+
+const formatDate = (value) => {
+    const date = parseDate(value);
+    return date ? date.toLocaleDateString() : 'TBD';
+};
+
+const getCohortStatus = (cohort) => {
+    const now = new Date();
+    const start = parseDate(cohort?.startDate);
+    const end = parseDate(cohort?.endDate);
+
+    if (start && end) {
+        if (now < start) return 'upcoming';
+        if (now > end) return 'completed';
+        return 'active';
+    }
+
+    if (cohort?.status === 'active' || cohort?.status === 'completed' || cohort?.status === 'upcoming') {
+        return cohort.status;
+    }
+
+    return 'upcoming';
+};
+
+const getCohortCurrentCapacity = (cohort, applications) => {
+    const directCapacity = Array.isArray(cohort?.startupIds) ? cohort.startupIds.length : 0;
+    if (directCapacity > 0) return directCapacity;
+
+    return applications.filter(app => app.status === 'accepted' && app.cohortId === cohort.id).length;
+};
 
 const Incubators = () => {
     const { user } = useAuth();
-    const { startup, applyToIncubator, applications } = useStartup();
+    const { startup } = useStartup();
 
-    // --- State Management ---
-    const [incubators, setIncubators] = useState([]);
-    const [selectedIncubator, setSelectedIncubator] = useState(null);
-    const [applyingIncubator, setApplyingIncubator] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [systemState, setSystemState] = useState({
+        incubators: [],
+        cohorts: [],
+        applications: [],
+        startups: []
+    });
+    const [selectedIncubator, setSelectedIncubator] = useState(null);
 
-    // Filter State
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState({
         sector: 'All',
         stages: [],
+        location: 'All',
         verifiedOnly: false
     });
     const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
-    // Application Form State
-    const [appForm, setAppForm] = useState({
-        problem: '',
-        traction: '',
-        reason: '',
-        funding: ''
-    });
-
-    // --- Initialization ---
     useEffect(() => {
         const refreshData = () => {
             setLoading(true);
             try {
-                // Fetch incubators from global system
                 const system = getSystem();
-                const allUsers = system.users || {};
-
-                const incubatorsList = Object.values(allUsers)
-                    .filter(u => u.role?.toLowerCase() === 'incubator')
-                    .map(inc => {
-                        const portalData = inc.portalData || {};
-                        const profileData = inc.profileData || portalData;
-
-                        return {
-                            id: inc.uid,
-                            name: inc.name || profileData?.incubatorName || inc.email.split('@')[0],
-                            location: profileData?.location || 'India',
-                            supportedStages: profileData?.supportedStages || profileData?.stagePreference || ['Idea', 'MVP', 'Revenue'],
-                            focus: profileData?.sector || profileData?.sectorFocus?.[0] || 'General',
-                            timeline: profileData?.timeline || 'Rolling Admissions',
-                            metrics: profileData?.metrics || 'N/A',
-                            initials: (inc.name || inc.email.split('@')[0]).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
-                            verified: profileData?.verified !== undefined ? profileData.verified : true,
-                            shortBio: profileData?.shortBio || profileData?.description || 'Incubator supporting early-stage startups.',
-                            totalStartups: profileData?.totalStartups || 0,
-                            fundingCap: profileData?.fundingCap || (profileData?.fundingSupport ? 'Varies' : '$0')
-                        };
-                    });
-                setIncubators(incubatorsList);
-            } catch (err) {
-                console.error("Error fetching incubators:", err);
+                setSystemState({
+                    incubators: system.incubators || [],
+                    cohorts: system.cohorts || [],
+                    applications: system.applications || [],
+                    startups: system.startups || []
+                });
+            } catch (error) {
+                console.error('Error loading incubator discovery data:', error);
             } finally {
                 setLoading(false);
             }
         };
 
         refreshData();
-    }, [user.uid]);
+        const handleStorage = () => refreshData();
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, []);
 
-    // --- Logic: Premium Matching & Filtering ---
-    const filteredIncubators = useMemo(() => {
-        let result = [...incubators];
+    const currentStartup = useMemo(() => {
+        if (!user) return null;
 
-        if (searchQuery) {
-            result = result.filter(inc =>
-                inc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                inc.focus.toLowerCase().includes(searchQuery.toLowerCase())
+        if (startup?.startupId) {
+            const fromSystem = systemState.startups.find(s => s.startupId === startup.startupId);
+            if (fromSystem) return fromSystem;
+        }
+
+        if (user.role === 'founder') {
+            return systemState.startups.find(s => s.founderId === user.uid) || null;
+        }
+
+        if (['co-founder', 'cofounder'].includes(user.role)) {
+            return (
+                systemState.startups.find(
+                    s => Array.isArray(s.coFounders) && s.coFounders.includes(user.uid)
+                ) || null
             );
+        }
+
+        return null;
+    }, [startup, systemState.startups, user]);
+
+    const myApplications = useMemo(() => {
+        if (!currentStartup) return [];
+        return systemState.applications.filter(app => app.startupId === currentStartup.startupId);
+    }, [systemState.applications, currentStartup]);
+
+    const activeApplicationsCount = useMemo(
+        () => myApplications.filter(app => app.status === 'pending').length,
+        [myApplications]
+    );
+
+    const incubatorCards = useMemo(() => {
+        const founderSector = (currentStartup?.sector || '').toLowerCase();
+        const founderStage = (currentStartup?.stage || '').toLowerCase();
+
+        return (systemState.incubators || [])
+            .map(incubator => {
+                const incubatorId = incubator.id || incubator.uid || incubator.incubatorId;
+                if (!incubatorId) return null;
+
+                const incubatorCohorts = systemState.cohorts
+                    .filter(cohort => cohort.incubatorId === incubatorId)
+                    .map(cohort => ({ ...cohort, derivedStatus: getCohortStatus(cohort) }))
+                    .sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
+
+                const activeCohort = incubatorCohorts.find(cohort => cohort.derivedStatus === 'active') || null;
+                const upcomingCohort = incubatorCohorts.find(cohort => cohort.derivedStatus === 'upcoming') || null;
+                const pastCohorts = incubatorCohorts.filter(cohort => cohort.derivedStatus === 'completed');
+
+                let batchTimeline = 'No active cohort';
+                if (activeCohort) {
+                    batchTimeline = `Batch Active (${formatDate(activeCohort.startDate)} - ${formatDate(activeCohort.endDate)})`;
+                } else if (upcomingCohort) {
+                    batchTimeline = `Next Batch Starts: ${formatDate(upcomingCohort.startDate)}`;
+                }
+
+                const sectorFocus = normalizeToArray(incubator.sectorFocus);
+                const stagePreference = normalizeToArray(incubator.stagePreference || incubator.supportedStages);
+
+                const sectorMatch = sectorFocus.some(s => s.toLowerCase() === founderSector);
+                const stageMatch = stagePreference.some(s => s.toLowerCase() === founderStage);
+                const matchScore = (sectorMatch ? 2 : 0) + (stageMatch ? 1 : 0);
+
+                const relatedApplication = myApplications.find(app => app.incubatorId === incubatorId) || null;
+
+                return {
+                    ...incubator,
+                    id: incubatorId,
+                    name: incubator.name || incubator.incubatorName || 'Unnamed Incubator',
+                    location: incubator.location || 'Unknown',
+                    sectorFocus,
+                    stagePreference,
+                    cohorts: incubatorCohorts,
+                    activeCohort,
+                    upcomingCohort,
+                    pastCohorts,
+                    activeCapacity: activeCohort ? getCohortCurrentCapacity(activeCohort, systemState.applications) : 0,
+                    batchTimeline,
+                    successStats: incubator.successStats && Object.keys(incubator.successStats).length > 0 ? incubator.successStats : null,
+                    verified: Boolean(incubator.verified),
+                    description: incubator.description || '',
+                    fundingSupport: Boolean(incubator.fundingSupport),
+                    mentors: normalizeToArray(incubator.mentors),
+                    relatedApplication,
+                    matchScore,
+                    isBestMatch: matchScore >= 2,
+                    initials: (incubator.name || incubator.incubatorName || 'IN')
+                        .split(' ')
+                        .filter(Boolean)
+                        .map(part => part[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2)
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => {
+                if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+                if (a.name && b.name) return a.name.localeCompare(b.name);
+                return 0;
+            });
+    }, [systemState.incubators, systemState.cohorts, systemState.applications, myApplications, currentStartup]);
+
+    const sectorOptions = useMemo(() => {
+        const options = new Set(['All']);
+        incubatorCards.forEach(card => card.sectorFocus.forEach(sector => options.add(sector)));
+        return Array.from(options);
+    }, [incubatorCards]);
+
+    const stageOptions = useMemo(() => {
+        const options = new Set();
+        incubatorCards.forEach(card => card.stagePreference.forEach(stage => options.add(stage)));
+        return Array.from(options);
+    }, [incubatorCards]);
+
+    const locationOptions = useMemo(() => {
+        const options = new Set(['All']);
+        incubatorCards.forEach(card => {
+            if (card.location) options.add(card.location);
+        });
+        return Array.from(options);
+    }, [incubatorCards]);
+
+    const filteredIncubators = useMemo(() => {
+        let result = [...incubatorCards];
+
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(incubator => {
+                const searchableSectors = incubator.sectorFocus.join(' ').toLowerCase();
+                return (
+                    incubator.name.toLowerCase().includes(query) ||
+                    incubator.location.toLowerCase().includes(query) ||
+                    searchableSectors.includes(query)
+                );
+            });
         }
 
         if (filters.sector !== 'All') {
-            result = result.filter(inc => inc.focus === filters.sector);
+            result = result.filter(incubator => incubator.sectorFocus.includes(filters.sector));
         }
 
         if (filters.stages.length > 0) {
-            result = result.filter(inc =>
-                inc.supportedStages.some(stage => filters.stages.includes(stage))
+            result = result.filter(incubator =>
+                incubator.stagePreference.some(stage => filters.stages.includes(stage))
             );
         }
 
-        if (filters.verifiedOnly) {
-            result = result.filter(inc => inc.verified);
+        if (filters.location !== 'All') {
+            result = result.filter(incubator => incubator.location === filters.location);
         }
 
-        const founderSector = startup?.sector || 'Fintech';
-        const founderStage = startup?.stage || 'Idea';
-
-        result = result.map(inc => {
-            const sectorMatch = inc.focus === founderSector;
-            const stageMatch = inc.supportedStages.includes(founderStage);
-            const matchScore = (sectorMatch ? 2 : 0) + (stageMatch ? 1 : 0);
-            return { ...inc, matchScore, isBestMatch: matchScore >= 2 };
-        });
-
-        result.sort((a, b) => {
-            if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
-            return (b.verified ? 1 : 0) - (a.verified ? 1 : 0);
-        });
+        if (filters.verifiedOnly) {
+            result = result.filter(incubator => incubator.verified);
+        }
 
         return result;
-    }, [incubators, filters, searchQuery, startup]);
+    }, [incubatorCards, filters, searchQuery]);
 
-    // --- Helpers ---
     const toggleStageFilter = (stage) => {
         setFilters(prev => ({
             ...prev,
             stages: prev.stages.includes(stage)
-                ? prev.stages.filter(s => s !== stage)
+                ? prev.stages.filter(item => item !== stage)
                 : [...prev.stages, stage]
         }));
     };
@@ -152,32 +292,58 @@ const Incubators = () => {
         setFilters({
             sector: 'All',
             stages: [],
+            location: 'All',
             verifiedOnly: false
         });
         setSearchQuery('');
     };
 
-    const handleApplicationSubmit = (e) => {
-        e.preventDefault();
+    const handleApply = (incubator) => {
+        if (!currentStartup || !user) return;
 
-        const message = `Problem: ${appForm.problem}\n\nTraction: ${appForm.traction}\n\nReason: ${appForm.reason}\n\nFunding: ${appForm.funding}`;
-        applyToIncubator(applyingIncubator.id, message);
+        const existing = myApplications.find(app => app.incubatorId === incubator.id);
+        if (existing) return;
 
-        setAppForm({ problem: '', traction: '', reason: '', funding: '' });
-        setApplyingIncubator(null);
+        const system = getSystem();
+        const duplicate = (system.applications || []).find(
+            app => app.startupId === currentStartup.startupId && app.incubatorId === incubator.id
+        );
+        if (duplicate) return;
+
+        const newApplication = {
+            id: `app_${Date.now()}`,
+            founderId: currentStartup.founderId || user.uid,
+            startupId: currentStartup.startupId,
+            incubatorId: incubator.id,
+            startupName: currentStartup.startupName || 'Unnamed Startup',
+            sector: currentStartup.sector || 'General',
+            teamSize: currentStartup.teamSize || 1,
+            appliedDate: new Date().toISOString(),
+            status: 'pending',
+            message: ''
+        };
+
+        system.applications = [...(system.applications || []), newApplication];
+        saveSystem(system);
+
+        setSystemState(prev => ({
+            ...prev,
+            applications: [...prev.applications, newApplication]
+        }));
     };
 
-    const hasApplied = (incubatorId) => {
-        return applications.some(app => app.incubatorId === incubatorId);
+    const getApplicationState = (incubator) => {
+        const application = incubator.relatedApplication;
+        if (!application) return { label: 'Apply', tone: 'action' };
+        if (application.status === 'accepted') return { label: 'Accepted', tone: 'accepted' };
+        if (application.status === 'rejected') return { label: 'Rejected', tone: 'rejected' };
+        return { label: 'Applied', tone: 'pending' };
     };
 
-    const getAppStatus = (incubatorId) => {
-        const app = applications.find(a => a.incubatorId === incubatorId);
-        return app ? app.status : null;
-    };
-
-    const isAccessRestricted = !['founder', 'co-founder'].includes(user?.role);
-    const canApply = user?.role === 'founder' || (user?.role === 'co-founder' && startup?.coFounderPermissions?.applications);
+    const isAccessRestricted = !['founder', 'co-founder', 'cofounder'].includes(user?.role);
+    const canApply =
+        user?.role === 'founder' ||
+        (['co-founder', 'cofounder'].includes(user?.role) && startup?.coFounderPermissions?.applications);
 
     if (loading) return <div className="p-20 text-center text-gray-400">Loading Incubators...</div>;
 
@@ -195,7 +361,6 @@ const Incubators = () => {
 
     return (
         <div className="space-y-10 animate-in fade-in duration-500">
-            {/* Header */}
             <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 px-2 md:px-0">
                 <div className="flex-1">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
@@ -204,7 +369,7 @@ const Incubators = () => {
                         </span>
                         <div className="flex items-center gap-2">
                             <span className="w-1 h-1 bg-gray-700 rounded-full" />
-                            <span className="text-gray-400 text-[10px] md:text-sm font-medium">Verified Institutions</span>
+                            <span className="text-gray-400 text-[10px] md:text-sm font-medium">Live Discovery</span>
                         </div>
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -215,22 +380,21 @@ const Incubators = () => {
                             onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
                             className="lg:hidden flex items-center justify-center gap-2 px-6 py-3.5 bg-[#1E1E2F] border border-white/5 rounded-2xl text-white font-bold transition-all hover:bg-white/5"
                         >
-                            <Filter size={20} className={isFilterMenuOpen ? "text-blue-500" : "text-gray-500"} />
+                            <Filter size={20} className={isFilterMenuOpen ? 'text-blue-500' : 'text-gray-500'} />
                             <span className="text-sm">Filters</span>
                         </button>
                     </div>
                 </div>
 
-                {applications.length > 0 && (
+                {currentStartup && (
                     <div className="flex items-center gap-2 px-4 py-3 bg-[#1E1E2F] rounded-xl border border-white/5 self-start sm:self-auto">
                         <Target size={16} className="text-blue-500" />
-                        <span className="text-xs md:text-sm font-bold text-white">{applications.length} Active Applications</span>
+                        <span className="text-xs md:text-sm font-bold text-white">{activeApplicationsCount} Active Applications</span>
                     </div>
                 )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                {/* Search & Filter */}
                 <aside className={`${isFilterMenuOpen ? 'block' : 'hidden lg:block'} lg:col-span-1 space-y-6 animate-in slide-in-from-top lg:animate-none`}>
                     <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 shadow-xl">
                         <div className="flex items-center justify-between mb-6">
@@ -246,7 +410,6 @@ const Incubators = () => {
                         </div>
 
                         <div className="space-y-6">
-                            {/* Search */}
                             <div className="relative group">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-blue-500 transition-colors" size={16} />
                                 <input
@@ -258,54 +421,66 @@ const Incubators = () => {
                                 />
                             </div>
 
-                            {/* Sector Filter */}
                             <div>
                                 <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block">Sector Focus</label>
                                 <div className="flex flex-wrap gap-2">
-                                    {['All', 'SaaS', 'Fintech', 'Deep Tech', 'AI', 'Sustainability'].map((s) => (
+                                    {sectorOptions.map((sector) => (
                                         <button
-                                            key={s}
-                                            onClick={() => setFilters({ ...filters, sector: s })}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black border transition-all ${filters.sector === s
+                                            key={sector}
+                                            onClick={() => setFilters(prev => ({ ...prev, sector }))}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black border transition-all ${filters.sector === sector
                                                 ? 'bg-blue-500/20 border-blue-500/40 text-white'
                                                 : 'bg-white/5 border-white/5 text-gray-600 hover:text-white'
                                                 }`}
                                         >
-                                            {s}
+                                            {sector}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Preferred Stage */}
                             <div>
                                 <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block">Startup Stage</label>
                                 <div className="space-y-3">
-                                    {['Idea', 'MVP', 'Revenue'].map((st) => (
+                                    {stageOptions.map((stage) => (
                                         <div
-                                            key={st}
+                                            key={stage}
                                             className="flex items-center gap-3 group cursor-pointer"
-                                            onClick={() => toggleStageFilter(st)}
+                                            onClick={() => toggleStageFilter(stage)}
                                         >
-                                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filters.stages.includes(st)
+                                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filters.stages.includes(stage)
                                                 ? 'bg-blue-500 border-blue-500'
                                                 : 'border-white/10 group-hover:border-blue-500/50'
                                                 }`}>
-                                                {filters.stages.includes(st) && <CheckCircle2 size={12} className="text-white" />}
+                                                {filters.stages.includes(stage) && <CheckCircle2 size={12} className="text-white" />}
                                             </div>
-                                            <span className={`text-sm font-medium transition-colors ${filters.stages.includes(st) ? 'text-white' : 'text-gray-400 group-hover:text-white'
-                                                }`}>{st} Stage</span>
+                                            <span className={`text-sm font-medium transition-colors ${filters.stages.includes(stage) ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}>
+                                                {stage}
+                                            </span>
                                         </div>
                                     ))}
+                                    {stageOptions.length === 0 && <p className="text-xs text-gray-500">No stage data available.</p>}
                                 </div>
                             </div>
 
-                            {/* Verified institution Toggle */}
+                            <div>
+                                <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block">Location</label>
+                                <select
+                                    value={filters.location}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-xl py-3 px-4 text-xs text-white focus:outline-none focus:border-blue-500/30 font-bold"
+                                >
+                                    {locationOptions.map(location => (
+                                        <option key={location} value={location}>{location}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <div className="pt-4 border-t border-white/5">
                                 <label className="flex items-center justify-between cursor-pointer group">
                                     <span className="text-[10px] text-gray-500 font-black uppercase">Verified Only</span>
                                     <div
-                                        onClick={() => setFilters({ ...filters, verifiedOnly: !filters.verifiedOnly })}
+                                        onClick={() => setFilters(prev => ({ ...prev, verifiedOnly: !prev.verifiedOnly }))}
                                         className={`w-10 h-5 rounded-full relative transition-all ${filters.verifiedOnly ? 'bg-blue-500' : 'bg-[#0F0F14] border border-white/10'}`}
                                     >
                                         <div className={`absolute top-1 w-3 h-3 rounded-full transition-all ${filters.verifiedOnly ? 'right-1 bg-white' : 'left-1 bg-gray-600'}`} />
@@ -317,21 +492,20 @@ const Incubators = () => {
 
                     <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1E1E2F] to-[#0F0F14] border border-blue-500/10 relative overflow-hidden group shadow-lg">
                         <div className="absolute top-0 right-0 p-4 opacity-5"><Globe size={64} /></div>
-                        <h4 className="text-white font-bold text-sm mb-2">Auto-Fill Active</h4>
-                        <p className="text-xs text-gray-500 font-medium mb-4">Vanguard has synced your system profiles with external portal requirements.</p>
+                        <h4 className="text-white font-bold text-sm mb-2">Relational Sync Active</h4>
+                        <p className="text-xs text-gray-500 font-medium mb-4">Cohorts, applications, and startup relevance update in real time.</p>
                         <div className="flex items-center gap-2 text-blue-400 font-black text-[10px] uppercase tracking-widest">
-                            <Zap size={10} fill="currentColor" /> Ready to Apply
+                            <Zap size={10} fill="currentColor" /> Live Data
                         </div>
                     </div>
                 </aside>
 
-                {/* Incubator Cards */}
                 <div className="lg:col-span-3 space-y-6">
                     {filteredIncubators.length === 0 ? (
                         <div className="flex flex-col items-center justify-center p-20 bg-[#1E1E2F] rounded-3xl border border-dashed border-white/10 text-center">
                             <RefreshCw size={40} className="text-gray-600 mb-4 animate-spin-slow" />
-                            <h3 className="text-xl font-bold text-white mb-2">No institutions match your refined criteria</h3>
-                            <p className="text-gray-400 max-w-sm">Adjust your filters or startup stage to discover growth opportunities.</p>
+                            <h3 className="text-xl font-bold text-white mb-2">No institutions match your criteria</h3>
+                            <p className="text-gray-400 max-w-sm">Adjust filters to discover relevant incubator programs.</p>
                             <button
                                 onClick={resetFilters}
                                 className="mt-8 px-8 py-3 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
@@ -340,125 +514,157 @@ const Incubators = () => {
                             </button>
                         </div>
                     ) : (
-                        filteredIncubators.map((inc) => (
-                            <motion.div
-                                layout
-                                key={inc.id}
-                                className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 group hover:border-blue-500/30 transition-all cursor-pointer relative overflow-hidden shadow-xl"
-                            >
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/2 blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2 group-hover:bg-blue-500/5 transition-all" />
+                        filteredIncubators.map((incubator) => {
+                            const state = getApplicationState(incubator);
+                            const disableApply = state.tone !== 'action' || !canApply || !currentStartup;
 
-                                {inc.isBestMatch && (
-                                    <div className="absolute top-4 left-4 z-10">
-                                        <span className="px-2 py-1 bg-blue-600 text-white text-[8px] font-black uppercase rounded-md shadow-lg shadow-blue-600/20">
-                                            Best Match
-                                        </span>
-                                    </div>
-                                )}
+                            return (
+                                <motion.div
+                                    layout
+                                    key={incubator.id}
+                                    className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 group hover:border-blue-500/30 transition-all relative overflow-hidden shadow-xl"
+                                >
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/2 blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2 group-hover:bg-blue-500/5 transition-all" />
 
-                                <div className="flex flex-col md:flex-row gap-8">
-                                    <div className="flex-shrink-0">
-                                        <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-2xl text-gray-400 group-hover:text-blue-400 group-hover:bg-blue-500/10 group-hover:border-blue-500/30 transition-all">
-                                            {inc.initials}
+                                    {incubator.isBestMatch && (
+                                        <div className="absolute top-4 left-4 z-10">
+                                            <span className="px-2 py-1 bg-blue-600 text-white text-[8px] font-black uppercase rounded-md shadow-lg shadow-blue-600/20">
+                                                Best Match
+                                            </span>
                                         </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <h3 className="text-2xl font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{inc.name}</h3>
-                                                    {inc.verified && <Shield size={16} className="text-blue-400" />}
-                                                </div>
-                                                <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                                    <span className="flex items-center gap-1.5"><MapPin size={12} className="text-blue-500" /> {inc.location}</span>
-                                                    <span className="flex items-center gap-1.5"><TrendingUp size={12} className="text-green-500" /> {inc.focus} Focus</span>
-                                                </div>
+                                    )}
+
+                                    <div className="flex flex-col md:flex-row gap-8">
+                                        <div className="flex-shrink-0">
+                                            <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-2xl text-gray-400 group-hover:text-blue-400 group-hover:bg-blue-500/10 group-hover:border-blue-500/30 transition-all">
+                                                {incubator.initials}
                                             </div>
-                                            <button
-                                                disabled={hasApplied(inc.id) || !canApply}
-                                                onClick={() => setApplyingIncubator(inc)}
-                                                className={`hidden md:flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black border transition-all shadow-xl ${getAppStatus(inc.id) === 'accepted' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                                                    getAppStatus(inc.id) === 'rejected' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
-                                                        getAppStatus(inc.id) === 'pending' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' :
-                                                            !canApply ? 'bg-gray-800 text-gray-500 cursor-not-allowed border-transparent' :
-                                                                'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-blue-500/20'
-                                                    }`}
-                                            >
-                                                {getAppStatus(inc.id) === 'accepted' ? (
-                                                    <>Accepted <CheckCircle2 size={18} /></>
-                                                ) : getAppStatus(inc.id) === 'rejected' ? (
-                                                    <>Rejected <AlertCircle size={18} /></>
-                                                ) : getAppStatus(inc.id) === 'pending' ? (
-                                                    <>Pending <Clock size={18} /></>
-                                                ) : !canApply ? (
-                                                    'Access Locked'
-                                                ) : (
-                                                    <>Apply Now <ArrowRight size={18} /></>
-                                                )}
-                                            </button>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-white/5">
-                                            <div className="space-y-4">
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-start mb-4 gap-4">
                                                 <div>
-                                                    <p className="text-[10px] text-gray-600 font-black uppercase mb-1 flex items-center gap-2 tracking-widest">
-                                                        <Calendar size={10} /> Batch Timeline
-                                                    </p>
-                                                    <p className="text-xs font-bold text-gray-300">{inc.timeline}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] text-gray-600 font-black uppercase mb-1 flex items-center gap-2 tracking-widest">
-                                                        <Award size={10} /> Success Metrics
-                                                    </p>
-                                                    <p className="text-xs font-bold text-gray-300">{inc.metrics}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex flex-col justify-end space-y-4">
-                                                <div>
-                                                    <p className="text-[10px] text-gray-600 font-black uppercase mb-2 tracking-widest">Target Stages</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {inc.supportedStages.map(stage => (
-                                                            <span key={stage} className="px-3 py-1 bg-white/5 text-[10px] font-bold text-blue-400 rounded-lg border border-blue-500/10 transition-all">{stage}</span>
-                                                        ))}
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <h3 className="text-2xl font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">
+                                                            {incubator.name}
+                                                        </h3>
+                                                        {incubator.verified && <Shield size={16} className="text-blue-400" />}
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                                        <span className="flex items-center gap-1.5"><MapPin size={12} className="text-blue-500" /> {incubator.location}</span>
+                                                        <span className="flex items-center gap-1.5"><TrendingUp size={12} className="text-green-500" /> {incubator.sectorFocus.join(', ') || 'General'}</span>
                                                     </div>
                                                 </div>
+
                                                 <button
-                                                    onClick={() => setSelectedIncubator(inc)}
-                                                    className="text-[10px] font-black text-blue-500 uppercase flex items-center gap-2 hover:translate-x-1 transition-transform"
+                                                    disabled={disableApply}
+                                                    onClick={() => handleApply(incubator)}
+                                                    className={`hidden md:flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black border transition-all shadow-xl ${state.tone === 'accepted' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                                        state.tone === 'rejected' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
+                                                            state.tone === 'pending' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' :
+                                                                !canApply || !currentStartup ? 'bg-gray-800 text-gray-500 cursor-not-allowed border-transparent' :
+                                                                    'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-blue-500/20'
+                                                        }`}
                                                 >
-                                                    View Full Details <ChevronRight size={14} />
+                                                    {state.tone === 'accepted' ? (
+                                                        <>Accepted <CheckCircle2 size={18} /></>
+                                                    ) : state.tone === 'rejected' ? (
+                                                        <>Rejected <AlertCircle size={18} /></>
+                                                    ) : state.tone === 'pending' ? (
+                                                        <>Applied <Clock size={18} /></>
+                                                    ) : !currentStartup ? (
+                                                        'No Startup Linked'
+                                                    ) : !canApply ? (
+                                                        'Access Locked'
+                                                    ) : (
+                                                        'Apply'
+                                                    )}
                                                 </button>
                                             </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-white/5">
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <p className="text-[10px] text-gray-600 font-black uppercase mb-1 flex items-center gap-2 tracking-widest">
+                                                            <Calendar size={10} /> Batch Timeline
+                                                        </p>
+                                                        <p className="text-xs font-bold text-gray-300">{incubator.batchTimeline}</p>
+                                                    </div>
+
+                                                    {incubator.activeCohort && (
+                                                        <div>
+                                                            <p className="text-[10px] text-gray-600 font-black uppercase mb-1 flex items-center gap-2 tracking-widest">
+                                                                <Users size={10} /> Active Cohort
+                                                            </p>
+                                                            <p className="text-xs font-bold text-gray-300">
+                                                                {incubator.activeCohort.name} ({formatDate(incubator.activeCohort.startDate)} - {formatDate(incubator.activeCohort.endDate)})
+                                                            </p>
+                                                            <p className="text-[10px] font-semibold text-blue-400 mt-1">
+                                                                Capacity: {incubator.activeCapacity}/{Number(incubator.activeCohort.maxCapacity) || 20}
+                                                            </p>
+                                                        </div>
+                                                    )}
+
+                                                    {incubator.successStats && (
+                                                        <div>
+                                                            <p className="text-[10px] text-gray-600 font-black uppercase mb-1 flex items-center gap-2 tracking-widest">
+                                                                <Target size={10} /> Success Metrics
+                                                            </p>
+                                                            <div className="text-xs font-bold text-gray-300 space-y-1">
+                                                                {Object.entries(incubator.successStats).map(([key, value]) => (
+                                                                    <p key={key}>{key}: {String(value)}</p>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex flex-col justify-end space-y-4">
+                                                    <div>
+                                                        <p className="text-[10px] text-gray-600 font-black uppercase mb-2 tracking-widest">Target Stages</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {incubator.stagePreference.map(stage => (
+                                                                <span key={stage} className="px-3 py-1 bg-white/5 text-[10px] font-bold text-blue-400 rounded-lg border border-blue-500/10 transition-all">
+                                                                    {stage}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => setSelectedIncubator(incubator)}
+                                                        className="text-[10px] font-black text-blue-500 uppercase flex items-center gap-2 hover:translate-x-1 transition-transform"
+                                                    >
+                                                        View Full Details <ChevronRight size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                disabled={disableApply}
+                                                onClick={() => handleApply(incubator)}
+                                                className={`md:hidden mt-8 w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-black transition-all ${state.tone === 'accepted'
+                                                    ? 'bg-emerald-500/20 text-emerald-400'
+                                                    : state.tone === 'rejected'
+                                                        ? 'bg-rose-500/20 text-rose-400'
+                                                        : state.tone === 'pending'
+                                                            ? 'bg-amber-500/20 text-amber-400'
+                                                            : !currentStartup || !canApply
+                                                                ? 'bg-gray-800 text-gray-500'
+                                                                : 'bg-blue-600 text-white shadow-lg'
+                                                    }`}
+                                            >
+                                                {state.label}
+                                            </button>
                                         </div>
-
-                                        <button
-                                            disabled={hasApplied(inc.id) || !canApply}
-                                            onClick={() => setApplyingIncubator(inc)}
-                                            className={`md:hidden mt-8 w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-black transition-all ${hasApplied(inc.id)
-                                                ? 'bg-green-500/20 text-green-400'
-                                                : !canApply
-                                                    ? 'bg-gray-800 text-gray-500'
-                                                    : 'bg-blue-600 text-white shadow-lg'
-                                                }`}
-                                        >
-                                            {hasApplied(inc.id) ? 'Applied' : 'Apply Now'} <ArrowRight size={18} />
-                                        </button>
                                     </div>
-                                </div>
-                            </motion.div>
-                        ))
+                                </motion.div>
+                            );
+                        })
                     )}
-
-                    <div className="p-8 border border-dashed border-white/10 rounded-2xl flex items-center justify-center text-center group hover:bg-white/5 transition-all">
-                        <div>
-                            <p className="text-xs font-bold text-gray-600">Showing {filteredIncubators.length} of 124 Growth Hubs</p>
-                            <button className="mt-4 text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-2 mx-auto">Discover More <Plus size={12} /></button>
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            {/* Profile Modal */}
             <AnimatePresence>
                 {selectedIncubator && (
                     <motion.div
@@ -471,7 +677,7 @@ const Incubators = () => {
                             initial={{ y: 50, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 50, opacity: 0 }}
-                            className="bg-[#1E1E2F] w-full h-full md:h-auto md:max-w-3xl md:rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-y-auto"
+                            className="bg-[#1E1E2F] w-full h-full md:h-auto md:max-w-4xl md:rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-y-auto"
                         >
                             <div className="relative">
                                 <div className="h-40 bg-gradient-to-r from-blue-600 to-indigo-700" />
@@ -493,192 +699,143 @@ const Incubators = () => {
                                                 <h2 className="text-3xl font-black text-white uppercase tracking-tight">{selectedIncubator.name}</h2>
                                                 {selectedIncubator.verified && <CheckCircle2 size={24} className="text-blue-400" />}
                                             </div>
-                                            <p className="text-gray-400 font-bold flex items-center gap-2"><MapPin size={16} className="text-blue-500" /> {selectedIncubator.location}</p>
+                                            <p className="text-gray-400 font-bold flex items-center gap-2">
+                                                <MapPin size={16} className="text-blue-500" /> {selectedIncubator.location}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="px-10 pb-10 grid grid-cols-1 md:grid-cols-2 gap-12">
-                                <div className="space-y-10">
+                            <div className="px-10 pb-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+                                <div className="space-y-8">
                                     <section>
                                         <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">About Institution</h4>
-                                        <p className="text-gray-300 text-sm leading-relaxed">{selectedIncubator.shortBio}</p>
+                                        <p className="text-gray-300 text-sm leading-relaxed">
+                                            {selectedIncubator.description || 'No description available.'}
+                                        </p>
                                     </section>
 
-                                    <section>
-                                        <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">Program Statistics</h4>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="bg-[#0F0F14] p-4 rounded-2xl border border-white/5">
-                                                <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Startups</p>
-                                                <p className="text-xl font-black text-white">{selectedIncubator.totalStartups}+</p>
-                                            </div>
-                                            <div className="bg-[#0F0F14] p-4 rounded-2xl border border-white/5">
-                                                <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Max Funding</p>
-                                                <p className="text-xl font-black text-blue-400">{selectedIncubator.fundingCap}</p>
-                                            </div>
-                                        </div>
-                                    </section>
-                                </div>
-
-                                <div className="space-y-10">
                                     <section>
                                         <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">Sector Focus</h4>
                                         <div className="flex flex-wrap gap-2">
-                                            <span className="px-4 py-2 bg-blue-500/10 text-white text-xs font-bold rounded-xl border border-blue-500/20">
-                                                {selectedIncubator.focus}
-                                            </span>
+                                            {selectedIncubator.sectorFocus.map(sector => (
+                                                <span key={sector} className="px-4 py-2 bg-blue-500/10 text-white text-xs font-bold rounded-xl border border-blue-500/20">
+                                                    {sector}
+                                                </span>
+                                            ))}
                                         </div>
                                     </section>
 
                                     <section>
-                                        <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">Eligibility</h4>
-                                        <div className="space-y-3">
-                                            {selectedIncubator.supportedStages.map(stage => (
+                                        <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">Stage Preference</h4>
+                                        <div className="space-y-2">
+                                            {selectedIncubator.stagePreference.map(stage => (
                                                 <div key={stage} className="flex items-center gap-3 text-sm font-bold text-gray-300">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                                    {stage} Stage Startups
+                                                    <CircleDot size={12} className="text-blue-500" />
+                                                    {stage}
                                                 </div>
                                             ))}
                                         </div>
                                     </section>
 
-                                    <div className="pt-6">
-                                        <button
-                                            disabled={hasApplied(selectedIncubator.id) || !canApply}
-                                            onClick={() => {
-                                                setApplyingIncubator(selectedIncubator);
-                                                setSelectedIncubator(null);
-                                            }}
-                                            className={`w-full py-5 rounded-2xl font-black text-white transition-all shadow-xl flex items-center justify-center gap-3 ${hasApplied(selectedIncubator.id)
-                                                ? 'bg-green-600/20 text-green-400 border border-green-500/20'
-                                                : !canApply
-                                                    ? 'bg-gray-800 text-gray-500'
-                                                    : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30'
-                                                }`}
-                                        >
-                                            {hasApplied(selectedIncubator.id) ? (
-                                                <>Application Sent <CheckCircle2 size={20} /></>
-                                            ) : !canApply ? (
-                                                'Founder Access Only'
-                                            ) : (
-                                                <>Start Application <ArrowRight size={20} /></>
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Application Modal */}
-            <AnimatePresence>
-                {applyingIncubator && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[160] flex items-center justify-center md:p-6"
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#1E1E2F] w-full h-full md:h-auto md:max-w-2xl md:rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-y-auto"
-                        >
-                            <div className="p-6 md:p-10">
-                                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-10">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-blue-500/10 flex items-center justify-center font-black text-blue-500 text-xl md:text-2xl border border-blue-500/20">
-                                            {applyingIncubator.initials}
-                                        </div>
-                                        <div>
-                                            <h2 className="text-2xl md:text-3xl font-black text-white mb-2">Program Application</h2>
-                                            <p className="text-blue-400 font-bold text-xs md:text-sm tracking-wide line-clamp-1">Applying to {applyingIncubator.name}</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setApplyingIncubator(null)}
-                                        className="absolute top-4 right-4 md:relative md:top-0 md:right-0 p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all"
-                                    >
-                                        <X size={20} />
-                                    </button>
+                                    <section>
+                                        <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">Funding Support</h4>
+                                        <p className="text-sm font-bold text-gray-300">
+                                            {selectedIncubator.fundingSupport ? 'Available' : 'Not listed'}
+                                        </p>
+                                    </section>
                                 </div>
 
-                                <form className="space-y-8" onSubmit={handleApplicationSubmit}>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-6">
-                                            <div>
-                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-3 block">Startup Snapshot</label>
-                                                <div className="bg-[#0F0F14] rounded-2xl p-4 border border-white/5">
-                                                    <p className="text-sm font-black text-white mb-1">{startup?.startupName || 'Default Startup'}</p>
-                                                    <p className="text-[10px] font-bold text-blue-500 uppercase">{startup?.stage || 'Idea'} Stage</p>
+                                <div className="space-y-8">
+                                    <section>
+                                        <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">Cohorts</h4>
+                                        <div className="space-y-3">
+                                            {selectedIncubator.activeCohort ? (
+                                                <div className="bg-[#0F0F14] p-4 rounded-2xl border border-emerald-500/20">
+                                                    <p className="text-[10px] text-emerald-400 font-black uppercase mb-1">Active Cohort</p>
+                                                    <p className="text-sm font-bold text-white">{selectedIncubator.activeCohort.name}</p>
+                                                    <p className="text-xs text-gray-400">{formatDate(selectedIncubator.activeCohort.startDate)} - {formatDate(selectedIncubator.activeCohort.endDate)}</p>
+                                                    <p className="text-xs text-blue-400 mt-1">Capacity {selectedIncubator.activeCapacity}/{Number(selectedIncubator.activeCohort.maxCapacity) || 20}</p>
                                                 </div>
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-3 block">Market Gap / Problem</label>
-                                                <textarea
-                                                    required
-                                                    value={appForm.problem}
-                                                    onChange={(e) => setAppForm({ ...appForm, problem: e.target.value })}
-                                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 min-h-[140px]"
-                                                    placeholder="Briefly describe the core problem you are solving..."
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-6">
-                                            <div>
-                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-3 block">Current Traction</label>
-                                                <textarea
-                                                    required
-                                                    value={appForm.traction}
-                                                    onChange={(e) => setAppForm({ ...appForm, traction: e.target.value })}
-                                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 min-h-[100px]"
-                                                    placeholder="Users, revenue, Pilot project status..."
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-3 block">Why this Incubator?</label>
-                                                <textarea
-                                                    required
-                                                    value={appForm.reason}
-                                                    onChange={(e) => setAppForm({ ...appForm, reason: e.target.value })}
-                                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 min-h-[100px]"
-                                                    placeholder="How does this program fit your growth path?"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest pl-1 mb-3 block">Anticipated Funding Needs</label>
-                                                <input
-                                                    required
-                                                    type="text"
-                                                    value={appForm.funding}
-                                                    onChange={(e) => setAppForm({ ...appForm, funding: e.target.value })}
-                                                    className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50"
-                                                    placeholder="e.g. $50k for MVP development"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
+                                            ) : (
+                                                <div className="bg-[#0F0F14] p-4 rounded-2xl border border-white/10">
+                                                    <p className="text-sm font-bold text-gray-300">No active cohort</p>
+                                                </div>
+                                            )}
 
-                                    <div className="flex flex-col md:flex-row gap-5 pt-6 border-t border-white/5">
-                                        <button
-                                            type="submit"
-                                            className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-600/20 hover:shadow-blue-600/40 transition-all flex items-center justify-center gap-3"
-                                        >
-                                            Submit Application <Globe size={20} />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setApplyingIncubator(null)}
-                                            className="px-10 bg-white/5 text-gray-400 font-bold py-5 rounded-2xl hover:text-white transition-all border border-white/10"
-                                        >
-                                            Discard Draft
-                                        </button>
+                                            {selectedIncubator.upcomingCohort && (
+                                                <div className="bg-[#0F0F14] p-4 rounded-2xl border border-blue-500/20">
+                                                    <p className="text-[10px] text-blue-400 font-black uppercase mb-1">Upcoming Cohort</p>
+                                                    <p className="text-sm font-bold text-white">{selectedIncubator.upcomingCohort.name}</p>
+                                                    <p className="text-xs text-gray-400">Starts {formatDate(selectedIncubator.upcomingCohort.startDate)}</p>
+                                                </div>
+                                            )}
+
+                                            {selectedIncubator.pastCohorts.length > 0 && (
+                                                <div className="bg-[#0F0F14] p-4 rounded-2xl border border-white/10">
+                                                    <p className="text-[10px] text-gray-400 font-black uppercase mb-2">Past Cohorts</p>
+                                                    <div className="space-y-2">
+                                                        {selectedIncubator.pastCohorts.map(cohort => (
+                                                            <p key={cohort.id} className="text-xs text-gray-300">
+                                                                {cohort.name} ({formatDate(cohort.startDate)} - {formatDate(cohort.endDate)})
+                                                            </p>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </section>
+
+                                    {selectedIncubator.mentors.length > 0 && (
+                                        <section>
+                                            <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">Mentors</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                {selectedIncubator.mentors.map(mentor => (
+                                                    <span key={mentor} className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-300 font-semibold">
+                                                        {mentor}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
+
+                                    {selectedIncubator.successStats && (
+                                        <section>
+                                            <h4 className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">Success Stats</h4>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {Object.entries(selectedIncubator.successStats).map(([key, value]) => (
+                                                    <div key={key} className="bg-[#0F0F14] p-4 rounded-xl border border-white/10">
+                                                        <p className="text-[10px] text-gray-500 font-black uppercase mb-1">{key}</p>
+                                                        <p className="text-sm font-bold text-white">{String(value)}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
+
+                                    <div className="pt-2">
+                                        {(() => {
+                                            const state = getApplicationState(selectedIncubator);
+                                            const disabled = state.tone !== 'action' || !canApply || !currentStartup;
+
+                                            return (
+                                                <button
+                                                    disabled={disabled}
+                                                    onClick={() => handleApply(selectedIncubator)}
+                                                    className={`w-full py-4 rounded-2xl font-black transition-all shadow-xl ${state.tone === 'accepted' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20' :
+                                                        state.tone === 'rejected' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/20' :
+                                                            state.tone === 'pending' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20' :
+                                                                !currentStartup || !canApply ? 'bg-gray-800 text-gray-500' :
+                                                                    'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/30'
+                                                        }`}
+                                                >
+                                                    {state.label}
+                                                </button>
+                                            );
+                                        })()}
                                     </div>
-                                </form>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>

@@ -1,5 +1,178 @@
 export const SYSTEM_KEY = 'vanguard_system';
 
+const normalizeStringArray = (value) => {
+    if (Array.isArray(value)) return value.filter(Boolean).map(String);
+    if (typeof value === 'string') {
+        return value
+            .split(',')
+            .map(item => item.trim())
+            .filter(Boolean);
+    }
+    return [];
+};
+
+const normalizeSector = (value) => {
+    const normalized = (value || '').toString().trim().toLowerCase();
+    const map = {
+        tech: 'Technology',
+        technology: 'Technology',
+        finance: 'Finance',
+        fintech: 'Fintech',
+        marketing: 'Marketing',
+        operations: 'Operations',
+        general: 'General',
+        ai: 'AI/ML',
+        'ai/ml': 'AI/ML',
+        saas: 'SaaS',
+        edtech: 'Edtech',
+        healthtech: 'Healthtech',
+        other: 'General'
+    };
+
+    if (!normalized) return 'General';
+    return map[normalized] || value;
+};
+
+const normalizeAvailability = (value) => {
+    if (typeof value === 'string') {
+        return {
+            status: value,
+            days: [],
+            workload: 0,
+            sessionType: '1:1'
+        };
+    }
+
+    return {
+        status: value?.status || 'Available',
+        days: Array.isArray(value?.days) ? value.days : [],
+        workload: Number(value?.workload) || 0,
+        sessionType: value?.sessionType || '1:1'
+    };
+};
+
+const normalizeRole = (role) => {
+    const normalized = (role || '').toString().trim().toLowerCase();
+    if (!normalized) return '';
+    if (normalized === 'cofounder') return 'co-founder';
+    return normalized;
+};
+
+export const normalizeUserProfile = (user) => {
+    if (!user || typeof user !== 'object') return user;
+
+    const normalizedRole = normalizeRole(user.role);
+    const inferredMentor = !normalizedRole && (
+        Number(user?.portalData?.capacity) > 0 ||
+        Array.isArray(user?.expertise) ||
+        Array.isArray(user?.areas) ||
+        typeof user?.areas === 'string' ||
+        typeof user?.availability === 'object'
+    );
+    const role = inferredMentor ? 'mentor' : normalizedRole;
+    if (role !== 'mentor') {
+        return {
+            ...user,
+            uid: user.uid || user.id,
+            role: role || user.role
+        };
+    }
+
+    const rawExpertise = normalizeStringArray(
+        user.expertise ||
+        user.portalData?.expertise ||
+        user.areas ||
+        user.primarySkills
+    );
+    const expertise = rawExpertise.length > 0 ? rawExpertise : ['General Mentorship'];
+    const sector = normalizeSector(
+        user.sector ||
+        user.portalData?.sector ||
+        user.industry
+    );
+    const capacity = Number(user.portalData?.capacity) || Number(user.capacity) || 5;
+    const availability = normalizeAvailability(user.availability || user.portalData?.availability);
+    const badge = user.badge || user.portalData?.badge || 'Verified';
+
+    return {
+        ...user,
+        uid: user.uid || user.id,
+        role: 'mentor',
+        name: user.name || user.fullName || user.portalData?.fullName || user.email?.split('@')[0] || 'Mentor',
+        email: user.email || '',
+        expertise,
+        sector,
+        bio: user.bio || user.portalData?.bio || 'Mentor profile initialized.',
+        availability,
+        badge,
+        responseRate: Number(user.responseRate) || Number(user.portalData?.responseRate) || null,
+        portalData: {
+            ...user.portalData,
+            expertise,
+            sector,
+            bio: user.bio || user.portalData?.bio || 'Mentor profile initialized.',
+            company: user.portalData?.company || user.company || '',
+            currentRole: user.portalData?.currentRole || user.currentRole || '',
+            capacity,
+            availability,
+            badge
+        }
+    };
+};
+
+export const isValidMentorUser = (user) => {
+    if (!user || normalizeRole(user.role) !== 'mentor') return false;
+    if (!user.uid || !user.name || !user.email) return false;
+    if (!Array.isArray(user.expertise) || user.expertise.length === 0) return false;
+    if (!user.sector || !user.bio) return false;
+    if (!user.availability || typeof user.availability !== 'object') return false;
+    if (!user.portalData || typeof user.portalData !== 'object') return false;
+    if (!user.portalData.sector) return false;
+    if (!Number.isFinite(Number(user.portalData.capacity)) || Number(user.portalData.capacity) <= 0) return false;
+    return true;
+};
+
+export const getMentorUsers = (system) => {
+    return Object.values(system?.users || {})
+        .map(normalizeUserProfile)
+        .filter(isValidMentorUser);
+};
+
+const normalizeUsersMap = (users) => {
+    return Object.values(users || {}).reduce((accumulator, user) => {
+        const normalized = normalizeUserProfile(user);
+        if (normalized?.uid) {
+            accumulator[normalized.uid] = normalized;
+        }
+        return accumulator;
+    }, {});
+};
+
+const mergeUsersWithProfileKeys = (usersMap) => {
+    const merged = { ...(usersMap || {}) };
+
+    try {
+        for (let i = 0; i < localStorage.length; i += 1) {
+            const key = localStorage.key(i);
+            if (!key || !key.startsWith('profile_')) continue;
+
+            const raw = localStorage.getItem(key);
+            if (!raw) continue;
+
+            const parsed = JSON.parse(raw);
+            const normalized = normalizeUserProfile(parsed);
+
+            if (normalized?.uid) {
+                merged[normalized.uid] = normalized;
+            }
+        }
+    } catch (error) {
+        console.error('Error merging profile keys into system users:', error);
+    }
+
+    return merged;
+};
+
 export const getSystem = () => {
     let system = {
         users: {},
@@ -22,7 +195,7 @@ export const getSystem = () => {
             system = {
                 ...system,
                 ...parsed,
-                users: parsed.users || {},
+                users: mergeUsersWithProfileKeys(normalizeUsersMap(parsed.users || {})),
                 startups: (parsed.startups || []).map(s => ({
                     ...s,
                     milestones: s.milestones || [],
@@ -80,7 +253,7 @@ export const getSystem = () => {
                 : legacyUsers;
 
             system = {
-                users: normalizedUsers,
+                users: mergeUsersWithProfileKeys(normalizeUsersMap(normalizedUsers)),
                 startups: legacyStartups,
                 incubators: legacyIncubators,
                 applications: legacyApplications,
@@ -98,6 +271,10 @@ export const getSystem = () => {
 };
 
 export const saveSystem = (system) => {
-    localStorage.setItem(SYSTEM_KEY, JSON.stringify(system));
+    const normalizedSystem = {
+        ...system,
+        users: mergeUsersWithProfileKeys(normalizeUsersMap(system.users || {}))
+    };
+    localStorage.setItem(SYSTEM_KEY, JSON.stringify(normalizedSystem));
     window.dispatchEvent(new Event('storage'));
 };

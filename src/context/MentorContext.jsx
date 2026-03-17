@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { calculateExecutionScore } from '../context/StartupContext';
 import { useMessaging } from './MessagingContext';
-import { getSystem, saveSystem } from '../utils/system';
+import { getSystem, normalizeUserProfile, saveSystem } from '../utils/system';
 
 
 const MentorContext = createContext();
@@ -24,24 +24,11 @@ export const MentorProvider = ({ children }) => {
         }
 
         const system = getSystem();
+        const mentorProfile = normalizeUserProfile(system.users?.[user.uid] || user);
 
-        // Use the unified SSOT user object
-        setProfile({
-            expertise: user.expertise || 'General Mentorship',
-            sector: user.sector || 'General',
-            badge: user.badge || 'Verified Mentor',
-            bio: user.bio || '',
-            name: user.name || 'Mentor',
-            email: user.email || '',
-            availability: {
-                status: 'Active',
-                days: ['Mon', 'Wed', 'Fri'],
-                sessionType: '1:1',
-                ...(user.availability || {})
-            }
-        });
+        setProfile(mentorProfile);
 
-        setRequests((system.mentorRequests || []).filter(r => r.mentorId === user.uid));
+        setRequests((system.mentorRequests || []).filter(r => r.mentorId === mentorProfile.uid));
         setSessions((system.sessions || []).filter(s => s.mentorId === user.uid));
         setMentees((system.startups || []).filter(s => s.mentorAssigned === user.uid));
         setLoading(false);
@@ -57,7 +44,7 @@ export const MentorProvider = ({ children }) => {
 
     const updateProfile = (updates) => {
         if (!user) return;
-        authUpdateProfile(updates);
+        authUpdateProfile(normalizeUserProfile({ ...profile, ...updates, uid: user.uid, role: 'mentor' }));
     };
 
     const updateSession = (sessionId, updates) => {
@@ -73,9 +60,16 @@ export const MentorProvider = ({ children }) => {
         const request = system.mentorRequests.find(r => r.id === requestId);
         if (!request) return;
 
+        const startup = system.startups.find(s => s.startupId === request.startupId);
+        if (!startup || (startup.mentorAssigned && startup.mentorAssigned !== user.uid)) return;
+
         // Update request status
         system.mentorRequests = system.mentorRequests.map(r =>
-            r.id === requestId ? { ...r, status: 'accepted', updatedAt: new Date().toISOString() } : r
+            r.id === requestId
+                ? { ...r, status: 'accepted', updatedAt: new Date().toISOString() }
+                : r.startupId === request.startupId && r.status === 'pending'
+                    ? { ...r, status: 'declined', updatedAt: new Date().toISOString() }
+                    : r
         );
 
         // Assign mentor to startup + log activity
@@ -133,10 +127,14 @@ export const MentorProvider = ({ children }) => {
 
     const scheduleSession = (startupId, date, time, topic = 'Mentorship Session', meetingLink = '') => {
         const system = getSystem();
+        const startup = system.startups.find(s => s.startupId === startupId);
+        if (!startup || startup.mentorAssigned !== user.uid) return;
+
         const newSession = {
             id: `ses_${Date.now()}`,
             mentorId: user.uid,
             startupId,
+            founderId: startup.founderId,
             date,
             time,
             topic,
@@ -170,6 +168,8 @@ export const MentorProvider = ({ children }) => {
         const system = getSystem();
         const session = system.sessions.find(s => s.id === sessionId);
         if (!session) return;
+        const startup = system.startups.find(s => s.startupId === session.startupId);
+        if (!startup || startup.mentorAssigned !== user.uid) return;
 
         const resolvedDate = schedule?.date || session.date;
         const resolvedTime = schedule?.time || session.time;
@@ -209,6 +209,8 @@ export const MentorProvider = ({ children }) => {
         const system = getSystem();
         const session = system.sessions.find(s => s.id === sessionId);
         if (!session) return;
+        const startup = system.startups.find(s => s.startupId === session.startupId);
+        if (!startup || startup.mentorAssigned !== user.uid) return;
 
         session.status = 'declined';
         session.updatedAt = new Date().toISOString();
@@ -237,6 +239,8 @@ export const MentorProvider = ({ children }) => {
         const system = getSystem();
         const session = system.sessions.find(s => s.id === sessionId);
         if (!session) return;
+        const startup = system.startups.find(s => s.startupId === session.startupId);
+        if (!startup || startup.mentorAssigned !== user.uid) return;
 
         session.status = 'completed';
         session.notes = feedback.advice;
@@ -306,6 +310,10 @@ export const MentorProvider = ({ children }) => {
 
     const messaging = useMessaging();
     const sendMessage = (startupId, text) => {
+        const system = getSystem();
+        const startup = system.startups.find(s => s.startupId === startupId);
+        if (!startup || startup.mentorAssigned !== user.uid) return;
+
         messaging.sendMessage({
             startupId,
             conversationType: 'mentor',

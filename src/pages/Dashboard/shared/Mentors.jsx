@@ -26,11 +26,32 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getSystem } from '../../../utils/system';
+import { getMentorUsers, getSystem } from '../../../utils/system';
+
+const normalizeSectorLabel = (value) => {
+    const normalized = (value || '').toString().trim().toLowerCase();
+    const map = {
+        tech: 'Technology',
+        technology: 'Technology',
+        finance: 'Finance',
+        fintech: 'Fintech',
+        marketing: 'Marketing',
+        operations: 'Operations',
+        general: 'General',
+        ai: 'AI/ML',
+        'ai/ml': 'AI/ML',
+        saas: 'SaaS',
+        edtech: 'Edtech',
+        healthtech: 'Healthtech'
+    };
+
+    if (!normalized) return 'General';
+    return map[normalized] || value;
+};
 
 const Mentors = () => {
     const { user } = useAuth();
-    const { startup, requestMentorship, mentorRequests } = useStartup();
+    const { startup, requestMentorship, mentorRequests, removeAssignedMentor } = useStartup();
     const location = useLocation();
     const navigate = useNavigate();
     const role = user?.role === 'co-founder' ? 'co-founder' : 'founder';
@@ -58,7 +79,7 @@ const Mentors = () => {
     const [filters, setFilters] = useState({
         sector: 'All',
         stages: [],
-        sessionType: 'All',
+        expertise: 'All',
         verifiedOnly: false
     });
     const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
@@ -129,22 +150,6 @@ const Mentors = () => {
                     return [];
                 };
 
-                const industryLabel = (value) => {
-                    const normalized = (value || '').toString().trim().toLowerCase();
-                    const map = {
-                        tech: 'Technology',
-                        technology: 'Technology',
-                        finance: 'Finance',
-                        fintech: 'Fintech',
-                        marketing: 'Marketing',
-                        operations: 'Operations',
-                        general: 'General'
-                    };
-                    if (map[normalized]) return map[normalized];
-                    if (!normalized) return 'General';
-                    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-                };
-
                 const stageLabel = (value) => {
                     const normalized = (value || '').toString().trim().toLowerCase();
                     const map = {
@@ -157,12 +162,10 @@ const Mentors = () => {
                     return map[normalized] || null;
                 };
 
-                const mentorsList = Object.values(allUsers)
-                    .filter(u => u.role === 'mentor')
+                const mentorsList = getMentorUsers({ users: allUsers })
                     .map((m, idx) => ({
-                        // Prefer mentor signup fields from user profile before generic defaults.
                         ...(() => {
-                            const rawFocusAreas = toArray(m.profileData?.focusAreas || m.areas || m.expertise || m.primarySkills);
+                            const rawFocusAreas = toArray(m.profileData?.focusAreas || m.expertise || m.primarySkills);
                             const normalizedStage = stageLabel(m.profileData?.stageSupport || m.stageSupport || m.stage);
                             const stages = Array.isArray(m.profileData?.supportedStages)
                                 ? m.profileData.supportedStages
@@ -178,22 +181,23 @@ const Mentors = () => {
                             return {
                                 focusAreas: rawFocusAreas.length > 0 ? rawFocusAreas : ['Strategy', 'Product', 'Fundraising'],
                                 supportedStages: stages,
-                                expertiseSector: industryLabel(m.profileData?.expertiseSector || m.expertiseSector || m.industry),
+                                expertiseSector: normalizeSectorLabel(m.profileData?.expertiseSector || m.expertiseSector || m.industry),
                                 shortBio: m.profileData?.shortBio || m.bio || 'Professional mentor helping startups scale.',
                                 experience: experienceText,
-                                title: m.profileData?.title || m.title || 'Expert Mentor'
+                                title: m.profileData?.currentRole || m.profileData?.title || m.title || 'Expert Mentor'
                             };
                         })(),
                         id: m.uid || `mentor-${idx}`,
                         name: m.name || m.profileData?.fullName || m.email.split('@')[0],
                         initials: (m.name || m.email.split('@')[0]).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
                         mentorshipFocus: m.profileData?.mentorshipFocus || 'Scaling & Growth',
+                        expertise: Array.isArray(m.expertise) ? m.expertise : [],
                         responseRate: m.profileData?.responseRate || 95,
-                        verified: m.profileData?.verified ?? true,
-                        sessionType: ['group', 'both', 'one-on-one'].includes((m.profileData?.sessionType || m.sessionType || '').toLowerCase())
-                            ? (m.profileData?.sessionType || m.sessionType || '').toLowerCase()
-                            : 'one-on-one',
-                        availabilityStatus: m.profileData?.availabilityStatus || 'available',
+                        verified: (m.badge || '').toLowerCase() === 'verified' || m.profileData?.verified === true,
+                        badge: m.badge || m.profileData?.badge || 'Verified',
+                        availabilityStatus: m.availability?.status || m.profileData?.availability?.status || 'Available',
+                        availability: m.availability || m.profileData?.availability || { status: 'Available', days: [], workload: 0, sessionType: '1:1' },
+                        capacity: Number(m.portalData?.capacity) || 5,
                         totalMentees: m.profileData?.totalMentees || 0,
                         rating: m.profileData?.rating || 5.0,
                         mentorshipStyle: m.profileData?.mentorshipStyle || 'Direct & Strategic with a focus on measurable KPIs.',
@@ -212,15 +216,20 @@ const Mentors = () => {
         };
 
         refreshData();
+        const handleStorage = () => refreshData();
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
     }, [user.uid]);
 
     // --- Logic: Dynamic Response Rate ---
     const processedMentors = useMemo(() => {
         const system = getSystem();
         const allRequests = system.mentorRequests || [];
+        const allStartups = system.startups || [];
         return mentors.map(m => {
             const mentorRequests = allRequests.filter(r => r.mentorId === m.id);
             const acceptedRequests = mentorRequests.filter(r => r.status === 'accepted').length;
+            const assignedStartups = allStartups.filter(startupItem => startupItem.mentorAssigned === m.id).length;
 
             let calculatedRate = m.responseRate;
             if (mentorRequests.length > 0) {
@@ -228,7 +237,12 @@ const Mentors = () => {
                 calculatedRate = Math.floor(70 + (ratio * 28)); // Adjusted math for realistic premium feel
             }
 
-            return { ...m, dynamicResponseRate: calculatedRate };
+            return {
+                ...m,
+                dynamicResponseRate: calculatedRate,
+                assignedStartups,
+                workload: `${assignedStartups}/${m.capacity}`
+            };
         });
     }, [mentors]);
 
@@ -246,9 +260,9 @@ const Mentors = () => {
             );
         }
 
-        if (filters.sessionType !== 'All') {
+        if (filters.expertise !== 'All') {
             result = result.filter(m =>
-                m.sessionType.toLowerCase() === filters.sessionType.toLowerCase() || m.sessionType === 'both'
+                m.expertise.includes(filters.expertise) || m.focusAreas.includes(filters.expertise)
             );
         }
 
@@ -256,7 +270,7 @@ const Mentors = () => {
             result = result.filter(m => m.verified);
         }
 
-        const founderSector = startup?.sector || '';
+        const founderSector = normalizeSectorLabel(startup?.sector || startup?.expertiseSector || '');
         const founderStage = startup?.stage || 'Idea';
 
         result = result.map(m => {
@@ -274,6 +288,10 @@ const Mentors = () => {
         return result;
     }, [processedMentors, filters, startup]);
 
+    const sectorOptions = useMemo(() => {
+        return ['All', ...new Set(processedMentors.map(mentor => mentor.expertiseSector).filter(Boolean))];
+    }, [processedMentors]);
+
     // --- Helpers ---
     const toggleStageFilter = (stage) => {
         setFilters(prev => ({
@@ -288,7 +306,7 @@ const Mentors = () => {
         setFilters({
             sector: 'All',
             stages: [],
-            sessionType: 'All',
+            expertise: 'All',
             verifiedOnly: false
         });
     };
@@ -310,6 +328,10 @@ const Mentors = () => {
 
     const isAccessRestricted = !['founder', 'co-founder'].includes(user?.role);
     const canRequest = user?.role === 'founder' && !!startup || (user?.role === 'co-founder' && startup?.coFounderPermissions?.mentorship);
+
+    const expertiseOptions = useMemo(() => {
+        return ['All', ...new Set(processedMentors.flatMap(mentor => mentor.expertise || []).filter(Boolean))];
+    }, [processedMentors]);
 
     if (loading) return (
         <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
@@ -419,26 +441,22 @@ const Mentors = () => {
                                         onChange={(e) => setFilters({ ...filters, sector: e.target.value })}
                                         className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-gray-300 focus:outline-none focus:border-[#8B5CF6]/50 transition-all cursor-pointer"
                                     >
-                                        <option value="All">All Tech Sectors</option>
-                                        <option value="Fintech">Fintech / DeFi</option>
-                                        <option value="D2C">D2C / E-commerce</option>
-                                        <option value="Deep Tech">Deep Tech / AI</option>
-                                        <option value="SaaS">SaaS / Enterprise</option>
-                                        <option value="Healthtech">Healthtech / Biotech</option>
-                                        <option value="Edtech">Edtech</option>
+                                        {sectorOptions.map((sector) => (
+                                            <option key={sector} value={sector}>{sector === 'All' ? 'All Sectors' : sector}</option>
+                                        ))}
                                     </select>
                                 </div>
-                                {/* Session Type Filter */}
+                                {/* Expertise Filter */}
                                 <div>
-                                    <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block tracking-widest pl-1">Session Protocol</label>
+                                    <label className="text-[10px] text-gray-500 font-black uppercase mb-3 block tracking-widest pl-1">Expertise</label>
                                     <select
-                                        value={filters.sessionType}
-                                        onChange={(e) => setFilters({ ...filters, sessionType: e.target.value })}
+                                        value={filters.expertise}
+                                        onChange={(e) => setFilters({ ...filters, expertise: e.target.value })}
                                         className="w-full bg-[#0F0F14] border border-white/10 rounded-2xl p-4 text-sm text-gray-300 focus:outline-none focus:border-[#8B5CF6]/50 transition-all cursor-pointer"
                                     >
-                                        <option value="All">All Formats</option>
-                                        <option value="One-on-One">1-on-1 Deep Dive</option>
-                                        <option value="Group">Group Board</option>
+                                        {expertiseOptions.map((expertise) => (
+                                            <option key={expertise} value={expertise}>{expertise === 'All' ? 'All Expertise' : expertise}</option>
+                                        ))}
                                     </select>
                                 </div>
 
@@ -488,7 +506,7 @@ const Mentors = () => {
                                 <Star size={14} className="text-[#8B5CF6]" fill="currentColor" /> Strategic Ranking
                             </h4>
                             <p className="text-[11px] text-gray-400 font-medium leading-relaxed relative z-10">
-                                The network is currently optimized to surface mentors who specialize in <span className="text-white font-bold">{startup?.stage || 'Idea'}</span> stage startups within the <span className="text-white font-bold">{startup?.expertiseSector || 'Tech'}</span> sector.
+                                The network is currently optimized to surface mentors who specialize in <span className="text-white font-bold">{startup?.stage || 'Idea'}</span> stage startups within the <span className="text-white font-bold">{normalizeSectorLabel(startup?.sector || startup?.expertiseSector || 'General')}</span> sector.
                             </p>
                         </div>
                     </aside>
@@ -537,7 +555,7 @@ const Mentors = () => {
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="flex items-center justify-end gap-1 text-green-400 font-black text-[9px] uppercase tracking-widest mb-2">
-                                                        <Shield size={12} className="fill-green-400/10" /> {mentor.verified ? 'Verified' : 'Associate'}
+                                                        <Shield size={12} className="fill-green-400/10" /> {mentor.badge}
                                                     </div>
                                                     <div className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{mentor.dynamicResponseRate}% Global Response</div>
                                                 </div>
@@ -552,6 +570,12 @@ const Mentors = () => {
                                                 <div className="flex flex-wrap gap-2">
                                                     <div className="px-3 py-1.5 bg-[#8B5CF6]/10 text-[#8B5CF6] text-[10px] font-black uppercase tracking-widest rounded-xl border border-[#8B5CF6]/20">
                                                         {mentor.expertiseSector}
+                                                    </div>
+                                                    <div className="px-3 py-1.5 bg-white/5 text-gray-300 text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10">
+                                                        {mentor.workload} Workload
+                                                    </div>
+                                                    <div className="px-3 py-1.5 bg-white/5 text-gray-300 text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10">
+                                                        {mentor.availabilityStatus}
                                                     </div>
                                                     {mentor.supportedStages.slice(0, 2).map(s => (
                                                         <div key={s} className="px-3 py-1.5 bg-white/5 text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10">
@@ -666,6 +690,12 @@ const Mentors = () => {
                                                         className="px-8 py-4 bg-white/5 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2"
                                                     >
                                                         <Calendar size={16} /> Schedule Session
+                                                    </button>
+                                                    <button
+                                                        onClick={removeAssignedMentor}
+                                                        className="px-8 py-4 bg-rose-500/10 text-rose-400 text-[10px] font-black uppercase tracking-widest rounded-2xl border border-rose-500/20 hover:bg-rose-500/20 transition-all"
+                                                    >
+                                                        Remove Mentor
                                                     </button>
                                                     <button
                                                         onClick={() => setSelectedMentor(myMentor)}

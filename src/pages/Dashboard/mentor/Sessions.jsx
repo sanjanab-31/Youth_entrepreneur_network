@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMentor } from '../../../context/MentorContext';
+import { getSystem } from '../../../utils/system';
 
 const SessionItem = ({ session, onComplete, onConfirm }) => {
     const startupName = session.startupName;
@@ -158,18 +159,9 @@ const Sessions = () => {
     const [completingSession, setCompletingSession] = useState(null);
 
     const hydrateSession = (s) => {
-        const allStartups = JSON.parse(localStorage.getItem('vanguard_startups') || '[]');
-        const allUsersRaw = localStorage.getItem('vanguard_users');
-        let allUsers = {};
-        try {
-            allUsers = JSON.parse(allUsersRaw || '{}');
-            if (Array.isArray(allUsers)) {
-                allUsers = allUsers.reduce((acc, u) => {
-                    if (u.uid || u.id) acc[u.uid || u.id] = u;
-                    return acc;
-                }, {});
-            }
-        } catch (e) { allUsers = {}; }
+        const system = getSystem();
+        const allStartups = system.startups || [];
+        const allUsers = system.users || {};
 
         const startup = allStartups.find(st => st.startupId === s.startupId);
         const founder = startup ? allUsers[startup.founderId] : null;

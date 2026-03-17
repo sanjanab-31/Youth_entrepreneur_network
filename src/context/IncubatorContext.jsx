@@ -247,33 +247,40 @@ export const IncubatorProvider = ({ children }) => {
 
     const onboardMentor = (mentorData) => {
         const mentorId = `MNT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+        const expertise = Array.isArray(mentorData.expertise)
+            ? mentorData.expertise
+            : (mentorData.expertise || mentorData.primarySkills || '')
+                .split(',')
+                .map(item => item.trim())
+                .filter(Boolean);
+
+        const availability = {
+            status: 'Available',
+            days: ['Mon', 'Wed', 'Fri'],
+            workload: 0,
+            sessionType: '1:1',
+            ...(mentorData.availability || {})
+        };
+
         const newMentor = {
             uid: mentorId,
             name: mentorData.name,
             email: mentorData.email || `${mentorData.name.toLowerCase().replace(/\s/g, '.')}@example.com`,
             role: 'mentor',
-            expertise: mentorData.expertise || [],
+            expertise: expertise.length > 0 ? expertise : ['General Mentorship'],
             sector: mentorData.sector || 'General',
             company: mentorData.company || '',
             linkedin: mentorData.linkedin || '',
-            bio: mentorData.bio || '',
-            availability: {
-                status: 'Active',
-                days: ['Mon', 'Wed', 'Fri'],
-                sessionType: '1:1',
-                ...(mentorData.availability || {})
-            },
+            bio: mentorData.bio || 'Mentor profile created by incubator.',
+            availability,
+            badge: mentorData.badge || 'Verified',
             portalData: {
                 sector: mentorData.sector || 'General',
                 company: mentorData.company || '',
                 currentRole: mentorData.currentRole || '',
                 capacity: Number(mentorData.capacity) || 5,
-                availability: {
-                    status: 'Active',
-                    days: ['Mon', 'Wed', 'Fri'],
-                    sessionType: '1:1',
-                    ...(mentorData.availability || {})
-                }
+                availability,
+                badge: mentorData.badge || 'Verified'
             },
             onboardedBy: user.uid,
             createdAt: new Date().toISOString()

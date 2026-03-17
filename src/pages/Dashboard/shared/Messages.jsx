@@ -19,7 +19,7 @@ import { useMessaging } from '../../../context/MessagingContext';
 const Messages = () => {
     const { user } = useAuth();
     const location = useLocation();
-    const { conversations, messages, sendMessage, markAsRead, loading } = useMessaging();
+    const { conversations, messages, sendMessage, markAsRead, getConversationMessages, loading } = useMessaging();
     const [selectedConvo, setSelectedConvo] = useState(null);
     const [messageText, setMessageText] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -28,8 +28,12 @@ const Messages = () => {
     // Auto-select chat from navigation state
     useEffect(() => {
         if (!loading && location.state?.openChat) {
-            const { startupId, type } = location.state.openChat;
-            const convo = conversations.find(c => c.startupId === startupId && c.type === type);
+            const { startupId, type, participantId } = location.state.openChat;
+            const convo = conversations.find(c =>
+                c.startupId === startupId
+                && c.type === type
+                && (!participantId || c.participantId === participantId)
+            );
             if (convo) setSelectedConvo(convo);
         }
     }, [loading, location.state, conversations]);
@@ -44,7 +48,7 @@ const Messages = () => {
     // Update unread status when a conversation is focused
     useEffect(() => {
         if (selectedConvo) {
-            markAsRead(selectedConvo.startupId, selectedConvo.type);
+            markAsRead(selectedConvo);
         }
     }, [selectedConvo, messages, markAsRead]);
 
@@ -55,6 +59,7 @@ const Messages = () => {
         sendMessage({
             startupId: selectedConvo.startupId,
             conversationType: selectedConvo.type,
+            receiverId: selectedConvo.participantId || selectedConvo.id,
             message: messageText
         });
         setMessageText('');
@@ -69,10 +74,7 @@ const Messages = () => {
         : filteredConvos;
 
     const activeMessages = selectedConvo
-        ? messages.filter(m =>
-            m.startupId === selectedConvo.startupId &&
-            m.conversationType === selectedConvo.type
-        )
+        ? getConversationMessages(selectedConvo)
         : [];
 
     const StatusBadge = ({ role }) => {
@@ -125,14 +127,14 @@ const Messages = () => {
                     <div className="flex-1 overflow-y-auto p-4 space-y-2">
                         {roleFilteredConvos.map((convo) => (
                             <button
-                                key={`${convo.id}_${convo.type}`}
+                                key={`${convo.id}_${convo.type}_${convo.participantId || 'none'}`}
                                 onClick={() => setSelectedConvo(convo)}
-                                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all group border ${selectedConvo?.id === convo.id && selectedConvo?.type === convo.type
+                                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all group border ${selectedConvo?.id === convo.id && selectedConvo?.type === convo.type && selectedConvo?.participantId === convo.participantId
                                     ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/20 shadow-lg'
                                     : 'hover:bg-white/5 border-transparent opacity-80 hover:opacity-100'
                                     }`}
                             >
-                                <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-white shadow-lg border border-white/10 transition-transform group-hover:scale-110 ${selectedConvo?.id === convo.id && selectedConvo?.type === convo.type ? 'bg-[#8B5CF6]' : 'bg-white/5'
+                                <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-white shadow-lg border border-white/10 transition-transform group-hover:scale-110 ${selectedConvo?.id === convo.id && selectedConvo?.type === convo.type && selectedConvo?.participantId === convo.participantId ? 'bg-[#8B5CF6]' : 'bg-white/5'
                                     }`}>
                                     {convo.name[0]}
                                 </div>

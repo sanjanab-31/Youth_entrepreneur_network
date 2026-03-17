@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMentor } from '../../../context/MentorContext';
+import { getSystem } from '../../../utils/system';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,18 +27,9 @@ import { useMentor } from '../../../context/MentorContext';
  * fetched fresh from localStorage every render.
  */
 const hydrateRequest = (request) => {
-    const allStartups = JSON.parse(localStorage.getItem('vanguard_startups') || '[]');
-    const allUsersRaw = localStorage.getItem('vanguard_users');
-    let allUsers = {};
-    try {
-        allUsers = JSON.parse(allUsersRaw || '{}');
-        if (Array.isArray(allUsers)) {
-            allUsers = allUsers.reduce((acc, u) => {
-                if (u.uid || u.id) acc[u.uid || u.id] = u;
-                return acc;
-            }, {});
-        }
-    } catch (e) { allUsers = {}; }
+    const system = getSystem();
+    const allStartups = system.startups || [];
+    const allUsers = system.users || {};
 
     const startup = allStartups.find(s => s.startupId === request.startupId) || null;
     const founder = startup ? allUsers[startup.founderId] : null;

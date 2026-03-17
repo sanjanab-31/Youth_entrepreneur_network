@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Search,
     UserPlus,
@@ -26,6 +26,62 @@ import { useStartup } from '../../../context/StartupContext';
 import { getSystem } from '../../../utils/system';
 import { Navigate } from 'react-router-dom';
 
+const normalizeStage = (value) => {
+    const normalized = (value || '').toString().trim().toLowerCase();
+    const map = {
+        idea: 'Idea',
+        validation: 'Validation',
+        mvp: 'MVP',
+        revenue: 'Revenue',
+        scale: 'Scale'
+    };
+
+    return map[normalized] || (value ? String(value) : 'Any');
+};
+
+const normalizeSector = (value) => {
+    if (!value) return 'General';
+
+    const normalized = value.toString().trim().toLowerCase();
+    const map = {
+        ai: 'AI/ML',
+        'ai/ml': 'AI/ML',
+        fintech: 'Fintech',
+        edtech: 'Edtech',
+        healthtech: 'Healthtech',
+        saas: 'SaaS',
+        tech: 'Technology',
+        technology: 'Technology',
+        other: 'General'
+    };
+
+    return map[normalized] || value;
+};
+
+const toSkillArray = (value) => {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === 'string') {
+        return value
+            .split(',')
+            .map(item => item.trim())
+            .filter(Boolean);
+    }
+    return [];
+};
+
+const normalizeCoFounderProfile = (userProfile) => ({
+    ...userProfile,
+    uid: userProfile.uid,
+    email: userProfile.email,
+    name: userProfile.name || userProfile.fullName || userProfile.email?.split('@')[0] || 'Co-Founder',
+    skills: toSkillArray(userProfile.skills || userProfile.primarySkills || userProfile.profileData?.primarySkills),
+    expertiseSector: normalizeSector(userProfile.expertiseSector || userProfile.sector || userProfile.profileData?.sector),
+    preferredStage: normalizeStage(userProfile.preferredStage || userProfile.stage || userProfile.profileData?.stage),
+    experienceSummary: userProfile.experienceSummary || userProfile.bio || userProfile.profileData?.bio || 'Available to join a startup team.',
+    location: userProfile.location || userProfile.profileData?.location || '',
+    commitment: userProfile.commitment || userProfile.profileData?.commitment || ''
+});
+
 const FindCoFounder = () => {
     const { user } = useAuth();
     const { startup, loading, sendDirectInvitation, cancelInvitation, invitations: startupInvitations } = useStartup();
@@ -37,18 +93,40 @@ const FindCoFounder = () => {
     const [inviteMessage, setInviteMessage] = useState('');
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [showSuccessToast, setShowSuccessToast] = useState(false);
+    const [systemState, setSystemState] = useState({ users: {}, startups: [] });
 
     if (loading) return null;
     if (!startup) return <Navigate to="/founder/my-startup" />;
 
-    // --- DATA FETCHING ---
-    const system = getSystem();
-    const allUsers = Object.values(system.users || {});
-    const allStartups = system.startups || [];
+    useEffect(() => {
+        const refreshData = () => {
+            const system = getSystem();
+            setSystemState({
+                users: system.users || {},
+                startups: system.startups || []
+            });
+        };
+
+        refreshData();
+        const handleStorage = () => refreshData();
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, []);
+
+    const allUsers = useMemo(
+        () => Object.values(systemState.users || {}),
+        [systemState.users]
+    );
+    const allStartups = systemState.startups || [];
+
+    const normalizedCoFounders = useMemo(
+        () => allUsers.map(normalizeCoFounderProfile),
+        [allUsers]
+    );
 
     // Filter for unlinked co-founders
     const unlinkedCoFounders = useMemo(() => {
-        return allUsers.filter(u => {
+        return normalizedCoFounders.filter(u => {
             const role = u.role?.toLowerCase() || '';
             if (role !== 'co-founder' && role !== 'cofounder') return false;
             if (u.uid === user.uid) return false;
@@ -63,17 +141,21 @@ const FindCoFounder = () => {
             // Check if they already have an invitation from THIS startup 
             // We omit them if there's any invitation record (pending, accepted, declined) 
             // to prevent spam or re-inviting someone who declined.
-            const hasInvitation = startupInvitations?.some(inv => inv.invitedUserId === u.uid);
+            const hasInvitation = startupInvitations?.some(inv =>
+                inv.invitedUserId === u.uid ||
+                (inv.invitedEmail && u.email && inv.invitedEmail.toLowerCase() === u.email.toLowerCase())
+            );
             if (hasInvitation) return false;
 
             return true;
         });
-    }, [allUsers, allStartups, user.uid, startupInvitations]);
+    }, [normalizedCoFounders, allStartups, user.uid, startupInvitations]);
 
     // --- MATCHING LOGIC ---
     const getMatchScore = (cf) => {
         let score = 0;
         const startupSkillGap = startup.skillGap?.toLowerCase() || '';
+        const startupSector = normalizeSector(startup.expertiseSector || startup.sector);
         const cfSkills = (cf.skills || []).map(s => s.toLowerCase());
         const cfSummary = (cf.experienceSummary || '').toLowerCase();
 
@@ -82,10 +164,10 @@ const FindCoFounder = () => {
         if (cfSummary.includes(startupSkillGap)) score += 10;
 
         // 2. Sector Match (Weight: 25)
-        if (cf.expertiseSector === startup.expertiseSector) score += 25;
+        if (cf.expertiseSector === startupSector) score += 25;
 
         // 3. Stage Alignment (Weight: 25)
-        if (cf.preferredStage === startup.stage) score += 25;
+        if (cf.preferredStage === startup.stage || cf.preferredStage === 'Any') score += 25;
 
         return Math.min(score, 100);
     };
@@ -106,6 +188,10 @@ const FindCoFounder = () => {
     // Unique skills and sectors for filters
     const availableSectors = ['All', ...new Set(unlinkedCoFounders.map(u => u.expertiseSector).filter(Boolean))];
     const availableSkills = ['All', ...new Set(unlinkedCoFounders.flatMap(u => u.skills || []).filter(Boolean))];
+
+    const usersById = useMemo(() => {
+        return Object.fromEntries(normalizedCoFounders.map(profile => [profile.uid, profile]));
+    }, [normalizedCoFounders]);
 
     // --- HANDLERS ---
     const handleInvite = (cf) => {
@@ -196,7 +282,7 @@ const FindCoFounder = () => {
                                 {startup.skillGap || "General Skills"} Needed
                             </span>
                             <span className="px-3 py-1 bg-white/5 text-gray-400 text-[10px] font-black uppercase rounded-lg border border-white/10">
-                                {startup.expertiseSector}
+                                {normalizeSector(startup.expertiseSector || startup.sector)}
                             </span>
                             <span className="px-3 py-1 bg-white/5 text-gray-400 text-[10px] font-black uppercase rounded-lg border border-white/10">
                                 {startup.stage} Stage
@@ -337,7 +423,7 @@ const FindCoFounder = () => {
                         <tbody className="divide-y divide-white/5">
                             {(startupInvitations || []).length > 0 ? (
                                 [...startupInvitations].reverse().map((inv) => {
-                                    const invitedUser = (system.users || {})[inv.invitedUserId];
+                                    const invitedUser = usersById[inv.invitedUserId] || (inv.invitedUserId ? normalizeCoFounderProfile((systemState.users || {})[inv.invitedUserId] || {}) : null);
                                     return (
                                         <tr key={inv.id} className="group hover:bg-white/[0.02] transition-colors">
                                             <td className="px-8 py-6">
@@ -347,7 +433,7 @@ const FindCoFounder = () => {
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-bold text-white">{invitedUser?.name || inv.invitedEmail}</p>
-                                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{invitedUser?.expertiseSector || 'Specialist'}</p>
+                                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{invitedUser?.expertiseSector || 'General'}</p>
                                                     </div>
                                                 </div>
                                             </td>

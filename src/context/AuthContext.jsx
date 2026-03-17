@@ -7,7 +7,7 @@ import {
     onAuthStateChanged
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { getSystem, saveSystem } from '../utils/system';
+import { getSystem, normalizeUserProfile, saveSystem } from '../utils/system';
 
 const AuthContext = createContext();
 
@@ -39,7 +39,16 @@ const getUserProfile = (uid) => {
 
     if (profile) {
         try {
-            return JSON.parse(profile);
+            const normalized = normalizeUserProfile(JSON.parse(profile));
+
+            // Auto-heal: ensure centralized users map always contains this profile.
+            const system = getSystem();
+            if (!system.users[uid]) {
+                system.users[uid] = normalized;
+                saveSystem(system);
+            }
+
+            return normalized;
         } catch (e) {
             console.error('Error parsing profile for:', uid, e);
         }
@@ -49,8 +58,9 @@ const getUserProfile = (uid) => {
     const system = getSystem();
     if (system.users[uid]) {
         // Standardize: ensure uid profile exists
-        localStorage.setItem(profileKey, JSON.stringify(system.users[uid]));
-        return system.users[uid];
+        const normalized = normalizeUserProfile(system.users[uid]);
+        localStorage.setItem(profileKey, JSON.stringify(normalized));
+        return normalized;
     }
 
     // Migration from legacy registry if still exists
@@ -60,8 +70,15 @@ const getUserProfile = (uid) => {
             const users = JSON.parse(legacyRaw);
             const user = Array.isArray(users) ? users.find(u => u.uid === uid || u.id === uid) : users[uid];
             if (user) {
-                localStorage.setItem(profileKey, JSON.stringify(user));
-                return user;
+                const normalized = normalizeUserProfile(user);
+                localStorage.setItem(profileKey, JSON.stringify(normalized));
+
+                // Auto-heal from legacy: persist into centralized users map.
+                const system = getSystem();
+                system.users[uid] = normalized;
+                saveSystem(system);
+
+                return normalized;
             }
         } catch (e) { }
     }
@@ -71,12 +88,13 @@ const getUserProfile = (uid) => {
 
 // Helper: save user to system
 const saveUserProfile = (uid, data) => {
+    const normalizedData = normalizeUserProfile({ ...data, uid });
     // 1. Save to direct key
-    localStorage.setItem(`profile_${uid}`, JSON.stringify(data));
+    localStorage.setItem(`profile_${uid}`, JSON.stringify(normalizedData));
 
     // 2. Save to centralized system
     const system = getSystem();
-    system.users[uid] = data;
+    system.users[uid] = normalizedData;
     saveSystem(system);
 };
 
@@ -190,11 +208,32 @@ export const AuthProvider = ({ children }) => {
                     problemStatement: profileData.problemStatement || '',
                 };
             } else if (normalizedRole === 'mentor') {
+                const expertise = Array.isArray(profileData.expertise)
+                    ? profileData.expertise
+                    : Array.isArray(profileData.areas)
+                        ? profileData.areas
+                        : (typeof profileData.areas === 'string' ? profileData.areas : '')
+                            .split(',')
+                            .map(item => item.trim())
+                            .filter(Boolean);
+
+                const availability = {
+                    status: 'Available',
+                    days: [],
+                    workload: 0,
+                    sessionType: '1:1'
+                };
+
                 portalData = {
-                    expertise: profileData.expertise || [],
-                    sector: profileData.sector || 'General',
+                    expertise,
+                    sector: profileData.sector || profileData.industry || 'General',
                     bio: profileData.bio || '',
                     linkedin: profileData.linkedin || '',
+                    company: profileData.company || '',
+                    currentRole: profileData.currentRole || '',
+                    capacity: Number(profileData.capacity) || 5,
+                    availability,
+                    badge: profileData.badge || 'Verified'
                 };
             } else if (normalizedRole === 'incubator') {
                 portalData = {
@@ -209,7 +248,7 @@ export const AuthProvider = ({ children }) => {
                 };
             }
 
-            const newUser = {
+            const baseUser = {
                 uid: firebaseUser.uid,
                 email,
                 role: finalRole,
@@ -218,6 +257,17 @@ export const AuthProvider = ({ children }) => {
                 createdAt: new Date().toISOString(),
                 ...profileData, // Keep flat props for compatibility with some legacy views if needed
             };
+
+            const newUser = finalRole === 'mentor'
+                ? normalizeUserProfile({
+                    ...baseUser,
+                    expertise: portalData.expertise,
+                    sector: portalData.sector,
+                    bio: portalData.bio,
+                    availability: portalData.availability,
+                    badge: portalData.badge
+                })
+                : baseUser;
 
             saveUserProfile(firebaseUser.uid, newUser);
 
@@ -332,6 +382,33 @@ export const AuthProvider = ({ children }) => {
                         incubatorName: profile.name,
                         successStats: { graduated: 0, raised: '$0', active: 0 }
                     };
+                } else if (profile.role === 'mentor') {
+                    profile = normalizeUserProfile({
+                        ...profile,
+                        expertise: ['General Mentorship'],
+                        sector: 'General',
+                        bio: 'Mentor profile initialized.',
+                        availability: {
+                            status: 'Available',
+                            days: [],
+                            workload: 0,
+                            sessionType: '1:1'
+                        },
+                        portalData: {
+                            expertise: ['General Mentorship'],
+                            sector: 'General',
+                            bio: 'Mentor profile initialized.',
+                            company: '',
+                            currentRole: '',
+                            capacity: 5,
+                            availability: {
+                                status: 'Available',
+                                days: [],
+                                workload: 0,
+                                sessionType: '1:1'
+                            }
+                        }
+                    });
                 }
 
                 saveUserProfile(firebaseUser.uid, profile);

@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useMentor } from '../../../context/MentorContext';
 import { useAuth } from '../../../context/AuthContext';
 import { calculateExecutionScore } from '../../../utils/executionScore';
+import { getSystem } from '../../../utils/system';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -327,9 +328,10 @@ const ProgressView = ({ startup, onBack }) => {
     const [showScheduleModal, setShowScheduleModal] = useState(false);
 
     // Re-hydrate live on every render so changes from founder are reflected
-    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '{}');
-    const allSessions = JSON.parse(localStorage.getItem('vanguard_sessions') || '[]');
-    const allStartups = JSON.parse(localStorage.getItem('vanguard_startups') || '[]');
+    const system = getSystem();
+    const allUsers = system.users || {};
+    const allSessions = system.sessions || [];
+    const allStartups = system.startups || [];
 
     // Always pull the freshest version of this startup
     const freshStartup = allStartups.find(s => s.startupId === startup.startupId) || startup;
@@ -688,8 +690,9 @@ const MyMentees = () => {
     const [selectedStartup, setSelectedStartup] = useState(null);
 
     // Hydrate all mentees with live data on every render
-    const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '{}');
-    const allSessions = JSON.parse(localStorage.getItem('vanguard_sessions') || '[]');
+    const system = getSystem();
+    const allUsers = system.users || {};
+    const allSessions = system.sessions || [];
 
     const hydratedMentees = useMemo(() => {
         return mentees.map(s => hydrateStartup(s, allUsers, allSessions, user?.uid));

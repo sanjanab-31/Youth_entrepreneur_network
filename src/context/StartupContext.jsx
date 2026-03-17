@@ -282,7 +282,7 @@ export const StartupProvider = ({ children }) => {
     };
 
     const requestSession = (date, time, topic) => {
-        if (!startup || !user) return;
+        if (!startup || !user || !startup.mentorAssigned) return;
         const system = getSystem();
         const newSession = {
             id: `ses_${Date.now()}`,
@@ -301,6 +301,41 @@ export const StartupProvider = ({ children }) => {
 
         addActivity(`Requested session for ${date}`, 'info');
 
+        saveSystem(system);
+        syncData();
+    };
+
+    const removeAssignedMentor = () => {
+        if (!startup || !user || !startup.mentorAssigned) return;
+
+        const system = getSystem();
+        const mentor = system.users?.[startup.mentorAssigned];
+        const mentorName = mentor?.name || mentor?.email?.split('@')[0] || 'Mentor';
+
+        const updatedStartups = (system.startups || []).map(s => {
+            if (s.startupId !== startup.startupId) return s;
+
+            const updated = {
+                ...s,
+                mentorAssigned: null,
+                mentorshipStartDate: null,
+                updatedAt: new Date().toISOString(),
+                activity: [
+                    {
+                        id: `act_${Date.now()}`,
+                        message: `Mentor ${mentorName} was removed from the startup`,
+                        type: 'warning',
+                        timestamp: new Date().toISOString()
+                    },
+                    ...(s.activity || [])
+                ].slice(0, 50)
+            };
+
+            updated.executionScore = calculateExecutionScore(updated);
+            return updated;
+        });
+
+        system.startups = updatedStartups;
         saveSystem(system);
         syncData();
     };
@@ -778,6 +813,7 @@ export const StartupProvider = ({ children }) => {
         applyToIncubator,
 
         requestMentorship,
+        removeAssignedMentor,
         requestSession,
         cancelSession,
         leaveStartup,

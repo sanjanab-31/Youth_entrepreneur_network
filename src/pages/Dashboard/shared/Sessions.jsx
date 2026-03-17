@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
 import { useMentor } from '../../../context/MentorContext';
+import { getSystem } from '../../../utils/system';
 
 // Modal for Founder to request or Mentor to schedule
 const SessionFormModal = ({ onClose, onSubmit, role, mentees = [] }) => {
@@ -346,12 +347,13 @@ const Sessions = () => {
     // Helper to get startup/founder details for mentor view
     const hydrateSession = (s) => {
         if (!isMentor) {
-            const allUsers = JSON.parse(localStorage.getItem('vanguard_users') || '{}');
+            const system = getSystem();
+            const allUsers = system.users || {};
             const mentor = allUsers[s.mentorId];
             return {
                 ...s,
                 mentorName: mentor?.name || mentor?.email?.split('@')[0] || 'Expert Mentor',
-                mentorTitle: mentor?.expertise || 'Mentor'
+                mentorTitle: Array.isArray(mentor?.expertise) ? mentor.expertise.join(', ') : 'Mentor'
             };
         }
         const startup = mentees.find(m => m.startupId === s.startupId);
