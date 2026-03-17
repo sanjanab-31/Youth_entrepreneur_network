@@ -313,6 +313,35 @@ export const AuthProvider = ({ children }) => {
                 system.startups.push(newStartup);
             }
 
+            // Relational: Initialize Incubator record in system.incubators so founders can discover it.
+            if (normalizedRole === 'incubator') {
+                const incubatorEntry = {
+                    id: firebaseUser.uid,
+                    uid: firebaseUser.uid,
+                    name: portalData.incubatorName || name,
+                    incubatorName: portalData.incubatorName || name,
+                    location: portalData.location || '',
+                    description: portalData.description || '',
+                    website: portalData.website || '',
+                    sectorFocus: Array.isArray(portalData.sectorFocus) ? portalData.sectorFocus : [],
+                    stagePreference: portalData.stagePreference
+                        ? [portalData.stagePreference]
+                        : [],
+                    fundingSupport: Boolean(portalData.fundingSupport),
+                    batchSize: portalData.batchSize || 20,
+                    verified: false,
+                    mentors: [],
+                    successStats: { graduated: 0, raised: '$0', active: 0 },
+                    createdAt: new Date().toISOString()
+                };
+                const alreadyExists = (system.incubators || []).some(
+                    inc => (inc.id || inc.uid) === firebaseUser.uid
+                );
+                if (!alreadyExists) {
+                    system.incubators = [...(system.incubators || []), incubatorEntry];
+                }
+            }
+
             // Case A: Manual invite linking (was handled partially by pre-signup but check again if they provided code)
             if (['co-founder', 'cofounder'].includes(normalizedRole) && profileData.onboardingType === 'invite') {
                 const invitation = system.invitations.find(inv =>

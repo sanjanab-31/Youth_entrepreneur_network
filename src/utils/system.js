@@ -148,6 +148,42 @@ const normalizeUsersMap = (users) => {
     }, {});
 };
 
+const recoverIncubatorsFromUsers = (incubators, usersMap) => {
+    const result = Array.isArray(incubators) ? [...incubators] : [];
+    const existingIds = new Set(result.map(inc => inc.id || inc.uid).filter(Boolean));
+
+    Object.values(usersMap || {}).forEach((user) => {
+        if (!user || (user.role || '').toLowerCase() !== 'incubator') return;
+        const uid = user.uid || user.id;
+        if (!uid || existingIds.has(uid)) return;
+
+        const pd = user.portalData || {};
+        result.push({
+            id: uid,
+            uid,
+            name: pd.incubatorName || user.name || user.incubatorName || 'Unnamed Incubator',
+            incubatorName: pd.incubatorName || user.name || user.incubatorName || 'Unnamed Incubator',
+            location: pd.location || user.location || '',
+            description: pd.description || user.description || '',
+            website: pd.website || user.website || '',
+            sectorFocus: Array.isArray(pd.sectorFocus) ? pd.sectorFocus
+                : (Array.isArray(user.sectorFocus) ? user.sectorFocus : []),
+            stagePreference: pd.stagePreference
+                ? [pd.stagePreference]
+                : (Array.isArray(user.stagePreference) ? user.stagePreference : []),
+            fundingSupport: Boolean(pd.fundingSupport),
+            batchSize: pd.batchSize || 20,
+            verified: Boolean(user.verified),
+            mentors: Array.isArray(user.mentors) ? user.mentors : [],
+            successStats: user.successStats || { graduated: 0, raised: '$0', active: 0 },
+            createdAt: user.createdAt || new Date().toISOString()
+        });
+        existingIds.add(uid);
+    });
+
+    return result;
+};
+
 const mergeUsersWithProfileKeys = (usersMap) => {
     const merged = { ...(usersMap || {}) };
 
@@ -192,10 +228,11 @@ export const getSystem = () => {
         if (stored) {
             const parsed = JSON.parse(stored);
             // AUTO-HEALING: Ensure all required keys exist
+            const parsedUsers = mergeUsersWithProfileKeys(normalizeUsersMap(parsed.users || {}));
             system = {
                 ...system,
                 ...parsed,
-                users: mergeUsersWithProfileKeys(normalizeUsersMap(parsed.users || {})),
+                users: parsedUsers,
                 startups: (parsed.startups || []).map(s => ({
                     ...s,
                     milestones: s.milestones || [],
@@ -210,7 +247,7 @@ export const getSystem = () => {
                     sector: s.sector || 'General',
                     stage: s.stage || 'Idea'
                 })),
-                incubators: parsed.incubators || [],
+                incubators: recoverIncubatorsFromUsers(parsed.incubators || [], parsedUsers),
                 applications: parsed.applications || [],
                 cohorts: parsed.cohorts || [],
                 mentorRequests: parsed.mentorRequests || [],
@@ -252,10 +289,11 @@ export const getSystem = () => {
                 ? legacyUsers.reduce((acc, u) => { if (u.uid || u.id) acc[u.uid || u.id] = u; return acc; }, {})
                 : legacyUsers;
 
+            const legacyMergedUsers = mergeUsersWithProfileKeys(normalizeUsersMap(normalizedUsers));
             system = {
-                users: mergeUsersWithProfileKeys(normalizeUsersMap(normalizedUsers)),
+                users: legacyMergedUsers,
                 startups: legacyStartups,
-                incubators: legacyIncubators,
+                incubators: recoverIncubatorsFromUsers(legacyIncubators, legacyMergedUsers),
                 applications: legacyApplications,
                 cohorts: legacyCohorts,
                 mentorRequests: legacyRequests,
@@ -271,9 +309,11 @@ export const getSystem = () => {
 };
 
 export const saveSystem = (system) => {
+    const normalizedUsers = mergeUsersWithProfileKeys(normalizeUsersMap(system.users || {}));
     const normalizedSystem = {
         ...system,
-        users: mergeUsersWithProfileKeys(normalizeUsersMap(system.users || {}))
+        users: normalizedUsers,
+        incubators: recoverIncubatorsFromUsers(system.incubators || [], normalizedUsers)
     };
     localStorage.setItem(SYSTEM_KEY, JSON.stringify(normalizedSystem));
     window.dispatchEvent(new Event('storage'));
