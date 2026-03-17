@@ -1,26 +1,89 @@
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    ClipboardList,
-    Search,
-    Filter,
     MoreHorizontal,
-    Clock,
-    CheckCircle2,
-    XCircle,
     ArrowRight,
     Search as SearchIcon,
     AlertCircle
 } from 'lucide-react';
+import { getSystem, saveSystem } from '../../../utils/system';
 
 const ApplicationsControl = () => {
-    const applications = [
-        { id: 1, startup: 'PayFlow', incubator: 'Peak Accelerate', stage: 'Round 1', status: 'Pending', date: 'Feb 12, 2026' },
-        { id: 2, startup: 'Vision AI', incubator: 'DeepTech Ventures', stage: 'Final Review', status: 'Accepted', date: 'Feb 10, 2026' },
-        { id: 3, startup: 'EcoGrid', incubator: 'Peak Accelerate', stage: 'Interview', status: 'In Review', date: 'Feb 05, 2026' },
-        { id: 4, startup: 'HealthSync', incubator: 'GreenHouse Africa', stage: 'Round 1', status: 'Stalled', date: 'Jan 28, 2026' },
-        { id: 5, startup: 'LogiLink', incubator: 'DeepTech Ventures', stage: 'Round 1', status: 'Rejected', date: 'Jan 15, 2026' },
-    ];
+    const [systemData, setSystemData] = useState(() => getSystem());
+    const [searchQuery, setSearchQuery] = useState('');
+    const [tab, setTab] = useState('all');
+
+    useEffect(() => {
+        const refresh = () => setSystemData(getSystem());
+        window.addEventListener('storage', refresh);
+        return () => window.removeEventListener('storage', refresh);
+    }, []);
+
+    const applications = useMemo(() => {
+        const startupMap = (systemData.startups || []).reduce((acc, startup, index) => {
+            const id = startup.id || startup.uid || startup.startupId || `startup-${index}`;
+            acc[id] = startup;
+            return acc;
+        }, {});
+        const incubatorMap = (systemData.incubators || []).reduce((acc, incubator, index) => {
+            const id = incubator.id || incubator.uid || `incubator-${index}`;
+            acc[id] = incubator;
+            return acc;
+        }, {});
+
+        return (systemData.applications || [])
+            .map((application, index) => {
+                const id = application.id || application.applicationId || `app-${index}`;
+                const normalizedStatus = (application.status || 'pending').toLowerCase();
+                const startup = startupMap[application.startupId] || {};
+                const incubator = incubatorMap[application.incubatorId] || {};
+                const submittedAt = application.createdAt || application.submittedAt || application.date;
+
+                return {
+                    id,
+                    startup: startup.startupName || startup.name || application.startupName || 'Unknown Startup',
+                    incubator: incubator.incubatorName || incubator.name || application.incubatorName || 'Unknown Incubator',
+                    stage: application.stage || application.currentStage || 'Round 1',
+                    status: normalizedStatus,
+                    submittedAt,
+                };
+            })
+            .filter((application) => {
+                const q = searchQuery.toLowerCase();
+                const matchesSearch = !q ||
+                    application.startup.toLowerCase().includes(q) ||
+                    application.incubator.toLowerCase().includes(q);
+                const matchesTab = tab === 'all' ||
+                    (tab === 'active' && ['pending', 'in review', 'in-review', 'accepted'].includes(application.status)) ||
+                    (tab === 'stalled' && application.status === 'stalled') ||
+                    (tab === 'archive' && ['rejected', 'withdrawn'].includes(application.status));
+                return matchesSearch && matchesTab;
+            });
+    }, [searchQuery, systemData, tab]);
+
+    const updateApplicationStatus = (applicationId, nextStatus) => {
+        const sys = getSystem();
+        sys.applications = (sys.applications || []).map((application, index) => {
+            const id = application.id || application.applicationId || `app-${index}`;
+            return id === applicationId
+                ? { ...application, status: nextStatus }
+                : application;
+        });
+        saveSystem(sys);
+        setSystemData(getSystem());
+    };
+
+    const prettyStatus = (status) => {
+        if (status === 'in review' || status === 'in-review') return 'In Review';
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    };
+
+    const formatDate = (value) => {
+        if (!value) return '—';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
 
     return (
         <div className="space-y-8">
@@ -30,9 +93,10 @@ const ApplicationsControl = () => {
                     <p className="text-gray-400">Platform-wide monitoring of incubator selection processes</p>
                 </div>
                 <div className="flex bg-[#1E1E2F] rounded-xl border border-white/5 p-1">
-                    <button className="px-4 py-1.5 bg-[#8B5CF6] text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-[#8B5CF6]/20">Active Apps</button>
-                    <button className="px-4 py-1.5 text-gray-500 text-xs font-bold rounded-lg hover:text-white transition-all">Stalled</button>
-                    <button className="px-4 py-1.5 text-gray-500 text-xs font-bold rounded-lg hover:text-white transition-all">Archive</button>
+                    <button onClick={() => setTab('active')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${tab === 'active' ? 'bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20' : 'text-gray-500 hover:text-white'}`}>Active Apps</button>
+                    <button onClick={() => setTab('stalled')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${tab === 'stalled' ? 'bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20' : 'text-gray-500 hover:text-white'}`}>Stalled</button>
+                    <button onClick={() => setTab('archive')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${tab === 'archive' ? 'bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20' : 'text-gray-500 hover:text-white'}`}>Archive</button>
+                    <button onClick={() => setTab('all')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${tab === 'all' ? 'bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20' : 'text-gray-500 hover:text-white'}`}>All</button>
                 </div>
             </div>
 
@@ -43,6 +107,8 @@ const ApplicationsControl = () => {
                         <input
                             type="text"
                             placeholder="Search by startup or incubator..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full bg-black/20 border border-white/5 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50"
                         />
                     </div>
@@ -63,11 +129,16 @@ const ApplicationsControl = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                        {applications.map((app, index) => (
-                            <tr key={index} className="hover:bg-white/2 transition-all group">
+                        {applications.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">No applications found</td>
+                            </tr>
+                        )}
+                        {applications.map((app) => (
+                            <tr key={app.id} className="hover:bg-white/2 transition-all group">
                                 <td className="px-6 py-4">
                                     <p className="text-sm font-bold text-white mb-0.5">{app.startup}</p>
-                                    <p className="text-[10px] text-gray-500 uppercase font-black">ID: #APP-{2000 + app.id}</p>
+                                    <p className="text-[10px] text-gray-500 uppercase font-black">ID: {app.id}</p>
                                 </td>
                                 <td className="px-6 py-4 text-sm text-gray-300 font-medium">{app.incubator}</td>
                                 <td className="px-6 py-4">
@@ -77,26 +148,30 @@ const ApplicationsControl = () => {
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">
-                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${app.status === 'Accepted' ? 'bg-green-500/10 text-green-400' :
-                                            app.status === 'Stalled' ? 'bg-red-500/10 text-red-400 animate-pulse' :
-                                                app.status === 'Rejected' ? 'bg-gray-500/10 text-gray-500' :
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${app.status === 'accepted' ? 'bg-green-500/10 text-green-400' :
+                                            app.status === 'stalled' ? 'bg-red-500/10 text-red-400 animate-pulse' :
+                                                app.status === 'rejected' ? 'bg-gray-500/10 text-gray-500' :
                                                     'bg-blue-500/10 text-blue-400'
                                         }`}>
-                                        {app.status}
+                                        {prettyStatus(app.status)}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-500">{app.date}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500">{formatDate(app.submittedAt)}</td>
                                 <td className="px-6 py-4">
                                     <div className="flex gap-2">
-                                        <button className="p-2 hover:bg-[#8B5CF6]/20 text-[#8B5CF6] rounded-lg transition-all" title="View Application">
+                                        <button onClick={() => updateApplicationStatus(app.id, 'in review')} className="p-2 hover:bg-[#8B5CF6]/20 text-[#8B5CF6] rounded-lg transition-all" title="Move to In Review">
                                             <ArrowRight size={18} />
                                         </button>
-                                        {app.status === 'Stalled' && (
-                                            <button className="p-2 hover:bg-amber-500/20 text-amber-500 rounded-lg transition-all" title="Intervene / Notify Admin">
+                                        {app.status === 'stalled' && (
+                                            <button onClick={() => updateApplicationStatus(app.id, 'in review')} className="p-2 hover:bg-amber-500/20 text-amber-500 rounded-lg transition-all" title="Intervene / Notify Admin">
                                                 <AlertCircle size={18} />
                                             </button>
                                         )}
-                                        <button className="p-2 hover:bg-white/10 text-gray-400 rounded-lg transition-all">
+                                        <button
+                                            onClick={() => updateApplicationStatus(app.id, app.status === 'accepted' ? 'rejected' : 'accepted')}
+                                            className="p-2 hover:bg-white/10 text-gray-400 rounded-lg transition-all"
+                                            title="Toggle Accepted/Rejected"
+                                        >
                                             <MoreHorizontal size={18} />
                                         </button>
                                     </div>

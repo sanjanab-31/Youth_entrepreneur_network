@@ -1,26 +1,94 @@
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Megaphone,
-    Rocket,
     Star,
     Calendar,
     Plus,
     Search,
-    MoreHorizontal,
     Edit3,
     Trash2,
-    Eye,
     Bell,
     Send
 } from 'lucide-react';
+import { getSystem, saveSystem } from '../../../utils/system';
 
 const ContentManagement = () => {
-    const announcements = [
-        { id: 1, title: 'Upcoming Demo Day 2026', type: 'Announcement', target: 'Founder', date: 'Feb 20, 2026', status: 'Published' },
-        { id: 2, title: 'Matching Algorithm Update', type: 'System', target: 'All', date: 'Feb 15, 2026', status: 'Scheduled' },
-        { id: 3, title: 'New Mentor Onboarding Program', type: 'Feature', target: 'Mentor', date: 'Feb 10, 2026', status: 'Draft' },
-    ];
+    const [systemData, setSystemData] = useState(() => getSystem());
+    const [searchQuery, setSearchQuery] = useState('');
+    const [target, setTarget] = useState('All Users');
+    const [message, setMessage] = useState('');
+
+    useEffect(() => {
+        const refresh = () => setSystemData(getSystem());
+        window.addEventListener('storage', refresh);
+        return () => window.removeEventListener('storage', refresh);
+    }, []);
+
+    const announcements = useMemo(() => {
+        return (systemData.announcements || [])
+            .map((item, index) => ({
+                id: item.id || `announcement-${index}`,
+                title: item.title || 'Untitled Announcement',
+                type: item.type || 'Announcement',
+                target: item.target || 'All',
+                date: item.date || item.createdAt || new Date().toISOString(),
+                status: item.status || 'Draft',
+                body: item.body || '',
+            }))
+            .filter((item) => {
+                const q = searchQuery.toLowerCase();
+                return !q ||
+                    item.title.toLowerCase().includes(q) ||
+                    item.type.toLowerCase().includes(q) ||
+                    item.target.toLowerCase().includes(q);
+            });
+    }, [searchQuery, systemData]);
+
+    const formatDate = (value) => {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
+    const createAnnouncement = () => {
+        if (!message.trim()) return;
+        const sys = getSystem();
+        const next = {
+            id: `announcement-${Date.now()}`,
+            title: message.trim().slice(0, 60),
+            type: 'System',
+            target,
+            body: message.trim(),
+            status: 'Published',
+            date: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+        };
+        sys.announcements = [next, ...(sys.announcements || [])];
+        saveSystem(sys);
+        setMessage('');
+        setSystemData(getSystem());
+    };
+
+    const updateAnnouncement = (id, updater) => {
+        const sys = getSystem();
+        sys.announcements = (sys.announcements || []).map((item, index) => {
+            const itemId = item.id || `announcement-${index}`;
+            return itemId === id ? updater(item) : item;
+        });
+        saveSystem(sys);
+        setSystemData(getSystem());
+    };
+
+    const deleteAnnouncement = (id) => {
+        const sys = getSystem();
+        sys.announcements = (sys.announcements || []).filter((item, index) => {
+            const itemId = item.id || `announcement-${index}`;
+            return itemId !== id;
+        });
+        saveSystem(sys);
+        setSystemData(getSystem());
+    };
 
     return (
         <div className="space-y-8">
@@ -45,14 +113,21 @@ const ContentManagement = () => {
                                 <input
                                     type="text"
                                     placeholder="Search content..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
                                     className="bg-black/20 border border-white/5 rounded-lg py-1.5 pl-10 pr-4 text-xs text-white focus:outline-none focus:border-[#8B5CF6]/50"
                                 />
                             </div>
                         </div>
                         <table className="w-full text-left">
                             <tbody className="divide-y divide-white/5">
-                                {announcements.map((item, idx) => (
-                                    <tr key={idx} className="hover:bg-white/2 transition-all group">
+                                {announcements.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-10 text-center text-gray-500">No announcements yet</td>
+                                    </tr>
+                                )}
+                                {announcements.map((item) => (
+                                    <tr key={item.id} className="hover:bg-white/2 transition-all group">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-lg bg-[#8B5CF6]/10 flex items-center justify-center text-[#8B5CF6]">
@@ -64,7 +139,7 @@ const ContentManagement = () => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-xs text-gray-400">{item.date}</td>
+                                        <td className="px-6 py-4 text-xs text-gray-400">{formatDate(item.date)}</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest ${item.status === 'Published' ? 'bg-green-500 text-white shadow-[0_0_8px_rgba(34,197,94,0.4)]' :
                                                     item.status === 'Scheduled' ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-500'
@@ -74,8 +149,16 @@ const ContentManagement = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                <button className="p-2 text-gray-400 hover:text-white transition-all"><Edit3 size={16} /></button>
-                                                <button className="p-2 text-red-400 hover:text-red-300 transition-all"><Trash2 size={16} /></button>
+                                                <button
+                                                    onClick={() => updateAnnouncement(item.id, (a) => ({
+                                                        ...a,
+                                                        status: a.status === 'Published' ? 'Draft' : 'Published'
+                                                    }))}
+                                                    className="p-2 text-gray-400 hover:text-white transition-all"
+                                                >
+                                                    <Edit3 size={16} />
+                                                </button>
+                                                <button onClick={() => deleteAnnouncement(item.id)} className="p-2 text-red-400 hover:text-red-300 transition-all"><Trash2 size={16} /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -116,7 +199,11 @@ const ContentManagement = () => {
                         <div className="space-y-4">
                             <div>
                                 <label className="text-[10px] text-gray-500 uppercase font-black mb-1 block">Recipient Group</label>
-                                <select className="w-full bg-black/20 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50">
+                                <select
+                                    value={target}
+                                    onChange={(e) => setTarget(e.target.value)}
+                                    className="w-full bg-black/20 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50"
+                                >
                                     <option>All Users</option>
                                     <option>Founders Only</option>
                                     <option>Mentors Only</option>
@@ -128,10 +215,12 @@ const ContentManagement = () => {
                                 <textarea
                                     rows="4"
                                     placeholder="Enter system announcement..."
+                                    value={message}
+                                    onChange={(e) => setMessage(e.target.value)}
                                     className="w-full bg-black/20 border border-white/5 rounded-xl p-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50 resize-none"
                                 />
                             </div>
-                            <button className="w-full py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2">
+                            <button onClick={createAnnouncement} className="w-full py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2">
                                 <Send size={16} /> Publish Now
                             </button>
                         </div>

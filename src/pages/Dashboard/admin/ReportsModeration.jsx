@@ -1,8 +1,7 @@
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     ShieldAlert,
-    User,
     Flag,
     Clock,
     MoreVertical,
@@ -12,13 +11,80 @@ import {
     UserX,
     Bell
 } from 'lucide-react';
+import { getSystem, saveSystem } from '../../../utils/system';
 
 const ReportsModeration = () => {
-    const reports = [
-        { id: 1, user: 'Unknown_User', reason: 'Spam activity in Mentor chat', date: '2 hours ago', status: 'Pending', severity: 'High' },
-        { id: 2, user: 'John Doe', reason: 'Suspicious login locations', date: '5 hours ago', status: 'In Review', severity: 'Medium' },
-        { id: 3, user: 'StartupX', reason: 'Misleading profile data', date: '1 day ago', status: 'Pending', severity: 'Low' },
-    ];
+    const [systemData, setSystemData] = useState(() => getSystem());
+
+    useEffect(() => {
+        const refresh = () => setSystemData(getSystem());
+        window.addEventListener('storage', refresh);
+        return () => window.removeEventListener('storage', refresh);
+    }, []);
+
+    const reports = useMemo(() => {
+        const users = systemData.users || {};
+        const reportList = (systemData.reports || []).map((report, index) => {
+            const user = users[report.userId] || users[report.targetId] || {};
+            return {
+                id: report.id || `report-${index}`,
+                userId: report.userId || report.targetId || '',
+                user: user.name || report.user || report.targetName || 'Unknown User',
+                reason: report.reason || report.message || 'Unspecified report reason',
+                date: report.date || report.createdAt || new Date().toISOString(),
+                status: report.status || 'Pending',
+                severity: report.severity || 'Medium',
+            };
+        });
+
+        const suspendedUsers = Object.values(users)
+            .filter((user) => ['suspended', 'banned'].includes((user.status || '').toLowerCase()))
+            .map((user, index) => ({
+                id: `status-${user.uid || user.id || index}`,
+                userId: user.uid || user.id,
+                user: user.name || user.email || 'User',
+                reason: `Account currently marked as ${(user.status || '').toLowerCase()}`,
+                date: user.updatedAt || user.createdAt || new Date().toISOString(),
+                status: 'In Review',
+                severity: user.status === 'banned' ? 'High' : 'Medium',
+            }));
+
+        return [...reportList, ...suspendedUsers];
+    }, [systemData]);
+
+    const activeAlerts = reports.filter((report) => report.status !== 'Resolved').length;
+
+    const updateUserStatus = (uid, nextStatus) => {
+        if (!uid) return;
+        const sys = getSystem();
+        if (sys.users?.[uid]) {
+            sys.users[uid].status = nextStatus;
+            saveSystem(sys);
+        }
+
+        const profileKey = `profile_${uid}`;
+        const raw = localStorage.getItem(profileKey);
+        if (raw) {
+            try {
+                const profile = JSON.parse(raw);
+                profile.status = nextStatus;
+                localStorage.setItem(profileKey, JSON.stringify(profile));
+            } catch {
+                // Ignore malformed profile cache.
+            }
+        }
+        setSystemData(getSystem());
+    };
+
+    const resolveReport = (reportId) => {
+        const sys = getSystem();
+        sys.reports = (sys.reports || []).map((report, index) => {
+            const id = report.id || `report-${index}`;
+            return id === reportId ? { ...report, status: 'Resolved' } : report;
+        });
+        saveSystem(sys);
+        setSystemData(getSystem());
+    };
 
     return (
         <div className="space-y-8">
@@ -30,7 +96,7 @@ const ReportsModeration = () => {
                 <div className="flex gap-4">
                     <div className="bg-[#1E1E2F] px-4 py-2 rounded-xl border border-white/5 flex items-center gap-3">
                         <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                        <span className="text-sm font-bold text-white">4 Active Alerts</span>
+                        <span className="text-sm font-bold text-white">{activeAlerts} Active Alerts</span>
                     </div>
                 </div>
             </div>
@@ -39,8 +105,13 @@ const ReportsModeration = () => {
                 {/* Reports List */}
                 <div className="lg:col-span-2 space-y-4">
                     <h3 className="text-lg font-bold text-white px-2">Recent Incidents</h3>
-                    {reports.map((report, index) => (
-                        <div key={index} className="bg-[#1E1E2F] p-6 rounded-2xl border border-white/5 flex items-start justify-between group hover:border-red-500/30 transition-all">
+                    {reports.length === 0 && (
+                        <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 text-center text-gray-500">
+                            No incidents reported yet.
+                        </div>
+                    )}
+                    {reports.map((report) => (
+                        <div key={report.id} className="bg-[#1E1E2F] p-6 rounded-2xl border border-white/5 flex items-start justify-between group hover:border-red-500/30 transition-all">
                             <div className="flex gap-4">
                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${report.severity === 'High' ? 'bg-red-500/10 text-red-400' :
                                         report.severity === 'Medium' ? 'bg-amber-500/10 text-amber-400' :
@@ -59,16 +130,16 @@ const ReportsModeration = () => {
                                     </div>
                                     <p className="text-sm text-gray-400 mb-3">{report.reason}</p>
                                     <div className="flex items-center gap-4 text-[10px] text-gray-500 uppercase font-black tracking-widest">
-                                        <span className="flex items-center gap-1"><Clock size={12} /> {report.date}</span>
+                                        <span className="flex items-center gap-1"><Clock size={12} /> {new Date(report.date).toLocaleString()}</span>
                                         <span className="flex items-center gap-1"><Flag size={12} /> {report.status}</span>
                                     </div>
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <button className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg transition-all">
+                                <button onClick={() => resolveReport(report.id)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg transition-all">
                                     Investigate
                                 </button>
-                                <button className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all">
+                                <button onClick={() => updateUserStatus(report.userId, 'banned')} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all">
                                     <Ban size={18} />
                                 </button>
                             </div>
@@ -81,21 +152,21 @@ const ReportsModeration = () => {
                     <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5">
                         <h3 className="text-lg font-bold text-white mb-6">Moderation Controls</h3>
                         <div className="space-y-4">
-                            <button className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-red-500/10 rounded-xl border border-white/5 group transition-all">
+                            <button onClick={() => updateUserStatus(Object.keys(systemData.users || {})[0], 'banned')} className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-red-500/10 rounded-xl border border-white/5 group transition-all">
                                 <div className="flex items-center gap-3">
                                     <UserX size={18} className="text-red-400" />
                                     <span className="text-sm font-bold text-gray-300">Ban User</span>
                                 </div>
                                 <MoreVertical size={16} className="text-gray-600" />
                             </button>
-                            <button className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-amber-500/10 rounded-xl border border-white/5 group transition-all">
+                            <button onClick={() => resolveReport(reports[0]?.id)} className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-amber-500/10 rounded-xl border border-white/5 group transition-all">
                                 <div className="flex items-center gap-3">
                                     <Bell size={18} className="text-amber-400" />
                                     <span className="text-sm font-bold text-gray-300">Send Warning</span>
                                 </div>
                                 <MoreVertical size={16} className="text-gray-600" />
                             </button>
-                            <button className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-green-500/10 rounded-xl border border-white/5 group transition-all">
+                            <button onClick={() => updateUserStatus(Object.keys(systemData.users || {})[0], 'active')} className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-green-500/10 rounded-xl border border-white/5 group transition-all">
                                 <div className="flex items-center gap-3">
                                     <CheckCircle size={18} className="text-green-400" />
                                     <span className="text-sm font-bold text-gray-300">Whitelist Entity</span>

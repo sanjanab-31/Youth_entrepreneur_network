@@ -220,7 +220,10 @@ export const getSystem = () => {
         sessions: [],
         invitations: [],
         joinRequests: [],
-        messages: []
+        messages: [],
+        announcements: [],
+        reports: [],
+        settings: {}
     };
 
     try {
@@ -254,7 +257,10 @@ export const getSystem = () => {
                 sessions: parsed.sessions || [],
                 invitations: parsed.invitations || [],
                 joinRequests: parsed.joinRequests || [],
-                messages: parsed.messages || []
+                messages: parsed.messages || [],
+                announcements: parsed.announcements || [],
+                reports: parsed.reports || [],
+                settings: parsed.settings || {}
             };
         } else {
             // MIGRATION LOGIC
@@ -297,7 +303,10 @@ export const getSystem = () => {
                 applications: legacyApplications,
                 cohorts: legacyCohorts,
                 mentorRequests: legacyRequests,
-                sessions: legacySessions
+                sessions: legacySessions,
+                announcements: [],
+                reports: [],
+                settings: {}
             };
 
             saveSystem(system);

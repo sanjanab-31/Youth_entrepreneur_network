@@ -1,27 +1,85 @@
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Users,
-    Briefcase,
-    Star,
-    CheckCircle2,
     ShieldCheck,
-    Clock,
-    MessageSquare,
     Search,
-    Filter,
     Award,
     Ban
 } from 'lucide-react';
+import { getSystem, saveSystem } from '../../../utils/system';
 
 const MentorManagement = () => {
-    const mentors = [
-        { id: 1, name: 'Dr. Sarah Jenkins', industry: 'Artificial Intelligence', experience: 12, mentees: 8, responseRate: '98%', verified: true },
-        { id: 2, name: 'Marcus Kovac', industry: 'SaaS / Sales', experience: 15, mentees: 5, responseRate: '92%', verified: true },
-        { id: 3, name: 'Jessica Wang', industry: 'FinTech', experience: 8, mentees: 12, responseRate: '85%', verified: false },
-        { id: 4, name: 'Robert Miller', industry: 'UX Design', experience: 10, mentees: 3, responseRate: '100%', verified: true },
-        { id: 5, name: 'Ananya Sharma', industry: 'CleanTech', experience: 7, mentees: 0, responseRate: '0%', verified: false },
-    ];
+    const [systemData, setSystemData] = useState(() => getSystem());
+    const [searchQuery, setSearchQuery] = useState('');
+    const [verificationFilter, setVerificationFilter] = useState('all');
+
+    useEffect(() => {
+        const refresh = () => setSystemData(getSystem());
+        window.addEventListener('storage', refresh);
+        return () => window.removeEventListener('storage', refresh);
+    }, []);
+
+    const mentors = useMemo(() => {
+        const users = Object.values(systemData.users || {});
+        const startups = systemData.startups || [];
+        const sessions = systemData.sessions || [];
+
+        return users
+            .filter((user) => user.role === 'mentor')
+            .map((mentor) => {
+                const uid = mentor.uid || mentor.id;
+                const mentees = startups.filter((startup) => startup.mentorAssigned === uid).length;
+                const mentorSessions = sessions.filter((session) => session.mentorId === uid);
+                const completed = mentorSessions.filter((session) => session.status === 'completed').length;
+                const responseRate = mentor.responseRate || (mentorSessions.length > 0
+                    ? `${Math.round((completed / mentorSessions.length) * 100)}%`
+                    : '0%');
+
+                return {
+                    uid,
+                    name: mentor.name || mentor.email?.split('@')[0] || 'Mentor',
+                    industry: mentor.sector || mentor.portalData?.sector || 'General',
+                    experience: Number(mentor.yearsExperience || mentor.portalData?.yearsExperience || 0),
+                    mentees,
+                    responseRate,
+                    verified: Boolean(mentor.verified),
+                    status: mentor.status || 'active',
+                };
+            })
+            .filter((mentor) => {
+                const q = searchQuery.toLowerCase();
+                const matchesSearch = !q ||
+                    mentor.name.toLowerCase().includes(q) ||
+                    mentor.industry.toLowerCase().includes(q);
+                const matchesVerification = verificationFilter === 'all' ||
+                    (verificationFilter === 'verified' && mentor.verified) ||
+                    (verificationFilter === 'pending' && !mentor.verified);
+                return matchesSearch && matchesVerification;
+            });
+    }, [searchQuery, systemData, verificationFilter]);
+
+    const updateMentorUser = (uid, updater) => {
+        if (!uid) return;
+        const sys = getSystem();
+        if (sys.users?.[uid]) {
+            sys.users[uid] = updater(sys.users[uid]);
+            saveSystem(sys);
+        }
+
+        const profileKey = `profile_${uid}`;
+        const raw = localStorage.getItem(profileKey);
+        if (raw) {
+            try {
+                const profile = JSON.parse(raw);
+                const updated = updater(profile);
+                localStorage.setItem(profileKey, JSON.stringify(updated));
+            } catch {
+                // Ignore malformed profile cache.
+            }
+        }
+        setSystemData(getSystem());
+    };
 
     return (
         <div className="space-y-8">
@@ -32,7 +90,7 @@ const MentorManagement = () => {
                 </div>
                 <div className="flex gap-3">
                     <button className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white hover:bg-white/10 transition-all">
-                        Applications (24)
+                        Mentors ({mentors.length})
                     </button>
                 </div>
             </div>
@@ -44,15 +102,20 @@ const MentorManagement = () => {
                         <input
                             type="text"
                             placeholder="Find mentors..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full bg-black/20 border border-white/5 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50"
                         />
                     </div>
                     <div className="flex gap-3">
-                        <select className="bg-black/20 border border-white/5 rounded-xl px-4 py-2 text-sm text-white focus:outline-none">
-                            <option>All Industries</option>
-                        </select>
-                        <select className="bg-black/20 border border-white/5 rounded-xl px-4 py-2 text-sm text-white focus:outline-none">
-                            <option>Verification</option>
+                        <select
+                            className="bg-black/20 border border-white/5 rounded-xl px-4 py-2 text-sm text-white focus:outline-none"
+                            value={verificationFilter}
+                            onChange={(e) => setVerificationFilter(e.target.value)}
+                        >
+                            <option value="all">All Verification</option>
+                            <option value="verified">Verified</option>
+                            <option value="pending">Pending</option>
                         </select>
                     </div>
                 </div>
@@ -69,8 +132,13 @@ const MentorManagement = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                        {mentors.map((mentor, index) => (
-                            <tr key={index} className="hover:bg-white/2 transition-all">
+                        {mentors.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">No mentors found</td>
+                            </tr>
+                        )}
+                        {mentors.map((mentor) => (
+                            <tr key={mentor.uid} className="hover:bg-white/2 transition-all">
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-white/5 flex items-center justify-center">
@@ -81,7 +149,7 @@ const MentorManagement = () => {
                                                 <p className="text-sm font-bold text-white">{mentor.name}</p>
                                                 {mentor.verified && <ShieldCheck size={14} className="text-[#8B5CF6]" title="Verified Specialist" />}
                                             </div>
-                                            <p className="text-xs text-gray-500">Member since 2025</p>
+                                            <p className="text-xs text-gray-500">UID: {mentor.uid}</p>
                                         </div>
                                     </div>
                                 </td>
@@ -102,16 +170,28 @@ const MentorManagement = () => {
                                 <td className="px-6 py-4">
                                     <div className="flex gap-2">
                                         {!mentor.verified ? (
-                                            <button className="px-3 py-1.5 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-[10px] uppercase font-black rounded-lg transition-all">
+                                            <button
+                                                onClick={() => updateMentorUser(mentor.uid, (u) => ({ ...u, verified: true }))}
+                                                className="px-3 py-1.5 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-[10px] uppercase font-black rounded-lg transition-all"
+                                            >
                                                 Verify
                                             </button>
                                         ) : (
-                                            <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[#8B5CF6] text-[10px] uppercase font-black rounded-lg transition-all border border-white/5">
-                                                Feature
+                                            <button
+                                                onClick={() => updateMentorUser(mentor.uid, (u) => ({ ...u, featured: !u.featured }))}
+                                                className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[#8B5CF6] text-[10px] uppercase font-black rounded-lg transition-all border border-white/5"
+                                            >
+                                                {systemData.users?.[mentor.uid]?.featured ? 'Unfeature' : 'Feature'}
                                             </button>
                                         )}
-                                        <button className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] uppercase font-black rounded-lg transition-all border border-red-500/10">
-                                            Suspend
+                                        <button
+                                            onClick={() => updateMentorUser(mentor.uid, (u) => ({
+                                                ...u,
+                                                status: (u.status || 'active') === 'suspended' ? 'active' : 'suspended'
+                                            }))}
+                                            className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] uppercase font-black rounded-lg transition-all border border-red-500/10"
+                                        >
+                                            {mentor.status === 'suspended' ? 'Restore' : 'Suspend'}
                                         </button>
                                     </div>
                                 </td>

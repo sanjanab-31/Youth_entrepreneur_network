@@ -1,25 +1,79 @@
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Building,
     Layers,
     Target,
     ClipboardCheck,
     ShieldCheck,
-    Users,
-    ArrowUpRight,
     Edit3,
     Eye,
     AlertCircle
 } from 'lucide-react';
+import { getSystem, saveSystem } from '../../../utils/system';
 
 const IncubatorManagement = () => {
-    const incubators = [
-        { id: 1, name: 'Peak Accelerate', focus: 'B2B SaaS / FinTech', cohorts: 4, applications: 245, status: 'Verified' },
-        { id: 2, name: 'DeepTech Ventures', focus: 'AI / Robotics', cohorts: 2, applications: 182, status: 'Verified' },
-        { id: 3, name: 'GreenHouse Africa', focus: 'Social Impact / AgTech', cohorts: 6, applications: 560, status: 'Verified' },
-        { id: 4, name: 'Innovation Hub NYC', focus: 'Web3 / DeFi', cohorts: 1, applications: 89, status: 'Pending' },
-    ];
+    const [systemData, setSystemData] = useState(() => getSystem());
+
+    useEffect(() => {
+        const refresh = () => setSystemData(getSystem());
+        window.addEventListener('storage', refresh);
+        return () => window.removeEventListener('storage', refresh);
+    }, []);
+
+    const incubators = useMemo(() => {
+        const cohortList = systemData.cohorts || [];
+        const apps = systemData.applications || [];
+        const users = systemData.users || {};
+
+        return (systemData.incubators || []).map((incubator, index) => {
+            const id = incubator.id || incubator.uid || `incubator-${index}`;
+            const user = users[id] || {};
+            const focus = incubator.sectorFocus;
+            const status = incubator.verified || user.verified ? 'Verified' : 'Pending';
+
+            return {
+                id,
+                name: incubator.incubatorName || incubator.name || user.name || 'Unnamed Incubator',
+                focus: Array.isArray(focus) && focus.length > 0 ? focus.join(' / ') : 'General',
+                cohorts: cohortList.filter((cohort) => cohort.incubatorId === id).length,
+                applications: apps.filter((app) => app.incubatorId === id).length,
+                status,
+            };
+        });
+    }, [systemData]);
+
+    const updateIncubator = (incubatorId, updater) => {
+        const sys = getSystem();
+        sys.incubators = (sys.incubators || []).map((incubator, index) => {
+            const id = incubator.id || incubator.uid || `incubator-${index}`;
+            return id === incubatorId ? updater(incubator) : incubator;
+        });
+
+        if (sys.users?.[incubatorId]) {
+            const updatedUser = updater(sys.users[incubatorId]);
+            sys.users[incubatorId] = {
+                ...sys.users[incubatorId],
+                verified: Boolean(updatedUser.verified),
+                status: updatedUser.status || sys.users[incubatorId].status,
+            };
+        }
+
+        saveSystem(sys);
+
+        const profileKey = `profile_${incubatorId}`;
+        const raw = localStorage.getItem(profileKey);
+        if (raw) {
+            try {
+                const profile = JSON.parse(raw);
+                const updatedProfile = updater(profile);
+                localStorage.setItem(profileKey, JSON.stringify(updatedProfile));
+            } catch {
+                // Ignore malformed profile cache.
+            }
+        }
+        setSystemData(getSystem());
+    };
 
     return (
         <div className="space-y-8">
@@ -29,8 +83,13 @@ const IncubatorManagement = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {incubators.map((incubator, index) => (
-                    <div key={index} className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 hover:border-[#8B5CF6]/30 transition-all duration-300 group">
+                {incubators.length === 0 && (
+                    <div className="md:col-span-2 bg-[#1E1E2F] p-10 rounded-2xl border border-white/5 text-center text-gray-500">
+                        No incubators registered yet.
+                    </div>
+                )}
+                {incubators.map((incubator) => (
+                    <div key={incubator.id} className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 hover:border-[#8B5CF6]/30 transition-all duration-300 group">
                         <div className="flex justify-between items-start mb-6">
                             <div className="w-16 h-16 rounded-2xl bg-[#8B5CF6]/10 flex items-center justify-center text-[#8B5CF6] border border-[#8B5CF6]/20">
                                 <Building size={32} />
@@ -66,7 +125,10 @@ const IncubatorManagement = () => {
 
                         <div className="flex gap-3 pt-6 border-t border-white/5">
                             {incubator.status === 'Pending' ? (
-                                <button className="flex-1 py-2.5 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2">
+                                <button
+                                    onClick={() => updateIncubator(incubator.id, (inc) => ({ ...inc, verified: true, status: 'active' }))}
+                                    className="flex-1 py-2.5 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                                >
                                     <ShieldCheck size={16} /> Approve Account
                                 </button>
                             ) : (
@@ -74,10 +136,16 @@ const IncubatorManagement = () => {
                                     <Eye size={16} /> View Details
                                 </button>
                             )}
-                            <button className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl transition-all border border-white/5">
+                            <button
+                                onClick={() => updateIncubator(incubator.id, (inc) => ({ ...inc, verified: !inc.verified }))}
+                                className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl transition-all border border-white/5"
+                            >
                                 <Edit3 size={16} />
                             </button>
-                            <button className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all border border-red-500/10">
+                            <button
+                                onClick={() => updateIncubator(incubator.id, (inc) => ({ ...inc, status: inc.status === 'suspended' ? 'active' : 'suspended' }))}
+                                className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all border border-red-500/10"
+                            >
                                 <AlertCircle size={16} />
                             </button>
                         </div>
