@@ -10,7 +10,7 @@ export const useStartup = () => useContext(StartupContext);
 // --- Calculation Helpers (Can be moved to a separate utils file later) ---
 export const calculateExecutionScore = (startup) => {
     let baseScore = 20; // Start at 20 unconditionally
-    if (!startup || !startup.milestones || startup.milestones.length === 0) return baseScore;
+    if (!startup) return baseScore;
 
     // Advanced Execution Logic
     // Stage multipliers (harder stages = more score points)
@@ -19,7 +19,7 @@ export const calculateExecutionScore = (startup) => {
     let earnedPoints = 0;
     let totalPossiblePoints = 0;
 
-    startup.milestones.forEach(m => {
+    (startup.milestones || []).forEach(m => {
         const weight = stageWeights[m.stage] || 1;
         totalPossiblePoints += weight;
         if (m.status === 'completed') {
@@ -28,9 +28,23 @@ export const calculateExecutionScore = (startup) => {
     });
 
     const progressRatio = totalPossiblePoints > 0 ? (earnedPoints / totalPossiblePoints) : 0;
+    const milestoneScore = Math.round(progressRatio * 70);
 
-    // Add up to 80 points based on weighted completion
-    const finalScore = baseScore + Math.round(progressRatio * 80);
+    // Mentor validation bonus comes from assigned mentor + completed mentorship sessions.
+    const mentorAssignedBonus = startup.mentorAssigned ? 6 : 0;
+    let mentorSessionBonus = 0;
+    if (startup.startupId) {
+        const system = getSystem();
+        const completedSessions = (system.sessions || []).filter(
+            s => s.startupId === startup.startupId && s.status === 'completed'
+        ).length;
+        mentorSessionBonus = Math.min(completedSessions * 2, 4);
+    }
+
+    const focusAreaBonus = Math.min((startup.focusAreas || []).length, 2);
+
+    // Total score = baseline + milestone execution + mentor validation signals.
+    const finalScore = baseScore + milestoneScore + mentorAssignedBonus + mentorSessionBonus + focusAreaBonus;
     return Math.min(finalScore, 100);
 };
 
@@ -116,6 +130,7 @@ export const StartupProvider = ({ children }) => {
             ...updates,
             updatedAt: new Date().toISOString()
         };
+        updated.executionScore = calculateExecutionScore(updated);
         if (updates.activeUsers !== undefined && updates.activeUsers !== currentStartup.activeUsers) {
             updated.lastTractionUpdate = new Date().toISOString();
         }
@@ -702,20 +717,30 @@ export const StartupProvider = ({ children }) => {
             sector: startupData.sector || 'General',
             stage: capitalizeStage(startupData.stage),
             oneLiner: startupData.oneLiner || '',
+            solutionOverview: startupData.solutionOverview || '',
             traction: '',
+            growth: startupData.growth || '',
+            revenue: startupData.revenue || '',
             fundingGoal: '',
+            marketInfo: startupData.marketInfo || '',
             teamSize: parseInt(startupData.teamSize) || 1,
             milestones: [],
             focusAreas: [],
             problemStatement: startupData.problemStatement || '',
-            targetAudience: [],
+            targetAudience: startupData.targetAudience
+                ? startupData.targetAudience.split(',').map(a => a.trim()).filter(Boolean)
+                : [],
             skillGap: startupData.lookingFor || '',
             primarySkills: startupData.primarySkills || '',
             location: startupData.location || '',
             commitment: startupData.commitment || '',
             linkedin: startupData.linkedin || '',
             equity: startupData.equity || '',
+            demoLink: startupData.demoLink || '',
+            pitchDeckLink: startupData.pitchDeckLink || '',
             website: '',
+            documents: [],
+            activeUsers: Number(startupData.activeUsers) || 0,
             executionScore: 0,
             createdAt: new Date().toISOString(),
             mentorAssigned: null,
@@ -756,9 +781,6 @@ export const StartupProvider = ({ children }) => {
         requestSession,
         cancelSession,
         leaveStartup,
-
-        isUserLinked,
-        resignFromStartup,
 
         // Invites / Join Requests
         sendInvitation,

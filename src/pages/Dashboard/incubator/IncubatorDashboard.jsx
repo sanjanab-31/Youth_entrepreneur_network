@@ -5,15 +5,8 @@ import {
     FileText,
     Layers,
     Star,
-    TrendingUp,
     Calendar,
     ArrowUpRight,
-    MapPin,
-    Briefcase,
-    Globe,
-    ExternalLink,
-    Clock,
-    CheckCircle2,
     AlertCircle,
     Bell,
     CheckCircle
@@ -21,7 +14,7 @@ import {
 import { useIncubator } from '../../../context/IncubatorContext';
 
 const IncubatorDashboard = () => {
-    const { profile, analytics, alerts, activityFeed, pipeline, loading } = useIncubator();
+    const { profile, analytics, alerts, activityFeed, highPotentialStartups, nextBatch, loading } = useIncubator();
 
     if (loading || !profile) {
         return (
@@ -32,15 +25,11 @@ const IncubatorDashboard = () => {
     }
 
     const stats = [
-        { label: 'Total Startups in Pipeline', value: analytics.totalStartups, icon: Users, trend: '+12% this month', color: 'from-blue-500 to-cyan-500' },
-        { label: 'Active Applications', value: analytics.activeApps, icon: FileText, trend: '+8% from last month', color: 'from-purple-500 to-indigo-500' },
-        { label: 'Application Acceptance Rate', value: analytics.acceptedRate, icon: Layers, trend: 'In progress', color: 'from-[#8B5CF6] to-[#7C3AED]' },
-        { label: 'Critical Pipeline Issues', value: alerts.length, icon: Star, trend: 'Execution Check', color: 'from-amber-500 to-orange-500' },
+        { label: 'Total Startups in Pipeline', value: analytics.totalStartups, icon: Users, trend: `${analytics.cohortSize} in cohorts`, color: 'from-blue-500 to-cyan-500' },
+        { label: 'Pending Applications', value: analytics.pendingApplications, icon: FileText, trend: `${analytics.totalApplications} total applications`, color: 'from-purple-500 to-indigo-500' },
+        { label: 'Acceptance Rate', value: analytics.acceptanceRateLabel, icon: Layers, trend: analytics.totalApplications > 0 ? `${analytics.acceptedApplications}/${analytics.totalApplications} accepted` : 'No applications yet', color: 'from-[#8B5CF6] to-[#7C3AED]' },
+        { label: 'At-Risk Startups', value: analytics.atRiskStartups, icon: Star, trend: 'Needs immediate review', color: 'from-amber-500 to-orange-500' },
     ];
-
-    const highPotentialStartups = pipeline
-        .sort((a, b) => (b.executionScore || 0) - (a.executionScore || 0))
-        .slice(0, 3);
 
     return (
         <div className="space-y-8 pb-10">
@@ -62,7 +51,14 @@ const IncubatorDashboard = () => {
                     </div>
                     <div className="pr-4">
                         <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Next Batch</p>
-                        <p className="text-sm font-bold text-white">Starts April 2025</p>
+                        {nextBatch ? (
+                            <>
+                                <p className="text-sm font-bold text-white">{nextBatch.name || 'Upcoming Cohort'}</p>
+                                <p className="text-xs text-gray-400">Starts {new Date(nextBatch.startDate).toLocaleDateString()}</p>
+                            </>
+                        ) : (
+                            <p className="text-sm font-bold text-gray-400">No upcoming cohorts</p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -93,19 +89,19 @@ const IncubatorDashboard = () => {
             </div>
 
             {/* Alerts Section */}
-            {alerts.length > 0 && (
-                <div className="space-y-4">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <AlertCircle className="text-amber-400" size={20} />
-                        Critical Alerts
-                    </h2>
+            <div className="space-y-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <AlertCircle className="text-amber-400" size={20} />
+                    Critical Alerts
+                </h2>
+                {alerts.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {alerts.slice(0, 3).map((alert, idx) => (
+                        {alerts.slice(0, 4).map((alert, idx) => (
                             <motion.div
                                 key={idx}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className={`p-4 rounded-xl border flex items-center gap-3 ${alert.type === 'error' ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' :
+                                className={`p-4 rounded-xl border flex items-center gap-3 ${alert.type === 'critical' ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' :
                                     alert.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
                                         'bg-blue-500/10 border-blue-500/20 text-blue-400'
                                     }`}
@@ -115,8 +111,13 @@ const IncubatorDashboard = () => {
                             </motion.div>
                         ))}
                     </div>
-                </div>
-            )}
+                ) : (
+                    <div className="p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/20 text-emerald-400 flex items-center gap-3">
+                        <CheckCircle size={18} />
+                        <p className="text-sm font-medium">No critical alerts right now.</p>
+                    </div>
+                )}
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* High Potential Startups */}
@@ -129,44 +130,50 @@ const IncubatorDashboard = () => {
                         <button className="text-sm font-bold text-[#8B5CF6] hover:text-[#7C3AED] transition-colors">View All Pipeline</button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {highPotentialStartups.map((startup, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.3 + index * 0.1 }}
-                                className="p-5 bg-[#1E1E2F] rounded-2xl border border-white/5 hover:border-white/10 transition-all group"
-                            >
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-[#8B5CF6]/20 flex items-center justify-center text-xl font-bold text-[#8B5CF6]">
-                                            {(startup.startupName || 'V')[0]}
+                        {highPotentialStartups.length > 0 ? (
+                            highPotentialStartups.map((startup, index) => (
+                                <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: 0.3 + index * 0.1 }}
+                                    className="p-5 bg-[#1E1E2F] rounded-2xl border border-white/5 hover:border-white/10 transition-all group"
+                                >
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-xl bg-[#8B5CF6]/20 flex items-center justify-center text-xl font-bold text-[#8B5CF6]">
+                                                {(startup.startupName || 'V')[0]}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-white group-hover:text-[#8B5CF6] transition-colors">{startup.startupName || 'Unnamed Venture'}</h4>
+                                                <p className="text-xs text-gray-400">{startup.sector}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="font-bold text-white group-hover:text-[#8B5CF6] transition-colors">{startup.startupName || 'Unnamed Venture'}</h4>
-                                            <p className="text-xs text-gray-400">{startup.sector}</p>
+                                        <span className="px-2 py-1 bg-white/5 text-[10px] font-bold text-gray-400 rounded-md border border-white/5 uppercase">
+                                            {startup.stage}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-3 mb-6">
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">Execution Score</span>
+                                            <span className="text-emerald-400 font-bold">{startup.executionScore}%</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">Milestones</span>
+                                            <span className="text-[#8B5CF6] font-bold">{(startup.milestones || []).length}</span>
                                         </div>
                                     </div>
-                                    <span className="px-2 py-1 bg-white/5 text-[10px] font-bold text-gray-400 rounded-md border border-white/5 uppercase">
-                                        {startup.stage}
-                                    </span>
-                                </div>
-                                <div className="space-y-3 mb-6">
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-500">Execution Score</span>
-                                        <span className="text-emerald-400 font-bold">{startup.executionScore}%</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-500">Traction</span>
-                                        <span className="text-[#8B5CF6] font-bold">{startup.traction}</span>
-                                    </div>
-                                </div>
-                                <button className="w-full py-2.5 bg-white/5 hover:bg-[#8B5CF6] text-sm font-bold text-white rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn">
-                                    View Profile
-                                    <ArrowUpRight size={16} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
-                                </button>
-                            </motion.div>
-                        ))}
+                                    <button className="w-full py-2.5 bg-white/5 hover:bg-[#8B5CF6] text-sm font-bold text-white rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn">
+                                        View Profile
+                                        <ArrowUpRight size={16} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+                                    </button>
+                                </motion.div>
+                            ))
+                        ) : (
+                            <div className="md:col-span-2 p-6 bg-[#1E1E2F] rounded-2xl border border-white/5 text-gray-400 text-sm">
+                                No high-performing startups yet.
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -191,6 +198,7 @@ const IncubatorDashboard = () => {
                                             <ArrowUpRight size={14} />}
                                 </div>
                                 <div>
+                                    <p className="text-xs text-[#8B5CF6] font-bold">{log.startupName || 'Startup'}</p>
                                     <p className="text-sm text-gray-300 font-medium">{log.message}</p>
                                     <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">
                                         {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -198,6 +206,9 @@ const IncubatorDashboard = () => {
                                 </div>
                             </div>
                         ))}
+                        {activityFeed.length === 0 && (
+                            <div className="text-sm text-gray-500 py-4">No activity logged yet.</div>
+                        )}
                     </div>
 
                     {/* Mentor Utilization Card */}

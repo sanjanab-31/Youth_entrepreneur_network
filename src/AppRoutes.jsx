@@ -38,7 +38,6 @@ import StartupPipeline from './pages/Dashboard/incubator/StartupPipeline';
 import Applications from './pages/Dashboard/incubator/Applications';
 import Cohorts from './pages/Dashboard/incubator/Cohorts';
 import IncubatorMentors from './pages/Dashboard/incubator/Mentors';
-import Analytics from './pages/Dashboard/incubator/Analytics';
 import IncubatorProfile from './pages/Dashboard/incubator/IncubatorProfile';
 import IncubatorSettings from './pages/Dashboard/incubator/Settings';
 
@@ -131,7 +130,6 @@ const AppRoutes = () => {
                     <Route path="applications" element={<Applications />} />
                     <Route path="cohorts" element={<Cohorts />} />
                     <Route path="mentors" element={<IncubatorMentors />} />
-                    <Route path="analytics" element={<Analytics />} />
                     <Route path="messages" element={<Messages />} />
                     <Route path="profile" element={<IncubatorProfile />} />
                     <Route path="settings" element={<IncubatorSettings />} />

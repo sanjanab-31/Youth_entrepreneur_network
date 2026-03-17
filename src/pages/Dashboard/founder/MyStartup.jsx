@@ -152,6 +152,11 @@ const MyStartup = () => {
                             <textarea name="problemStatement" required placeholder="What problem are you solving? (max 150 words)" rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all resize-none" />
                         </div>
 
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Solution / Mission</label>
+                            <textarea name="solutionOverview" placeholder="How does your startup solve this problem?" rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all resize-none" />
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Current Stage</label>
@@ -169,6 +174,44 @@ const MyStartup = () => {
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Key Skill Gaps</label>
                                 <input name="lookingFor" placeholder="e.g., CTO, Marketing" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Traction Users</label>
+                                <input name="activeUsers" type="number" min="0" placeholder="e.g., 1200" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Growth</label>
+                                <input name="growth" placeholder="e.g., 18% MoM" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Revenue</label>
+                                <input name="revenue" placeholder="e.g., $12,000 MRR" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Target Audience (comma separated)</label>
+                                <input name="targetAudience" placeholder="SMBs, freelancers, fintech founders" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Market Info</label>
+                            <textarea name="marketInfo" rows="3" placeholder="Market size, competitors, or strategic market notes" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all resize-none" />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Demo Link</label>
+                                <input name="demoLink" type="url" placeholder="https://demo.example.com" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Pitch Deck Link</label>
+                                <input name="pitchDeckLink" type="url" placeholder="https://drive.google.com/..." className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
                             </div>
                         </div>
 
@@ -248,8 +291,14 @@ const MyStartup = () => {
                                     startupName: formData.get('startupName'),
                                     stage: formData.get('stage'),
                                     fundingGoal: formData.get('fundingGoal'),
-                                    activeUsers: parseInt(formData.get('activeUsers')),
-                                    burnRate: parseInt(formData.get('burnRate'))
+                                    activeUsers: Number(formData.get('activeUsers')) || 0,
+                                    burnRate: Number(formData.get('burnRate')) || 0,
+                                    solutionOverview: formData.get('solutionOverview') || '',
+                                    marketInfo: formData.get('marketInfo') || '',
+                                    growth: formData.get('growth') || '',
+                                    revenue: formData.get('revenue') || '',
+                                    demoLink: formData.get('demoLink') || '',
+                                    pitchDeckLink: formData.get('pitchDeckLink') || ''
                                 };
                                 handleUpdate(data, "Updated Successfully");
                                 setIsEditModalOpen(false);
@@ -281,6 +330,34 @@ const MyStartup = () => {
                                 <div>
                                     <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Burn Rate ($)</label>
                                     <input type="number" name="burnRate" defaultValue={startup.burnRate} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Solution / Mission</label>
+                                    <textarea name="solutionOverview" defaultValue={startup.solutionOverview} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all resize-none" />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Market Info</label>
+                                    <textarea name="marketInfo" defaultValue={startup.marketInfo} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all resize-none" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Growth</label>
+                                        <input name="growth" defaultValue={startup.growth} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Revenue</label>
+                                        <input name="revenue" defaultValue={startup.revenue} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Demo Link</label>
+                                        <input type="url" name="demoLink" defaultValue={startup.demoLink} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-2">Pitch Deck Link</label>
+                                        <input type="url" name="pitchDeckLink" defaultValue={startup.pitchDeckLink} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#8B5CF6] transition-all" />
+                                    </div>
                                 </div>
                                 <button type="submit" className="w-full py-4 bg-[#8B5CF6] text-white font-black rounded-xl shadow-lg shadow-[#8B5CF6]/20 hover:bg-[#7C3AED] transition-all flex items-center justify-center gap-2 mt-4">
                                     <Save size={20} /> Save Changes
