@@ -95,9 +95,6 @@ const FindCoFounder = () => {
     const [showSuccessToast, setShowSuccessToast] = useState(false);
     const [systemState, setSystemState] = useState({ users: {}, startups: [] });
 
-    if (loading) return null;
-    if (!startup) return <Navigate to="/founder/my-startup" />;
-
     useEffect(() => {
         const refreshData = () => {
             const system = getSystem();
@@ -153,6 +150,7 @@ const FindCoFounder = () => {
 
     // --- MATCHING LOGIC ---
     const getMatchScore = (cf) => {
+        if (!startup) return 0;
         let score = 0;
         const startupSkillGap = startup.skillGap?.toLowerCase() || '';
         const startupSector = normalizeSector(startup.expertiseSector || startup.sector);
@@ -192,6 +190,9 @@ const FindCoFounder = () => {
     const usersById = useMemo(() => {
         return Object.fromEntries(normalizedCoFounders.map(profile => [profile.uid, profile]));
     }, [normalizedCoFounders]);
+
+    if (loading) return null;
+    if (!startup) return <Navigate to="/founder/my-startup" />;
 
     // --- HANDLERS ---
     const handleInvite = (cf) => {

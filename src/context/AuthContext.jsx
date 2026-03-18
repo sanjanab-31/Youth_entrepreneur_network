@@ -80,7 +80,9 @@ const getUserProfile = (uid) => {
 
                 return normalized;
             }
-        } catch (e) { }
+        } catch (e) {
+            console.warn('Failed to parse legacy users during profile migration', e);
+        }
     }
 
     return null;
@@ -443,10 +445,7 @@ export const AuthProvider = ({ children }) => {
                 saveUserProfile(firebaseUser.uid, profile);
             }
 
-            // Role match validation log
-            // Role match validation
-            if (selectedRole && profile.role !== selectedRole.toLowerCase()) {
-            }
+            // Keep profile role as source of truth even when selected role differs in login form.
 
             setUser(profile);
             localStorage.setItem('vanguard_session_currentUser', JSON.stringify(profile));

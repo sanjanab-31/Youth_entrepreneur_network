@@ -92,7 +92,17 @@ const QuickAction = ({ label, icon: Icon, onClick, variant = "default" }) => (
 
 const DashboardHome = ({ role: propsRole }) => {
     const { user } = useAuth();
-    const { startup, loading, updateStartup, addMilestone, addActivity, joinRequests, createStartup } = useStartup();
+    const {
+        startup,
+        loading,
+        updateStartup,
+        addMilestone,
+        updateMilestone,
+        deleteMilestone,
+        addActivity,
+        joinRequests,
+        createStartup
+    } = useStartup();
     const navigate = useNavigate();
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);

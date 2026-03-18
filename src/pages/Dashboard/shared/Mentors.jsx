@@ -619,7 +619,7 @@ const Mentors = () => {
                                                     'Active Partner'
                                                 ) : hasRequested(mentor.id) ? (
                                                     'Request Sent'
-                                                ) : !!startup?.mentorAssigned ? (
+                                                ) : startup?.mentorAssigned ? (
                                                     'Request Locked'
                                                 ) : !canRequest ? (
                                                     'Access Locked'
