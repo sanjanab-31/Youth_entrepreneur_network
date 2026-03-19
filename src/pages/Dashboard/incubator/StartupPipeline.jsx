@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 import { useIncubator } from '../../../context/IncubatorContext';
-import { calculateExecutionScore } from '../../../context/StartupContext';
+import { calculateExecutionScore } from '../../../utils/executionScore';
 import { getSystem } from '../../../utils/system';
 
 const DAY_MS = 24 * 60 * 60 * 1000;

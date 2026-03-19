@@ -25,7 +25,8 @@ import {
     Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useStartup, calculateExecutionScore } from '../../../context/StartupContext';
+import { useStartup } from '../../../context/StartupContext';
+import { calculateExecutionScore } from '../../../utils/executionScore';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getSystem } from '../../../utils/system';

@@ -1,9 +1,22 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
-import { calculateExecutionScore } from '../context/StartupContext';
 import { useMessaging } from './MessagingContext';
-import { getSystem, normalizeSession, normalizeUserProfile, saveSystem } from '../utils/system';
-
+import {
+    acceptMentorRequest,
+    addMentorFocusArea,
+    buildMentorMessagePayload,
+    buildMentorActivity,
+    buildMentorStats,
+    completeMentorSession,
+    confirmMentorSessionRequest,
+    declineMentorRequest,
+    declineMentorSessionRequest,
+    loadMentorState,
+    removeMentorFocusArea,
+    scheduleMentorSession,
+    updateMentorProfile,
+    updateMentorSession
+} from '../utils/mentorService';
 
 const MentorContext = createContext();
 
@@ -11,383 +24,97 @@ export const useMentor = () => useContext(MentorContext);
 
 export const MentorProvider = ({ children }) => {
     const { user, updateProfile: authUpdateProfile } = useAuth();
+    const messaging = useMessaging();
+
     const [profile, setProfile] = useState(null);
     const [requests, setRequests] = useState([]);
     const [sessions, setSessions] = useState([]);
     const [mentees, setMentees] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const refreshData = () => {
-        if (!user || user.role !== 'mentor') {
-            setLoading(false);
-            return;
-        }
-
-        const system = getSystem();
-        const mentorProfile = normalizeUserProfile(system.users?.[user.uid] || user);
-
-        setProfile(mentorProfile);
-
-        setRequests((system.mentorRequests || []).filter(r => r.mentorId === mentorProfile.uid));
-        setSessions((system.sessions || []).filter(s => s.mentorId === user.uid));
-        setMentees((system.startups || []).filter(s => s.mentorAssigned === user.uid));
+    const refreshData = async () => {
+        setLoading(true);
+        const state = await loadMentorState(user);
+        setProfile(state.profile);
+        setRequests(state.requests);
+        setSessions(state.sessions);
+        setMentees(state.mentees);
         setLoading(false);
     };
 
     useEffect(() => {
         refreshData();
-        window.addEventListener('storage', refreshData);
-        return () => window.removeEventListener('storage', refreshData);
+        const handler = () => refreshData();
+        window.addEventListener('storage', handler);
+        return () => window.removeEventListener('storage', handler);
     }, [user]);
 
-    // ── Mutations ──────────────────────────────────────────────
-
-    const updateProfile = (updates) => {
-        if (!user) return;
-        authUpdateProfile(normalizeUserProfile({ ...profile, ...updates, uid: user.uid, role: 'mentor' }));
+    const updateProfile = async (updates) => {
+        await updateMentorProfile(profile, updates, user, authUpdateProfile);
+        await refreshData();
     };
 
-    const updateSession = (sessionId, updates) => {
-        const system = getSystem();
-        system.sessions = system.sessions.map(s =>
-            s.id === sessionId ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s
-        );
-        saveSystem(system);
+    const updateSession = async (sessionId, updates) => {
+        await updateMentorSession(sessionId, updates);
+        await refreshData();
     };
 
-    const acceptRequest = (requestId) => {
-        const system = getSystem();
-        const request = system.mentorRequests.find(r => r.id === requestId);
-        if (!request) return;
-
-        const startup = system.startups.find(s => s.startupId === request.startupId);
-        if (!startup || (startup.mentorAssigned && startup.mentorAssigned !== user.uid)) return;
-
-        // Update request status
-        system.mentorRequests = system.mentorRequests.map(r =>
-            r.id === requestId
-                ? { ...r, status: 'accepted', updatedAt: new Date().toISOString() }
-                : r.startupId === request.startupId && r.status === 'pending'
-                    ? { ...r, status: 'declined', updatedAt: new Date().toISOString() }
-                    : r
-        );
-
-        // Assign mentor to startup + log activity
-        system.startups = system.startups.map(s => {
-            if (s.startupId !== request.startupId) return s;
-            const activityEntry = {
-                id: null,
-                message: `Mentor ${user.name || 'Advisor'} accepted your request`,
-                type: 'mentor',
-                timestamp: new Date().toISOString()
-            };
-            const updated = {
-                ...s,
-                mentorAssigned: user.uid,
-                mentorshipStartDate: new Date().toISOString(),
-                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 20),
-                updatedAt: new Date().toISOString()
-            };
-            updated.executionScore = calculateExecutionScore(updated);
-            return updated;
-        });
-
-        saveSystem(system);
-        refreshData();
+    const acceptRequest = async (requestId) => {
+        await acceptMentorRequest(requestId, user);
+        await refreshData();
     };
 
-    const declineRequest = (requestId) => {
-        const system = getSystem();
-        const request = system.mentorRequests.find(r => r.id === requestId);
-        if (!request) return;
-
-        system.mentorRequests = system.mentorRequests.map(r =>
-            r.id === requestId ? { ...r, status: 'declined', updatedAt: new Date().toISOString() } : r
-        );
-
-        // Log activity
-        system.startups = system.startups.map(s => {
-            if (s.startupId !== request.startupId) return s;
-            const activityEntry = {
-                id: null,
-                message: `Mentor ${user.name || 'Advisor'} declined your request`,
-                type: 'warning',
-                timestamp: new Date().toISOString()
-            };
-            return {
-                ...s,
-                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 50),
-                updatedAt: new Date().toISOString()
-            };
-        });
-
-        saveSystem(system);
-        refreshData();
+    const declineRequest = async (requestId) => {
+        await declineMentorRequest(requestId, user);
+        await refreshData();
     };
 
-    const scheduleSession = (startupId, date, time, topic = 'Mentorship Session', meetingLink = '') => {
-        const system = getSystem();
-        const startup = system.startups.find(s => s.startupId === startupId);
-        if (!startup || startup.mentorAssigned !== user.uid) return;
-
-        const newSession = {
-            id: null,
-            mentorId: user.uid,
-            startupId,
-            founderId: startup.founderId,
-            date,
-            time,
-            topic,
-            meetingLink,
-            status: 'upcoming',
-            createdAt: new Date().toISOString()
-        };
-        system.sessions.push(normalizeSession(newSession));
-
-        // Log activity
-        system.startups = system.startups.map(s => {
-            if (s.startupId !== startupId) return s;
-            const activityEntry = {
-                id: null,
-                message: `Mentor scheduled a session for ${date} at ${time}`,
-                type: 'mentor',
-                timestamp: new Date().toISOString()
-            };
-            return {
-                ...s,
-                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 50),
-                updatedAt: new Date().toISOString()
-            };
-        });
-
-        saveSystem(system);
-        refreshData();
+    const scheduleSession = async (startupId, date, time, topic = 'Mentorship Session', meetingLink = '') => {
+        await scheduleMentorSession(startupId, date, time, topic, meetingLink, user);
+        await refreshData();
     };
 
-    const confirmSessionRequest = (sessionId, schedule) => {
-        const system = getSystem();
-        const session = system.sessions.find(s => s.id === sessionId);
-        if (!session) return;
-        const startup = system.startups.find(s => s.startupId === session.startupId);
-        if (!startup || startup.mentorAssigned !== user.uid) return;
-
-        const resolvedDate = schedule?.date || session.date;
-        const resolvedTime = schedule?.time || session.time;
-        const resolvedMeetingLink = schedule?.meetingLink?.trim();
-        const resolvedTopic = schedule?.topic || session.topic;
-
-        if (!resolvedDate || !resolvedTime || !resolvedMeetingLink) return;
-
-        session.status = 'upcoming';
-        session.date = resolvedDate;
-        session.time = resolvedTime;
-        session.topic = resolvedTopic;
-        session.meetingLink = resolvedMeetingLink;
-        session.updatedAt = new Date().toISOString();
-
-        // Log activity
-        system.startups = system.startups.map(s => {
-            if (s.startupId !== session.startupId) return s;
-            const activityEntry = {
-                id: null,
-                message: `Mentor confirmed your session request for ${resolvedDate} at ${resolvedTime}`,
-                type: 'mentor',
-                timestamp: new Date().toISOString()
-            };
-            return {
-                ...s,
-                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 50),
-                updatedAt: new Date().toISOString()
-            };
-        });
-
-        saveSystem(system);
-        refreshData();
+    const confirmSessionRequest = async (sessionId, schedule) => {
+        await confirmMentorSessionRequest(sessionId, schedule, user);
+        await refreshData();
     };
 
-    const declineSessionRequest = (sessionId) => {
-        const system = getSystem();
-        const session = system.sessions.find(s => s.id === sessionId);
-        if (!session) return;
-        const startup = system.startups.find(s => s.startupId === session.startupId);
-        if (!startup || startup.mentorAssigned !== user.uid) return;
-
-        session.status = 'declined';
-        session.updatedAt = new Date().toISOString();
-
-        // Log activity
-        system.startups = system.startups.map(s => {
-            if (s.startupId !== session.startupId) return s;
-            const activityEntry = {
-                id: null,
-                message: `Mentor declined your session request for ${session.date}`,
-                type: 'warning',
-                timestamp: new Date().toISOString()
-            };
-            return {
-                ...s,
-                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 50),
-                updatedAt: new Date().toISOString()
-            };
-        });
-
-        saveSystem(system);
-        refreshData();
+    const declineSessionRequest = async (sessionId) => {
+        await declineMentorSessionRequest(sessionId, user);
+        await refreshData();
     };
 
-    const completeSession = (sessionId, feedback) => {
-        const system = getSystem();
-        const session = system.sessions.find(s => s.id === sessionId);
-        if (!session) return;
-        const startup = system.startups.find(s => s.startupId === session.startupId);
-        if (!startup || startup.mentorAssigned !== user.uid) return;
-
-        session.status = 'completed';
-        session.notes = feedback.advice;
-        session.actionItems = Array.isArray(feedback.actionItems) ? feedback.actionItems : [];
-        session.completedAt = new Date().toISOString();
-        session.updatedAt = new Date().toISOString();
-
-        // Log activity & boost execution score
-        system.startups = system.startups.map(s => {
-            if (s.startupId !== session.startupId) return s;
-            const activityEntry = {
-                id: null,
-                message: `Completed session with mentor. Feedback received.`,
-                type: 'success',
-                timestamp: new Date().toISOString()
-            };
-            const updated = {
-                ...s,
-                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 50),
-                updatedAt: new Date().toISOString()
-            };
-            // Recalculate execution score (it includes sessions already in StartupContext logic)
-            updated.executionScore = calculateExecutionScore(updated);
-            return updated;
-        });
-
-        saveSystem(system);
-        refreshData();
+    const completeSession = async (sessionId, feedback) => {
+        await completeMentorSession(sessionId, feedback, user);
+        await refreshData();
     };
 
-    const addFocusArea = (startupId, area) => {
-        if (!area?.trim()) return;
-        const system = getSystem();
-        system.startups = system.startups.map(s => {
-            if (s.startupId !== startupId) return s;
-            const existing = Array.isArray(s.focusAreas) ? s.focusAreas : [];
-            if (existing.includes(area.trim())) return s;
-            const activityEntry = {
-                id: null,
-                message: `Mentor added focus area: ${area.trim()}`,
-                type: 'mentor',
-                timestamp: new Date().toISOString()
-            };
-            return {
-                ...s,
-                focusAreas: [...existing, area.trim()],
-                activity: [activityEntry, ...(Array.isArray(s.activity) ? s.activity : [])].slice(0, 20),
-                updatedAt: new Date().toISOString()
-            };
-        });
-        saveSystem(system);
+    const addFocusArea = async (startupId, area) => {
+        await addMentorFocusArea(startupId, area);
+        await refreshData();
     };
 
-    const removeFocusArea = (startupId, area) => {
-        const system = getSystem();
-        system.startups = system.startups.map(s => {
-            if (s.startupId !== startupId) return s;
-            return {
-                ...s,
-                focusAreas: (s.focusAreas || []).filter(a => a !== area),
-                updatedAt: new Date().toISOString()
-            };
-        });
-        saveSystem(system);
-        refreshData();
+    const removeFocusArea = async (startupId, area) => {
+        await removeMentorFocusArea(startupId, area);
+        await refreshData();
     };
 
-    const messaging = useMessaging();
-    const sendMessage = (startupId, text) => {
-        const system = getSystem();
-        const startup = system.startups.find(s => s.startupId === startupId);
-        if (!startup || startup.mentorAssigned !== user.uid) return;
-
-        messaging.sendMessage({
-            startupId,
-            conversationType: 'mentor',
-            message: text
-        });
+    const sendMessage = async (startupId, text) => {
+        const payload = await buildMentorMessagePayload(user, startupId, text);
+        if (!payload) return;
+        await messaging.sendMessage(payload);
     };
 
-    // ── Derived data ───────────────────────────────────────────
-
-    const calculateStats = () => {
-        const now = new Date();
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        const endOfWeek = new Date(now);
-        endOfWeek.setDate(now.getDate() + (6 - now.getDay()));
-
-        const sessionsWeek = sessions.filter(s => {
-            const d = new Date(s.date);
-            return d >= startOfWeek && d <= endOfWeek;
-        }).length;
-
-        const accepted = requests.filter(r => r.status === 'accepted').length;
-        const total = requests.length;
-
-        return {
-            pendingRequests: requests.filter(r => r.status === 'pending').length,
-            activeMentees: mentees.length,
-            sessionsThisWeek: sessionsWeek,
-            responseRate: total > 0 ? Math.round((accepted / total) * 100) : 100
-        };
-    };
-
-    const buildActivity = () => {
-        // Hydrate names from IDs — never rely on stale duplicated data
-        const system = getSystem();
-        const allUsers = system.users || {};
-
-        const getStartupName = (startupId) =>
-            system.startups.find(s => s.startupId === startupId)?.startupName || 'Unknown Startup';
-        const getFounderName = (founderId) => {
-            const u = allUsers[founderId];
-            return u?.name || u?.email?.split('@')[0] || 'Unknown Founder';
-        };
-
-        const items = [];
-
-        requests.forEach(r => {
-            const startup = system.startups.find(s => s.startupId === r.startupId);
-            const founderName = startup ? getFounderName(startup.founderId) : 'Unknown Founder';
-            const startupName = startup?.startupName || 'Unknown Startup';
-            if (r.status === 'pending') {
-                items.push({ id: r.id || null, type: 'request', message: `New mentorship request from ${founderName} (${startupName})`, timestamp: r.createdAt });
-            } else if (r.status === 'accepted') {
-                items.push({ id: r.id || null, type: 'success', message: `Accepted request from ${founderName}`, timestamp: r.updatedAt || r.createdAt });
-            } else if (r.status === 'declined') {
-                items.push({ id: r.id || null, type: 'error', message: `Declined request from ${founderName}`, timestamp: r.updatedAt || r.createdAt });
-            }
-        });
-
-        sessions.forEach(s => {
-            const startupName = getStartupName(s.startupId);
-            items.push({ id: s.id || null, type: 'session', message: `Session with ${startupName} on ${s.date} at ${s.time}`, timestamp: s.createdAt });
-        });
-
-        return items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    };
+    const activity = useMemo(() => buildMentorActivity(requests, sessions), [requests, sessions]);
+    const stats = useMemo(() => buildMentorStats(requests, sessions, mentees), [requests, sessions, mentees]);
 
     const value = {
         profile,
         requests,
         mentees,
         sessions,
-        activity: buildActivity(),
-        stats: calculateStats(),
+        activity,
+        stats,
         updateProfile,
         updateSession,
         acceptRequest,
