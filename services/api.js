@@ -10,9 +10,13 @@ api.interceptors.request.use(
     const user = auth.currentUser;
 
     if (user) {
-      const token = await user.getIdToken();
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${token}`;
+      try {
+        const token = await user.getIdToken(false);
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+      } catch (error) {
+        console.warn('Token fetch failed, sending request without token', error);
+      }
     }
 
     return config;
