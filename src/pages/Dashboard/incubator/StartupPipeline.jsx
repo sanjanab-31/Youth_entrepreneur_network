@@ -89,7 +89,7 @@ const StartupPipeline = () => {
 
     const formatLastUpdated = (timestamp) => {
         if (!timestamp) return 'No updates';
-        const delta = Date.now() - timestamp;
+        const delta = new Date().getTime() - timestamp;
         if (delta < DAY_MS) return 'Today';
         if (delta < 2 * DAY_MS) return '1 day ago';
         if (delta < 30 * DAY_MS) return `${Math.floor(delta / DAY_MS)} days ago`;
@@ -99,7 +99,7 @@ const StartupPipeline = () => {
     const isNewStartup = (startup) => {
         const createdAt = startup.createdAt ? new Date(startup.createdAt).getTime() : null;
         if (!createdAt) return false;
-        return (Date.now() - createdAt) < (3 * DAY_MS);
+        return (new Date().getTime() - createdAt) < (3 * DAY_MS);
     };
 
     const getTractionData = (startup) => {
@@ -163,8 +163,8 @@ const StartupPipeline = () => {
                     || (filters.mentor === 'without' && !hasMentor);
 
                 const recentMatch = filters.recent === 'all'
-                    || (filters.recent === '7' && lastUpdated && (Date.now() - lastUpdated) <= 7 * DAY_MS)
-                    || (filters.recent === '14' && lastUpdated && (Date.now() - lastUpdated) <= 14 * DAY_MS);
+                    || (filters.recent === '7' && lastUpdated && (new Date().getTime() - lastUpdated) <= 7 * DAY_MS)
+                    || (filters.recent === '14' && lastUpdated && (new Date().getTime() - lastUpdated) <= 14 * DAY_MS);
 
                 return searchMatch && sectorMatch && stageMatch && executionMatch && mentorMatch && recentMatch;
             })

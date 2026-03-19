@@ -16,11 +16,6 @@ const StartupContext = createContext();
 
 export const useStartup = () => useContext(StartupContext);
 
-const makeId = (prefix) => {
-    const randomToken = Math.random().toString(36).slice(2, 10).toUpperCase();
-    return `${prefix}-${randomToken}`;
-};
-
 // --- Calculation Helpers (Can be moved to a separate utils file later) ---
 export const calculateExecutionScore = (startup) => {
     let baseScore = 20; // Start at 20 unconditionally
@@ -156,7 +151,7 @@ export const StartupProvider = ({ children }) => {
         const system = getSystem();
         const currentStartup = system.startups.find(s => s.startupId === startup.startupId) || startup;
         const newAct = {
-            id: `act_${Date.now()}`,
+            id: null,
             message,
             type,
             timestamp: new Date().toISOString()
@@ -172,7 +167,7 @@ export const StartupProvider = ({ children }) => {
         const system = getSystem();
         const currentStartup = system.startups.find(s => s.startupId === startup.startupId) || startup;
         const newMilestone = {
-            id: Date.now(),
+            id: null,
             title,
             description,
             stage,
@@ -239,7 +234,7 @@ export const StartupProvider = ({ children }) => {
         if (!startup || !user) return;
         const system = getSystem();
         const newApp = {
-            id: makeId('app'),
+            id: null,
             founderId: user.uid,
             startupId: startup.startupId,
             incubatorId: incubatorId,
@@ -282,7 +277,7 @@ export const StartupProvider = ({ children }) => {
         const mentorName = mentor?.name || mentor?.email?.split('@')[0] || 'Mentor';
 
         const newRequest = {
-            id: makeId('mreq'),
+            id: null,
             mentorId,
             startupId: startup.startupId,
             founderId: user.uid,
@@ -299,7 +294,7 @@ export const StartupProvider = ({ children }) => {
         if (!startup || !user || !startup.mentorAssigned) return;
         const system = getSystem();
         const newSession = {
-            id: makeId('ses'),
+            id: null,
             startupId: startup.startupId,
             founderId: user.uid,
             mentorId: startup.mentorAssigned,
@@ -336,7 +331,7 @@ export const StartupProvider = ({ children }) => {
                 updatedAt: new Date().toISOString(),
                 activity: [
                     {
-                        id: `act_${Date.now()}`,
+                        id: null,
                         message: `Mentor ${mentorName} was removed from the startup`,
                         type: 'warning',
                         timestamp: new Date().toISOString()
@@ -403,7 +398,7 @@ export const StartupProvider = ({ children }) => {
                 // Log activity
                 const activityMsg = `Co-Founder ${user.name || user.email} resigned from the team`;
                 s.activity = [{
-                    id: `act_${Date.now()}`,
+                    id: null,
                     message: activityMsg,
                     type: 'info',
                     timestamp: new Date().toISOString()
@@ -422,7 +417,7 @@ export const StartupProvider = ({ children }) => {
         if (!startup) return;
         const system = getSystem();
         const newInvitation = {
-            id: makeId('INV'),
+            id: null,
             startupId: startup.startupId,
             invitedEmail: invitedEmail.toLowerCase(),
             invitedUserId: null,
@@ -451,7 +446,7 @@ export const StartupProvider = ({ children }) => {
         if (exists) return { error: "Invitation already pending" };
 
         const newInvitation = {
-            id: makeId('INV'),
+            id: null,
             startupId: startup.startupId,
             founderId: user.uid,
             invitedUserId,
@@ -531,7 +526,7 @@ export const StartupProvider = ({ children }) => {
                         // Log Activity
                         const activityMsg = `${user.name || user.email || 'A Co-Founder'} joined the team via invitation`;
                         const newAct = {
-                            id: `act_${Date.now()}`,
+                            id: null,
                             message: activityMsg,
                             type: 'success',
                             timestamp: new Date().toISOString()
@@ -568,7 +563,7 @@ export const StartupProvider = ({ children }) => {
                 if (s.startupId === inv.startupId) {
                     const activityMsg = `Invitation declined by ${user.name || user.email || 'candidate'}`;
                     const newAct = {
-                        id: `act_${Date.now()}`,
+                        id: null,
                         message: activityMsg,
                         type: 'warning',
                         timestamp: new Date().toISOString()
@@ -619,7 +614,7 @@ export const StartupProvider = ({ children }) => {
         if (existing) return { error: "Request already pending" };
 
         const newRequest = {
-            id: makeId('jreq'),
+            id: null,
             startupId,
             founderId: targetStartup.founderId,
             requesterId: user.uid,
@@ -636,7 +631,7 @@ export const StartupProvider = ({ children }) => {
         // Activity for Startup
         targetStartup.activity = [
             {
-                id: `act_${Date.now()}_join`,
+                id: null,
                 message: `New join request from ${newRequest.requesterName}`,
                 type: 'info',
                 timestamp: new Date().toISOString()
@@ -670,7 +665,7 @@ export const StartupProvider = ({ children }) => {
             // Log Activity
             startupToUpdate.activity = [
                 {
-                    id: `act_${Date.now()}`,
+                    id: null,
                     message: `${req.requesterName} joined the team`,
                     type: 'success',
                     timestamp: new Date().toISOString()
@@ -697,7 +692,7 @@ export const StartupProvider = ({ children }) => {
         if (startupToUpdate) {
             startupToUpdate.activity = [
                 {
-                    id: `act_${Date.now()}`,
+                    id: null,
                     message: `Join request declined`,
                     type: 'warning',
                     timestamp: new Date().toISOString()
@@ -722,7 +717,7 @@ export const StartupProvider = ({ children }) => {
         if (startupToUpdate) {
             startupToUpdate.activity = [
                 {
-                    id: `act_${Date.now()}`,
+                    id: null,
                     message: `Co-Founder withdrew join request`,
                     type: 'info',
                     timestamp: new Date().toISOString()
@@ -760,7 +755,7 @@ export const StartupProvider = ({ children }) => {
         const capitalizeStage = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Idea';
 
         const newStartup = {
-            startupId: makeId('ST'),
+            startupId: user.uid || null,
             founderId: user.uid,
             startupName: startupData.startupName || 'My Startup',
             sector: startupData.sector || 'General',
@@ -799,7 +794,7 @@ export const StartupProvider = ({ children }) => {
             mentorAssigned: null,
             applications: [],
             activity: [{
-                id: `act_${Date.now()}`,
+                id: null,
                 message: 'Venture profile initialized.',
                 type: 'info',
                 timestamp: new Date().toISOString()

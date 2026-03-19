@@ -24,10 +24,10 @@ const ReportsModeration = () => {
 
     const reports = useMemo(() => {
         const users = systemData.users || {};
-        const reportList = (systemData.reports || []).map((report, index) => {
+        const reportList = (systemData.reports || []).map((report) => {
             const user = users[report.userId] || users[report.targetId] || {};
             return {
-                id: report.id || `report-${index}`,
+            id: report.id || null,
                 userId: report.userId || report.targetId || '',
                 user: user.name || report.user || report.targetName || 'Unknown User',
                 reason: report.reason || report.message || 'Unspecified report reason',
@@ -39,8 +39,8 @@ const ReportsModeration = () => {
 
         const suspendedUsers = Object.values(users)
             .filter((user) => ['suspended', 'banned'].includes((user.status || '').toLowerCase()))
-            .map((user, index) => ({
-                id: `status-${user.uid || user.id || index}`,
+            .map((user) => ({
+                id: user.uid || user.id || null,
                 userId: user.uid || user.id,
                 user: user.name || user.email || 'User',
                 reason: `Account currently marked as ${(user.status || '').toLowerCase()}`,
@@ -64,11 +64,13 @@ const ReportsModeration = () => {
         setSystemData(getSystem());
     };
 
-    const resolveReport = (reportId) => {
+    const resolveReport = (reportId, reportIndex = -1) => {
         const sys = getSystem();
         sys.reports = (sys.reports || []).map((report, index) => {
-            const id = report.id || `report-${index}`;
-            return id === reportId ? { ...report, status: 'Resolved' } : report;
+            if (reportId) {
+                return report.id === reportId ? { ...report, status: 'Resolved' } : report;
+            }
+            return index === reportIndex ? { ...report, status: 'Resolved' } : report;
         });
         saveSystem(sys);
         setSystemData(getSystem());
@@ -98,8 +100,8 @@ const ReportsModeration = () => {
                             No incidents reported yet.
                         </div>
                     )}
-                    {reports.map((report) => (
-                        <div key={report.id} className="bg-[#1E1E2F] p-6 rounded-2xl border border-white/5 flex items-start justify-between group hover:border-red-500/30 transition-all">
+                    {reports.map((report, index) => (
+                        <div key={report.id || index} className="bg-[#1E1E2F] p-6 rounded-2xl border border-white/5 flex items-start justify-between group hover:border-red-500/30 transition-all">
                             <div className="flex gap-4">
                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${report.severity === 'High' ? 'bg-red-500/10 text-red-400' :
                                         report.severity === 'Medium' ? 'bg-amber-500/10 text-amber-400' :
@@ -124,7 +126,7 @@ const ReportsModeration = () => {
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <button onClick={() => resolveReport(report.id)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg transition-all">
+                                <button onClick={() => resolveReport(report.id, index)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg transition-all">
                                     Investigate
                                 </button>
                                 <button onClick={() => updateUserStatus(report.userId, 'banned')} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all">
@@ -147,7 +149,7 @@ const ReportsModeration = () => {
                                 </div>
                                 <MoreVertical size={16} className="text-gray-600" />
                             </button>
-                            <button onClick={() => resolveReport(reports[0]?.id)} className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-amber-500/10 rounded-xl border border-white/5 group transition-all">
+                            <button onClick={() => resolveReport(reports[0]?.id, 0)} className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-amber-500/10 rounded-xl border border-white/5 group transition-all">
                                 <div className="flex items-center gap-3">
                                     <Bell size={18} className="text-amber-400" />
                                     <span className="text-sm font-bold text-gray-300">Send Warning</span>

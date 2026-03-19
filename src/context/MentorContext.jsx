@@ -76,7 +76,7 @@ export const MentorProvider = ({ children }) => {
         system.startups = system.startups.map(s => {
             if (s.startupId !== request.startupId) return s;
             const activityEntry = {
-                id: `act_${Date.now()}`,
+                id: null,
                 message: `Mentor ${user.name || 'Advisor'} accepted your request`,
                 type: 'mentor',
                 timestamp: new Date().toISOString()
@@ -109,7 +109,7 @@ export const MentorProvider = ({ children }) => {
         system.startups = system.startups.map(s => {
             if (s.startupId !== request.startupId) return s;
             const activityEntry = {
-                id: `act_${Date.now()}`,
+                id: null,
                 message: `Mentor ${user.name || 'Advisor'} declined your request`,
                 type: 'warning',
                 timestamp: new Date().toISOString()
@@ -131,7 +131,7 @@ export const MentorProvider = ({ children }) => {
         if (!startup || startup.mentorAssigned !== user.uid) return;
 
         const newSession = {
-            id: `ses_${Date.now()}`,
+            id: null,
             mentorId: user.uid,
             startupId,
             founderId: startup.founderId,
@@ -148,7 +148,7 @@ export const MentorProvider = ({ children }) => {
         system.startups = system.startups.map(s => {
             if (s.startupId !== startupId) return s;
             const activityEntry = {
-                id: `act_${Date.now()}`,
+                id: null,
                 message: `Mentor scheduled a session for ${date} at ${time}`,
                 type: 'mentor',
                 timestamp: new Date().toISOString()
@@ -189,7 +189,7 @@ export const MentorProvider = ({ children }) => {
         system.startups = system.startups.map(s => {
             if (s.startupId !== session.startupId) return s;
             const activityEntry = {
-                id: `act_${Date.now()}`,
+                id: null,
                 message: `Mentor confirmed your session request for ${resolvedDate} at ${resolvedTime}`,
                 type: 'mentor',
                 timestamp: new Date().toISOString()
@@ -219,7 +219,7 @@ export const MentorProvider = ({ children }) => {
         system.startups = system.startups.map(s => {
             if (s.startupId !== session.startupId) return s;
             const activityEntry = {
-                id: `act_${Date.now()}`,
+                id: null,
                 message: `Mentor declined your session request for ${session.date}`,
                 type: 'warning',
                 timestamp: new Date().toISOString()
@@ -252,7 +252,7 @@ export const MentorProvider = ({ children }) => {
         system.startups = system.startups.map(s => {
             if (s.startupId !== session.startupId) return s;
             const activityEntry = {
-                id: `act_${Date.now()}`,
+                id: null,
                 message: `Completed session with mentor. Feedback received.`,
                 type: 'success',
                 timestamp: new Date().toISOString()
@@ -279,7 +279,7 @@ export const MentorProvider = ({ children }) => {
             const existing = Array.isArray(s.focusAreas) ? s.focusAreas : [];
             if (existing.includes(area.trim())) return s;
             const activityEntry = {
-                id: `act_${Date.now()}`,
+                id: null,
                 message: `Mentor added focus area: ${area.trim()}`,
                 type: 'mentor',
                 timestamp: new Date().toISOString()
@@ -365,17 +365,17 @@ export const MentorProvider = ({ children }) => {
             const founderName = startup ? getFounderName(startup.founderId) : 'Unknown Founder';
             const startupName = startup?.startupName || 'Unknown Startup';
             if (r.status === 'pending') {
-                items.push({ id: `req-${r.id}`, type: 'request', message: `New mentorship request from ${founderName} (${startupName})`, timestamp: r.createdAt });
+                items.push({ id: r.id || null, type: 'request', message: `New mentorship request from ${founderName} (${startupName})`, timestamp: r.createdAt });
             } else if (r.status === 'accepted') {
-                items.push({ id: `acc-${r.id}`, type: 'success', message: `Accepted request from ${founderName}`, timestamp: r.updatedAt || r.createdAt });
+                items.push({ id: r.id || null, type: 'success', message: `Accepted request from ${founderName}`, timestamp: r.updatedAt || r.createdAt });
             } else if (r.status === 'declined') {
-                items.push({ id: `dec-${r.id}`, type: 'error', message: `Declined request from ${founderName}`, timestamp: r.updatedAt || r.createdAt });
+                items.push({ id: r.id || null, type: 'error', message: `Declined request from ${founderName}`, timestamp: r.updatedAt || r.createdAt });
             }
         });
 
         sessions.forEach(s => {
             const startupName = getStartupName(s.startupId);
-            items.push({ id: `ses-${s.id}`, type: 'session', message: `Session with ${startupName} on ${s.date} at ${s.time}`, timestamp: s.createdAt });
+            items.push({ id: s.id || null, type: 'session', message: `Session with ${startupName} on ${s.date} at ${s.time}`, timestamp: s.createdAt });
         });
 
         return items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));

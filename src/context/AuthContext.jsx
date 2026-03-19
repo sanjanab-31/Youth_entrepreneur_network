@@ -220,7 +220,7 @@ export const AuthProvider = ({ children }) => {
             // RULE: Auto-create only for Founder (including promoted co-founders)
             if (finalRole === 'founder') {
                 const capitalizeStage = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Idea';
-                const startupId = `ST-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
+                const startupId = firebaseUser.uid || null;
 
                 const newStartup = {
                     startupId,
@@ -253,7 +253,7 @@ export const AuthProvider = ({ children }) => {
                     mentorAssigned: null,
                     applications: [],
                     activity: [{
-                        id: `act_${Date.now()}`,
+                        id: null,
                         message: 'Venture profile initialized.',
                         type: 'info',
                         timestamp: new Date().toISOString()

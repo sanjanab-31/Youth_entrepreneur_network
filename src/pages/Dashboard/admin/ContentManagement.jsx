@@ -55,7 +55,7 @@ const ContentManagement = () => {
         if (!message.trim()) return;
         const sys = getSystem();
         const next = {
-            id: `announcement-${Date.now()}`,
+            id: null,
             title: message.trim().slice(0, 60),
             type: 'System',
             target,

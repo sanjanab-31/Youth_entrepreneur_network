@@ -411,7 +411,7 @@ export const MessagingProvider = ({ children }) => {
         }
 
         const newMessage = {
-            id: `msg_${Date.now()}`,
+            id: null,
             startupId: payload.startupId,
             senderId: user.uid,
             senderName: user.name || 'User',
@@ -432,7 +432,7 @@ export const MessagingProvider = ({ children }) => {
         // Activity Logging Rules
         if (user.role === 'mentor' && payload.conversationType === 'mentor') {
             const act = {
-                id: `act_${Date.now()}`,
+                id: null,
                 message: `Mentor sent strategic message`,
                 type: 'mentor',
                 timestamp: new Date().toISOString()
@@ -440,7 +440,7 @@ export const MessagingProvider = ({ children }) => {
             targetStartup.activity = [act, ...(targetStartup.activity || [])].slice(0, 50);
         } else if (user.role === 'incubator' && payload.conversationType === 'incubator') {
             const act = {
-                id: `act_${Date.now()}`,
+                id: null,
                 message: `Incubator sent decision message`,
                 type: 'incubator',
                 timestamp: new Date().toISOString()

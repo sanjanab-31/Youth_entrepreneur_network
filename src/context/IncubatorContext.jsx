@@ -16,7 +16,7 @@ const DEFAULT_SETTINGS = {
     batchLimits: {
         maxCapacity: 25,
         durationWeeks: 12,
-        deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        deadline: new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     },
     notifications: {
         newApplications: true,
@@ -104,7 +104,7 @@ export const IncubatorProvider = ({ children }) => {
     const hasRecentUpdate = (startup, days = 14) => {
         const lastUpdate = getLastUpdateTime(startup);
         if (!lastUpdate) return false;
-        const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+        const cutoff = new Date().getTime() - (days * 24 * 60 * 60 * 1000);
         return lastUpdate >= cutoff;
     };
 
@@ -180,7 +180,7 @@ export const IncubatorProvider = ({ children }) => {
                         mentorshipStartDate: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
                         activity: [{
-                            id: `act_${Date.now()}`,
+                            id: null,
                             message: `Incubator assigned mentor ${mentorName}`,
                             type: 'mentor',
                             timestamp: new Date().toISOString()
@@ -203,7 +203,7 @@ export const IncubatorProvider = ({ children }) => {
                         mentorAssigned: null,
                         updatedAt: new Date().toISOString(),
                         activity: [{
-                            id: `act_${Date.now()}`,
+                            id: null,
                             message: `Incubator removed mentor ${mentorName}`,
                             type: 'warning',
                             timestamp: new Date().toISOString()
@@ -216,11 +216,11 @@ export const IncubatorProvider = ({ children }) => {
 
     // --- ONBOARDING ---
     const onboardStartup = (startupData) => {
-        const startupId = `ST-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
+        const startupId = startupData?.startupId || startupData?.id || null;
         const newStartup = {
             startupId,
             id: startupId,
-            founderId: `GUEST-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+            founderId: startupData?.founderId || null,
             startupName: startupData.name || 'New Startup',
             sector: startupData.sector || 'General',
             stage: startupData.stage || 'Idea',
@@ -241,7 +241,7 @@ export const IncubatorProvider = ({ children }) => {
             documents: [],
             coFounders: [],
             focusAreas: [],
-            activity: [{ id: `act_${Date.now()}`, message: 'Onboarded by incubator.', type: 'info', timestamp: new Date().toISOString() }],
+            activity: [{ id: null, message: 'Onboarded by incubator.', type: 'info', timestamp: new Date().toISOString() }],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -253,7 +253,7 @@ export const IncubatorProvider = ({ children }) => {
     };
 
     const onboardMentor = (mentorData) => {
-        const mentorId = `MNT-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
+        const mentorId = mentorData?.uid || mentorData?.id || mentorData?.email || null;
         const expertise = Array.isArray(mentorData.expertise)
             ? mentorData.expertise
             : (mentorData.expertise || mentorData.primarySkills || '')
@@ -294,6 +294,7 @@ export const IncubatorProvider = ({ children }) => {
         });
 
         updateSystem(system => {
+            if (!mentorId) return;
             system.users[mentorId] = newMentor;
         });
         return newMentor;
@@ -302,7 +303,7 @@ export const IncubatorProvider = ({ children }) => {
     const createCohort = (cohortData) => {
         const nowIso = new Date().toISOString();
         const newCohort = {
-            id: `COH-${Math.random().toString(36).slice(2, 11).toUpperCase()}`,
+            id: cohortData?.id || null,
             incubatorId: user.uid,
             name: cohortData.name,
             startDate: cohortData.startDate,
@@ -339,7 +340,7 @@ export const IncubatorProvider = ({ children }) => {
                     cohortId,
                     updatedAt: new Date().toISOString(),
                     activity: [{
-                        id: `act_${Date.now()}`,
+                        id: null,
                         message: `Added to cohort ${targetCohort.name}`,
                         type: 'cohort',
                         timestamp: new Date().toISOString()
@@ -383,7 +384,7 @@ export const IncubatorProvider = ({ children }) => {
                     cohortId: null,
                     updatedAt: new Date().toISOString(),
                     activity: [{
-                        id: `act_${Date.now()}`,
+                        id: null,
                         message: `Removed from cohort ${cohort.name}`,
                         type: 'warning',
                         timestamp: new Date().toISOString()

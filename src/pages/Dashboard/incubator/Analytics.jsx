@@ -190,7 +190,7 @@ const Analytics = () => {
                                                 <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{count} Active Startups</p>
                                             </div>
                                         </div>
-                                        <span className="text-xs font-bold text-emerald-400">+{Math.floor(Math.random() * 20)}%</span>
+                                        <span className="text-xs font-bold text-emerald-400">N/A</span>
                                     </div>
                                 );
                             })}

@@ -166,8 +166,7 @@ export const normalizeStartup = (startup) => {
 export const normalizeApplication = (application) => {
     if (!application || typeof application !== 'object') return null;
 
-    const id = normalizeId(application.id);
-    if (!id) return null;
+    const id = normalizeId(application.id) || null;
 
     return {
         id,
@@ -188,8 +187,7 @@ export const normalizeApplication = (application) => {
 
 export const normalizeMentorRequest = (request) => {
     if (!request || typeof request !== 'object') return null;
-    const id = normalizeId(request.id);
-    if (!id) return null;
+    const id = normalizeId(request.id) || null;
 
     return {
         id,
@@ -205,8 +203,7 @@ export const normalizeMentorRequest = (request) => {
 
 export const normalizeSession = (session) => {
     if (!session || typeof session !== 'object') return null;
-    const id = normalizeId(session.id);
-    if (!id) return null;
+    const id = normalizeId(session.id) || null;
 
     return {
         id,
@@ -231,8 +228,7 @@ export const normalizeSession = (session) => {
 
 export const normalizeInvitation = (invitation) => {
     if (!invitation || typeof invitation !== 'object') return null;
-    const id = normalizeId(invitation.id);
-    if (!id) return null;
+    const id = normalizeId(invitation.id) || null;
 
     return {
         id,
@@ -249,8 +245,7 @@ export const normalizeInvitation = (invitation) => {
 
 export const normalizeJoinRequest = (request) => {
     if (!request || typeof request !== 'object') return null;
-    const id = normalizeId(request.id);
-    if (!id) return null;
+    const id = normalizeId(request.id) || null;
 
     return {
         id,
@@ -267,8 +262,7 @@ export const normalizeJoinRequest = (request) => {
 
 export const normalizeCohort = (cohort) => {
     if (!cohort || typeof cohort !== 'object') return null;
-    const id = normalizeId(cohort.id);
-    if (!id) return null;
+    const id = normalizeId(cohort.id) || null;
 
     return {
         id,
@@ -324,8 +318,7 @@ export const normalizeIncubator = (incubator) => {
 
 const normalizeMessage = (message) => {
     if (!message || typeof message !== 'object') return null;
-    const id = normalizeId(message.id);
-    if (!id) return null;
+    const id = normalizeId(message.id) || null;
 
     return {
         id,
@@ -344,8 +337,7 @@ const normalizeMessage = (message) => {
 
 const normalizeAnnouncement = (announcement) => {
     if (!announcement || typeof announcement !== 'object') return null;
-    const id = normalizeId(announcement.id);
-    if (!id) return null;
+    const id = normalizeId(announcement.id) || null;
 
     return {
         id,
@@ -359,8 +351,7 @@ const normalizeAnnouncement = (announcement) => {
 
 const normalizeReport = (report) => {
     if (!report || typeof report !== 'object') return null;
-    const id = normalizeId(report.id);
-    if (!id) return null;
+    const id = normalizeId(report.id) || null;
 
     return {
         id,

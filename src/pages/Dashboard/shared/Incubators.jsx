@@ -311,7 +311,7 @@ const Incubators = () => {
         if (duplicate) return;
 
         const newApplication = {
-            id: `app_${Date.now()}`,
+            id: null,
             founderId: currentStartup.founderId || user.uid,
             startupId: currentStartup.startupId,
             incubatorId: incubator.id,

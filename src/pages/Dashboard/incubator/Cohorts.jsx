@@ -91,7 +91,7 @@ const Cohorts = () => {
             (startup.milestones || [])
                 .filter(ms => typeof ms === 'object')
                 .map(ms => ({
-                    id: `ms_${startup.startupId}_${ms.id || ms.title || Math.random().toString(36).slice(2)}`,
+                    id: ms.id || null,
                     startupName: startup.startupName || 'Unnamed Startup',
                     type: 'milestone',
                     message: `${ms.title || 'Milestone'}: ${ms.status || (ms.completed ? 'completed' : 'updated')}`,
