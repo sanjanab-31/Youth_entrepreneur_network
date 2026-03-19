@@ -7,7 +7,13 @@ import {
     onAuthStateChanged
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { getSystem, normalizeUserProfile, saveSystem } from '../utils/system';
+import {
+    getSystem,
+    normalizeIncubator,
+    normalizeStartup,
+    normalizeUserProfile,
+    saveSystem
+} from '../utils/system';
 
 const AuthContext = createContext();
 
@@ -18,7 +24,6 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'admin@vanguard.com';
 const ROLE_PATHS = {
     founder: '/founder',
     'co-founder': '/cofounder',
-    cofounder: '/cofounder',
     mentor: '/mentor',
     incubator: '/incubator',
     admin: '/admin'
@@ -99,7 +104,7 @@ export const AuthProvider = ({ children }) => {
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const firebaseUser = userCredential.user;
-            const normalizedRole = role.toLowerCase();
+            const normalizedRole = role.toLowerCase() === 'cofounder' ? 'co-founder' : role.toLowerCase();
             const system = getSystem();
 
             // ─── Pre-Signup Invitation Handling ───────────────────
@@ -128,7 +133,7 @@ export const AuthProvider = ({ children }) => {
 
             // Case C: Co-Founder wants to create startup -> Promote to Founder
             let finalRole = normalizedRole;
-            if (['co-founder', 'cofounder'].includes(normalizedRole) && profileData.onboardingType === 'create') {
+            if (normalizedRole === 'co-founder' && profileData.onboardingType === 'create') {
                 finalRole = 'founder';
             }
 
@@ -138,12 +143,12 @@ export const AuthProvider = ({ children }) => {
             // Role-specific Portal Data Initialization
             let portalData = {};
 
-            if (['founder', 'co-founder', 'cofounder'].includes(normalizedRole)) {
+            if (['founder', 'co-founder'].includes(normalizedRole)) {
                 portalData = {
                     startupName: profileData.startupName || 'My Startup',
                     sector: profileData.sector || 'General',
                     stage: profileData.stage || 'Idea',
-                    teamSize: parseInt(profileData.teamSize) || 1,
+                    teamSize: Number(profileData.teamSize) || 1,
                     lookingFor: profileData.lookingFor || '',
                     problemStatement: profileData.problemStatement || '',
                 };
@@ -215,9 +220,11 @@ export const AuthProvider = ({ children }) => {
             // RULE: Auto-create only for Founder (including promoted co-founders)
             if (finalRole === 'founder') {
                 const capitalizeStage = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Idea';
+                const startupId = `ST-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
 
                 const newStartup = {
-                    startupId: `ST-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                    startupId,
+                    id: startupId,
                     founderId: firebaseUser.uid,
                     startupName: profileData.startupName || 'My Startup',
                     sector: profileData.sector || 'General',
@@ -225,13 +232,17 @@ export const AuthProvider = ({ children }) => {
                     oneLiner: '',
                     traction: '',
                     fundingGoal: '',
-                    teamSize: parseInt(profileData.teamSize) || 1,
+                    teamSize: Number(profileData.teamSize) || 1,
                     milestones: [],
                     focusAreas: [],
                     problemStatement: profileData.problemStatement || '',
                     targetAudience: [],
                     skillGap: profileData.lookingFor || '',
-                    primarySkills: profileData.primarySkills || '',
+                    primarySkills: Array.isArray(profileData.primarySkills)
+                        ? profileData.primarySkills.filter(Boolean)
+                        : (typeof profileData.primarySkills === 'string'
+                            ? profileData.primarySkills.split(',').map(s => s.trim()).filter(Boolean)
+                            : []),
                     location: profileData.location || '',
                     commitment: profileData.commitment || '',
                     linkedin: profileData.linkedin || '',
@@ -250,7 +261,7 @@ export const AuthProvider = ({ children }) => {
                     updatedAt: new Date().toISOString(),
                     status: 'active'
                 };
-                system.startups.push(newStartup);
+                system.startups.push(normalizeStartup(newStartup));
             }
 
             // Relational: Initialize Incubator record in system.incubators so founders can discover it.
@@ -258,6 +269,7 @@ export const AuthProvider = ({ children }) => {
                 const incubatorEntry = {
                     id: firebaseUser.uid,
                     uid: firebaseUser.uid,
+                    incubatorId: firebaseUser.uid,
                     name: portalData.incubatorName || name,
                     incubatorName: portalData.incubatorName || name,
                     location: portalData.location || '',
@@ -278,12 +290,12 @@ export const AuthProvider = ({ children }) => {
                     inc => (inc.id || inc.uid) === firebaseUser.uid
                 );
                 if (!alreadyExists) {
-                    system.incubators = [...(system.incubators || []), incubatorEntry];
+                    system.incubators = [...(system.incubators || []), normalizeIncubator(incubatorEntry)];
                 }
             }
 
             // Case A: Manual invite linking (was handled partially by pre-signup but check again if they provided code)
-            if (['co-founder', 'cofounder'].includes(normalizedRole) && profileData.onboardingType === 'invite') {
+            if (normalizedRole === 'co-founder' && profileData.onboardingType === 'invite') {
                 const invitation = system.invitations.find(inv =>
                     (inv.id === profileData.inviteCode || inv.startupId === profileData.inviteCode) &&
                     inv.status === 'pending'
@@ -340,7 +352,7 @@ export const AuthProvider = ({ children }) => {
                     uid: firebaseUser.uid,
                     name: firebaseUser.displayName || email.split('@')[0],
                     email: firebaseUser.email,
-                    role: selectedRole.toLowerCase(),
+                    role: selectedRole.toLowerCase() === 'cofounder' ? 'co-founder' : selectedRole.toLowerCase(),
                     portalData: {}, // Generic empty dashboard
                     createdAt: new Date().toISOString()
                 };

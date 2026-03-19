@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useAuth } from './AuthContext';
-import { getSystem, saveSystem } from '../utils/system';
+import {
+    getSystem,
+    normalizeCohort,
+    normalizeStartup,
+    normalizeUserProfile,
+    saveSystem
+} from '../utils/system';
 
 const IncubatorContext = createContext();
 
@@ -210,9 +216,11 @@ export const IncubatorProvider = ({ children }) => {
 
     // --- ONBOARDING ---
     const onboardStartup = (startupData) => {
+        const startupId = `ST-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
         const newStartup = {
-            startupId: `ST-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-            founderId: `GUEST-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+            startupId,
+            id: startupId,
+            founderId: `GUEST-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
             startupName: startupData.name || 'New Startup',
             sector: startupData.sector || 'General',
             stage: startupData.stage || 'Idea',
@@ -239,13 +247,13 @@ export const IncubatorProvider = ({ children }) => {
         };
 
         updateSystem(system => {
-            system.startups.push(newStartup);
+            system.startups.push(normalizeStartup(newStartup));
         });
         return newStartup;
     };
 
     const onboardMentor = (mentorData) => {
-        const mentorId = `MNT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+        const mentorId = `MNT-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
         const expertise = Array.isArray(mentorData.expertise)
             ? mentorData.expertise
             : (mentorData.expertise || mentorData.primarySkills || '')
@@ -261,7 +269,7 @@ export const IncubatorProvider = ({ children }) => {
             ...(mentorData.availability || {})
         };
 
-        const newMentor = {
+        const newMentor = normalizeUserProfile({
             uid: mentorId,
             name: mentorData.name,
             email: mentorData.email || `${mentorData.name.toLowerCase().replace(/\s/g, '.')}@example.com`,
@@ -283,7 +291,7 @@ export const IncubatorProvider = ({ children }) => {
             },
             onboardedBy: user.uid,
             createdAt: new Date().toISOString()
-        };
+        });
 
         updateSystem(system => {
             system.users[mentorId] = newMentor;
@@ -294,13 +302,15 @@ export const IncubatorProvider = ({ children }) => {
     const createCohort = (cohortData) => {
         const nowIso = new Date().toISOString();
         const newCohort = {
-            id: `COH-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+            id: `COH-${Math.random().toString(36).slice(2, 11).toUpperCase()}`,
             incubatorId: user.uid,
             name: cohortData.name,
             startDate: cohortData.startDate,
             endDate: cohortData.endDate,
             maxCapacity: Number(cohortData.maxCapacity) || 20,
-            sectorFocus: cohortData.sectorFocus || '',
+            sectorFocus: Array.isArray(cohortData.sectorFocus)
+                ? cohortData.sectorFocus
+                : (cohortData.sectorFocus ? [cohortData.sectorFocus] : []),
             startupIds: [],
             status: 'upcoming',
             createdAt: nowIso,
@@ -308,7 +318,7 @@ export const IncubatorProvider = ({ children }) => {
         };
 
         updateSystem(system => {
-            system.cohorts.push(newCohort);
+            system.cohorts.push(normalizeCohort(newCohort));
         });
     };
 

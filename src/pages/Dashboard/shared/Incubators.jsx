@@ -22,7 +22,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
-import { getSystem, saveSystem } from '../../../utils/system';
+import { getSystem, normalizeApplication, saveSystem } from '../../../utils/system';
 
 const normalizeToArray = (value) => {
     if (Array.isArray(value)) return value.filter(Boolean);
@@ -317,18 +317,20 @@ const Incubators = () => {
             incubatorId: incubator.id,
             startupName: currentStartup.startupName || 'Unnamed Startup',
             sector: currentStartup.sector || 'General',
-            teamSize: currentStartup.teamSize || 1,
+            teamSize: Number(currentStartup.teamSize) || 1,
             appliedDate: new Date().toISOString(),
             status: 'pending',
             message: ''
         };
 
-        system.applications = [...(system.applications || []), newApplication];
+        const normalizedApplication = normalizeApplication(newApplication);
+
+        system.applications = [...(system.applications || []), normalizedApplication];
         saveSystem(system);
 
         setSystemState(prev => ({
             ...prev,
-            applications: [...prev.applications, newApplication]
+            applications: [...prev.applications, normalizedApplication]
         }));
     };
 

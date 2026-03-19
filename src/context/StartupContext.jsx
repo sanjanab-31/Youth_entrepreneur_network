@@ -1,11 +1,25 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useMessaging } from './MessagingContext';
-import { getSystem, saveSystem } from '../utils/system';
+import {
+    getSystem,
+    normalizeApplication,
+    normalizeInvitation,
+    normalizeJoinRequest,
+    normalizeMentorRequest,
+    normalizeSession,
+    normalizeStartup,
+    saveSystem
+} from '../utils/system';
 
 const StartupContext = createContext();
 
 export const useStartup = () => useContext(StartupContext);
+
+const makeId = (prefix) => {
+    const randomToken = Math.random().toString(36).slice(2, 10).toUpperCase();
+    return `${prefix}-${randomToken}`;
+};
 
 // --- Calculation Helpers (Can be moved to a separate utils file later) ---
 export const calculateExecutionScore = (startup) => {
@@ -76,7 +90,7 @@ export const StartupProvider = ({ children }) => {
         // 2. If Co-Founder: user.uid exists in s.coFounders
         const userStartup = system.startups.find(s => {
             if (user.role === 'founder' && s.founderId === user.uid) return true;
-            if (['co-founder', 'cofounder'].includes(user.role) && Array.isArray(s.coFounders) && s.coFounders.includes(user.uid)) return true;
+            if (user.role === 'co-founder' && Array.isArray(s.coFounders) && s.coFounders.includes(user.uid)) return true;
             return false;
         });
 
@@ -105,7 +119,7 @@ export const StartupProvider = ({ children }) => {
         const allRequests = system.joinRequests || [];
         const filteredRequests = allRequests.filter(r =>
             (user.role === 'founder' && r.founderId === user.uid) ||
-            (['co-founder', 'cofounder'].includes(user.role) && r.requesterId === user.uid)
+            (user.role === 'co-founder' && r.requesterId === user.uid)
         );
         setJoinRequests(filteredRequests);
 
@@ -115,7 +129,7 @@ export const StartupProvider = ({ children }) => {
     const updateSystem = (updatedStartup) => {
         const system = getSystem();
         system.startups = system.startups.map(s =>
-            s.startupId === updatedStartup.startupId ? updatedStartup : s
+            s.startupId === updatedStartup.startupId ? normalizeStartup(updatedStartup) : s
         );
         saveSystem(system);
         syncData();
@@ -225,18 +239,18 @@ export const StartupProvider = ({ children }) => {
         if (!startup || !user) return;
         const system = getSystem();
         const newApp = {
-            id: `app_${Date.now()}`,
+            id: makeId('app'),
             founderId: user.uid,
             startupId: startup.startupId,
             incubatorId: incubatorId,
             startupName: startup.startupName,
             sector: startup.sector || 'General',
-            teamSize: startup.teamSize || 1,
+            teamSize: Number(startup.teamSize) || 1,
             appliedDate: new Date().toISOString(),
             status: "pending",
             message: message || ''
         };
-        system.applications.push(newApp);
+        system.applications.push(normalizeApplication(newApp));
         saveSystem(system);
         addActivity(`Sent application to incubator`, 'incubator');
     };
@@ -268,7 +282,7 @@ export const StartupProvider = ({ children }) => {
         const mentorName = mentor?.name || mentor?.email?.split('@')[0] || 'Mentor';
 
         const newRequest = {
-            id: `mreq_${Date.now()}`,
+            id: makeId('mreq'),
             mentorId,
             startupId: startup.startupId,
             founderId: user.uid,
@@ -276,7 +290,7 @@ export const StartupProvider = ({ children }) => {
             status: 'pending',
             createdAt: new Date().toISOString()
         };
-        system.mentorRequests.push(newRequest);
+        system.mentorRequests.push(normalizeMentorRequest(newRequest));
         saveSystem(system);
         addActivity(`Mentorship request sent to ${mentorName}`, 'mentor');
     };
@@ -285,7 +299,7 @@ export const StartupProvider = ({ children }) => {
         if (!startup || !user || !startup.mentorAssigned) return;
         const system = getSystem();
         const newSession = {
-            id: `ses_${Date.now()}`,
+            id: makeId('ses'),
             startupId: startup.startupId,
             founderId: user.uid,
             mentorId: startup.mentorAssigned,
@@ -297,7 +311,7 @@ export const StartupProvider = ({ children }) => {
         };
 
         if (!system.sessions) system.sessions = [];
-        system.sessions.push(newSession);
+        system.sessions.push(normalizeSession(newSession));
 
         addActivity(`Requested session for ${date}`, 'info');
 
@@ -408,7 +422,7 @@ export const StartupProvider = ({ children }) => {
         if (!startup) return;
         const system = getSystem();
         const newInvitation = {
-            id: `INV-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+            id: makeId('INV'),
             startupId: startup.startupId,
             invitedEmail: invitedEmail.toLowerCase(),
             invitedUserId: null,
@@ -416,7 +430,7 @@ export const StartupProvider = ({ children }) => {
             createdAt: new Date().toISOString()
         };
         system.invitations = system.invitations || [];
-        system.invitations.push(newInvitation);
+        system.invitations.push(normalizeInvitation(newInvitation));
         saveSystem(system);
         addActivity(`Invited ${invitedEmail}`, 'info');
         syncData();
@@ -437,7 +451,7 @@ export const StartupProvider = ({ children }) => {
         if (exists) return { error: "Invitation already pending" };
 
         const newInvitation = {
-            id: `INV-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+            id: makeId('INV'),
             startupId: startup.startupId,
             founderId: user.uid,
             invitedUserId,
@@ -448,7 +462,7 @@ export const StartupProvider = ({ children }) => {
             updatedAt: new Date().toISOString()
         };
 
-        system.invitations.push(newInvitation);
+        system.invitations.push(normalizeInvitation(newInvitation));
         saveSystem(system);
 
         // Log activity
@@ -592,7 +606,7 @@ export const StartupProvider = ({ children }) => {
     };
 
     const sendJoinRequest = (startupId, message) => {
-        if (!user || (user.role !== 'co-founder' && user.role !== 'cofounder')) return { error: "Unauthorized" };
+        if (!user || user.role !== 'co-founder') return { error: "Unauthorized" };
         const system = getSystem();
         const targetStartup = system.startups.find(s => s.startupId === startupId);
         if (!targetStartup) return { error: "Startup not found" };
@@ -605,7 +619,7 @@ export const StartupProvider = ({ children }) => {
         if (existing) return { error: "Request already pending" };
 
         const newRequest = {
-            id: `jreq_${Date.now()}`,
+            id: makeId('jreq'),
             startupId,
             founderId: targetStartup.founderId,
             requesterId: user.uid,
@@ -617,7 +631,7 @@ export const StartupProvider = ({ children }) => {
         };
 
         system.joinRequests = system.joinRequests || [];
-        system.joinRequests.push(newRequest);
+        system.joinRequests.push(normalizeJoinRequest(newRequest));
 
         // Activity for Startup
         targetStartup.activity = [
@@ -641,7 +655,7 @@ export const StartupProvider = ({ children }) => {
 
         // Prevent accepting if user is already linked to a startup - BUT ONLY IF THEY ARE A CO-FOUNDER
         // Founders are ALWAYS linked to their own startup.
-        if (['co-founder', 'cofounder'].includes(user.role) && isUserLinked()) {
+        if (user.role === 'co-founder' && isUserLinked()) {
             return { error: "User must resign from current startup first." };
         }
 
@@ -746,7 +760,7 @@ export const StartupProvider = ({ children }) => {
         const capitalizeStage = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Idea';
 
         const newStartup = {
-            startupId: `ST-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+            startupId: makeId('ST'),
             founderId: user.uid,
             startupName: startupData.startupName || 'My Startup',
             sector: startupData.sector || 'General',
@@ -758,7 +772,7 @@ export const StartupProvider = ({ children }) => {
             revenue: startupData.revenue || '',
             fundingGoal: '',
             marketInfo: startupData.marketInfo || '',
-            teamSize: parseInt(startupData.teamSize) || 1,
+            teamSize: Number(startupData.teamSize) || 1,
             milestones: [],
             focusAreas: [],
             problemStatement: startupData.problemStatement || '',
@@ -766,7 +780,11 @@ export const StartupProvider = ({ children }) => {
                 ? startupData.targetAudience.split(',').map(a => a.trim()).filter(Boolean)
                 : [],
             skillGap: startupData.lookingFor || '',
-            primarySkills: startupData.primarySkills || '',
+            primarySkills: Array.isArray(startupData.primarySkills)
+                ? startupData.primarySkills.filter(Boolean)
+                : (typeof startupData.primarySkills === 'string'
+                    ? startupData.primarySkills.split(',').map(s => s.trim()).filter(Boolean)
+                    : []),
             location: startupData.location || '',
             commitment: startupData.commitment || '',
             linkedin: startupData.linkedin || '',
@@ -790,7 +808,7 @@ export const StartupProvider = ({ children }) => {
             status: 'active'
         };
 
-        system.startups.push(newStartup);
+        system.startups.push(normalizeStartup(newStartup));
         saveSystem(system);
         syncData();
         return newStartup;

@@ -82,9 +82,9 @@ const AppRoutes = () => {
             </Route>
 
             {/* Co-Founder Dashboard Routes (Aliased for both variants) */}
-            <Route element={<ProtectedRoute allowedRoles={['co-founder', 'cofounder']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['co-founder']} />}>
                 {['/cofounder', '/co-founder'].map(path => (
-                    <Route key={path} path={path} element={<Dashboard role="cofounder" />}>
+                    <Route key={path} path={path} element={<Dashboard role="co-founder" />}>
                         <Route index element={<CoFounderDashboard />} />
                         <Route path="dashboard" element={<CoFounderDashboard />} />
                         <Route path="discover-startups" element={<DiscoverStartups />} />

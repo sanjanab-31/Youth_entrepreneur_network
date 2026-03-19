@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { calculateExecutionScore } from '../context/StartupContext';
 import { useMessaging } from './MessagingContext';
-import { getSystem, normalizeUserProfile, saveSystem } from '../utils/system';
+import { getSystem, normalizeSession, normalizeUserProfile, saveSystem } from '../utils/system';
 
 
 const MentorContext = createContext();
@@ -142,7 +142,7 @@ export const MentorProvider = ({ children }) => {
             status: 'upcoming',
             createdAt: new Date().toISOString()
         };
-        system.sessions.push(newSession);
+        system.sessions.push(normalizeSession(newSession));
 
         // Log activity
         system.startups = system.startups.map(s => {
@@ -244,7 +244,7 @@ export const MentorProvider = ({ children }) => {
 
         session.status = 'completed';
         session.notes = feedback.advice;
-        session.actionItems = feedback.actionItems;
+        session.actionItems = Array.isArray(feedback.actionItems) ? feedback.actionItems : [];
         session.completedAt = new Date().toISOString();
         session.updatedAt = new Date().toISOString();
 

@@ -6,7 +6,6 @@ import { useAuth } from '../context/AuthContext';
 const ROLE_HOME = {
     founder: '/founder',
     'co-founder': '/cofounder',
-    cofounder: '/cofounder',
     mentor: '/mentor',
     incubator: '/incubator',
     admin: '/admin'

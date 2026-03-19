@@ -165,7 +165,7 @@ export const MessagingProvider = ({ children }) => {
         const convoMap = new Map();
 
         // 1. Startup Members (Founder, Co-Founder)
-        if (user.role === 'founder' || ['co-founder', 'cofounder'].includes(user.role)) {
+        if (user.role === 'founder' || user.role === 'co-founder') {
             const myStartup = allStartups.find(s =>
                 s.founderId === user.uid || (s.coFounders || []).includes(user.uid)
             );
@@ -380,7 +380,7 @@ export const MessagingProvider = ({ children }) => {
 
         if (!targetStartup) return console.error("Invalid startupId");
 
-        if (user.role === 'founder' || ['co-founder', 'cofounder'].includes(user.role)) {
+        if (user.role === 'founder' || user.role === 'co-founder') {
             const isMember = targetStartup.founderId === user.uid || (targetStartup.coFounders || []).includes(user.uid);
             if (isMember) {
                 if (payload.conversationType === 'startup') isValid = true;

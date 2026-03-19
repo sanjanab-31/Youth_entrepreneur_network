@@ -10,9 +10,8 @@ const StartupWorkspaceGuard = () => {
     if (loading) return null; // Let StartupContext handle initial loading state
 
     // If co-founder is NOT linked to a startup, block workspace routes
-    if (['co-founder', 'cofounder'].includes(user?.role) && !startup) {
-        const homePath = user.role === 'cofounder' ? '/cofounder' : '/co-founder';
-        return <Navigate to={homePath} replace />;
+    if (user?.role === 'co-founder' && !startup) {
+        return <Navigate to="/cofounder" replace />;
     }
 
     return <Outlet />;
