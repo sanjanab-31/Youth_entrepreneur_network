@@ -50,7 +50,7 @@ const Messages = () => {
         if (selectedConvo) {
             markAsRead(selectedConvo);
         }
-    }, [selectedConvo, messages, markAsRead]);
+    }, [selectedConvo, markAsRead]);
 
     const handleSend = (e) => {
         e.preventDefault();

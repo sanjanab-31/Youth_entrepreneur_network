@@ -12,27 +12,29 @@ const Settings = ({ role: initialRole }) => {
 
     // Initialization: use Auth SSOT for all settings (in-memory only)
     useEffect(() => {
-        if (!authUser) return;
-
-        const profile = {
-            fullName: authUser.name || '',
-            email: authUser.email || '',
-            role: authUser.role || initialRole || 'founder',
-            commitmentLevel: authUser.commitmentLevel || '',
-            bio: authUser.bio || '',
-            preferences: {
-                emailNotifications: true,
-                mentorAlerts: true,
-                ...(authUser.preferences || {})
-            },
-            visibility: {
-                profile: 'public',
-                startup: 'visible',
-                ...(authUser.visibility || {})
+        const profile = authUser
+            ? {
+                fullName: authUser.name || '',
+                email: authUser.email || '',
+                role: authUser.role || initialRole || 'founder',
+                commitmentLevel: authUser.commitmentLevel || '',
+                bio: authUser.bio || '',
+                preferences: {
+                    emailNotifications: true,
+                    mentorAlerts: true,
+                    ...(authUser.preferences || {})
+                },
+                visibility: {
+                    profile: 'public',
+                    startup: 'visible',
+                    ...(authUser.visibility || {})
+                }
             }
-        };
+            : null;
 
-        setUser(profile);
+        queueMicrotask(() => {
+            setUser(profile);
+        });
     }, [authUser, initialRole]);
 
     const triggerToast = (msg) => {

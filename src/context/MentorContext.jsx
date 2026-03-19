@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useMessaging } from './MessagingContext';
 import {
@@ -32,7 +32,7 @@ export const MentorProvider = ({ children }) => {
     const [mentees, setMentees] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const refreshData = async () => {
+    const refreshData = useCallback(async () => {
         setLoading(true);
         const state = await loadMentorState(user);
         setProfile(state.profile);
@@ -40,14 +40,16 @@ export const MentorProvider = ({ children }) => {
         setSessions(state.sessions);
         setMentees(state.mentees);
         setLoading(false);
-    };
+    }, [user]);
 
     useEffect(() => {
-        refreshData();
-        const handler = () => refreshData();
+        const handler = () => {
+            void refreshData();
+        };
+        queueMicrotask(handler);
         window.addEventListener('storage', handler);
         return () => window.removeEventListener('storage', handler);
-    }, [user]);
+    }, [refreshData]);
 
     const updateProfile = async (updates) => {
         await updateMentorProfile(profile, updates, user, authUpdateProfile);

@@ -58,7 +58,7 @@ const HeroCarousel = () => {
             setCurrentSlide((prev) => (prev + 1) % slides.length);
         }, 5000); // 5 seconds
         return () => clearInterval(timer);
-    }, []);
+    }, [slides.length]);
 
     return (
         <div className="absolute inset-0 w-full h-full bg-brand-black">

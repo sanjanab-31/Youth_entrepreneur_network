@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useMessaging } from './MessagingContext';
 import {
@@ -49,7 +49,7 @@ export const StartupProvider = ({ children }) => {
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const syncData = async () => {
+    const syncData = useCallback(async () => {
         setLoading(true);
         const state = await loadStartupState(user);
         setStartup(state.startup);
@@ -60,14 +60,16 @@ export const StartupProvider = ({ children }) => {
         setMentorRequests(state.mentorRequests);
         setSessions(state.sessions);
         setLoading(false);
-    };
+    }, [user]);
 
     useEffect(() => {
-        syncData();
-        const handleStorage = () => syncData();
+        const handleStorage = () => {
+            void syncData();
+        };
+        queueMicrotask(handleStorage);
         window.addEventListener('storage', handleStorage);
         return () => window.removeEventListener('storage', handleStorage);
-    }, [user]);
+    }, [syncData]);
 
     const updateStartup = async (updates) => {
         if (!startup) return;

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import {
     acceptIncubatorApplication,
@@ -35,7 +35,7 @@ export const IncubatorProvider = ({ children }) => {
     const [nextBatch, setNextBatch] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const refreshData = async () => {
+    const refreshData = useCallback(async () => {
         setLoading(true);
         const state = await loadIncubatorState(user);
 
@@ -53,14 +53,16 @@ export const IncubatorProvider = ({ children }) => {
         setNextBatch(derived.nextBatch);
 
         setLoading(false);
-    };
+    }, [user]);
 
     useEffect(() => {
-        refreshData();
-        const handler = () => refreshData();
+        const handler = () => {
+            void refreshData();
+        };
+        queueMicrotask(handler);
         window.addEventListener('storage', handler);
         return () => window.removeEventListener('storage', handler);
-    }, [user]);
+    }, [refreshData]);
 
     const acceptApplication = async (appId, cohortId) => {
         await acceptIncubatorApplication(user, appId, cohortId);

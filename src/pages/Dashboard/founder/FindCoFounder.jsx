@@ -104,7 +104,7 @@ const FindCoFounder = () => {
             });
         };
 
-        refreshData();
+        queueMicrotask(refreshData);
         const handleStorage = () => refreshData();
         window.addEventListener('storage', handleStorage);
         return () => window.removeEventListener('storage', handleStorage);

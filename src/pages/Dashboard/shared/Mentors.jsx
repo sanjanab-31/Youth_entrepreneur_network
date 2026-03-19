@@ -215,11 +215,11 @@ const Mentors = () => {
             }
         };
 
-        refreshData();
+        queueMicrotask(refreshData);
         const handleStorage = () => refreshData();
         window.addEventListener('storage', handleStorage);
         return () => window.removeEventListener('storage', handleStorage);
-    }, [user.uid]);
+    }, []);
 
     // --- Logic: Dynamic Response Rate ---
     const processedMentors = useMemo(() => {

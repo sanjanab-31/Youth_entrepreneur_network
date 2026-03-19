@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import {
     buildConversations,
@@ -18,20 +18,22 @@ export const MessagingProvider = ({ children }) => {
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const refreshMessages = async () => {
+    const refreshMessages = useCallback(async () => {
         setLoading(true);
         const state = await loadMessagingState();
         setMessages(state.messages);
         setConversations(buildConversations(user, state.messages));
         setLoading(false);
-    };
+    }, [user]);
 
     useEffect(() => {
-        refreshMessages();
-        const handler = () => refreshMessages();
+        const handler = () => {
+            void refreshMessages();
+        };
+        queueMicrotask(handler);
         window.addEventListener('storage', handler);
         return () => window.removeEventListener('storage', handler);
-    }, [user]);
+    }, [refreshMessages]);
 
     const sendMessage = async (payload) => {
         await sendSystemMessage(user, payload);
