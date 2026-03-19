@@ -16,6 +16,7 @@ import {
 import { useStartup } from '../../../context/StartupContext';
 import { useAuth } from '../../../context/AuthContext';
 import { calculateExecutionScore } from '../../../utils/executionScore';
+import { getSystem } from '../../../utils/system';
 
 const StartupOverview = () => {
     const { startup, loading } = useStartup();
@@ -39,28 +40,16 @@ const StartupOverview = () => {
     const completedMilestones = startup.milestones?.filter(m => m.status === 'completed') || [];
     const pendingMilestones = startup.milestones?.filter(m => m.status !== 'completed') || [];
 
-    // Filter sessions for this startup
-    const allSessions = JSON.parse(localStorage.getItem('vanguard_sessions') || '[]');
-    const startupSessions = allSessions
+    // Get sessions from system state
+    const system = getSystem();
+    const startupSessions = (system.sessions || [])
         .filter(s => s.startupId === startup.startupId)
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const nextSession = startupSessions.find(s => s.status === 'upcoming');
 
-    // Get lead founder name
-    const allUsersRaw = localStorage.getItem('vanguard_users');
-    let allUsers = {};
-    try {
-        allUsers = JSON.parse(allUsersRaw || '{}');
-        if (Array.isArray(allUsers)) {
-            allUsers = allUsers.reduce((acc, u) => {
-                if (u.uid || u.id) acc[u.uid || u.id] = u;
-                return acc;
-            }, {});
-        }
-    } catch (e) { allUsers = {}; }
-
-    const founder = allUsers[startup.founderId];
+    // Get founder info from system state
+    const founder = system.users?.[startup.founderId];
     const founderName = founder?.name || founder?.email?.split('@')[0] || 'Original Founder';
 
     return (

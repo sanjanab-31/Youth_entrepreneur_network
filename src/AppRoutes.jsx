@@ -155,6 +155,8 @@ const AppRoutes = () => {
 
             {/* Catch-all and Redirects */}
             <Route path="/founder/find-cofounder" element={<Navigate to="/founder/find-co-founder" replace />} />
+            <Route path="/founder/findcofounder" element={<Navigate to="/founder/find-co-founder" replace />} />
+            <Route path="/founder/find_co_founder" element={<Navigate to="/founder/find-co-founder" replace />} />
         </Routes>
     );
 };

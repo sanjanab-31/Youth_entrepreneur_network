@@ -24,7 +24,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
 import { getSystem } from '../../../utils/system';
-import { Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const normalizeStage = (value) => {
     const normalized = (value || '').toString().trim().toLowerCase();
@@ -192,7 +192,26 @@ const FindCoFounder = () => {
     }, [normalizedCoFounders]);
 
     if (loading) return null;
-    if (!startup) return <Navigate to="/founder/my-startup" />;
+    if (!startup) {
+        return (
+            <div className="space-y-6">
+                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
+                    Find <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">Co-Founder</span>
+                </h1>
+                <div className="bg-[#1E1E2F] border border-white/10 rounded-2xl p-8 text-center">
+                    <p className="text-gray-300 font-medium">
+                        Create your startup profile first to invite co-founders.
+                    </p>
+                    <Link
+                        to="/founder/my-startup"
+                        className="inline-flex mt-5 px-5 py-3 rounded-xl bg-brand-purple text-white font-bold hover:opacity-90 transition"
+                    >
+                        Go To My Startup
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     // --- HANDLERS ---
     const handleInvite = (cf) => {

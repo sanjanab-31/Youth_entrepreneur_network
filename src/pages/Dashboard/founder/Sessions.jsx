@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStartup } from '../../../context/StartupContext';
+import { getSystem } from '../../../utils/system';
 
 const RequestSessionModal = ({ onClose, onRequest }) => {
     const [date, setDate] = useState('');
@@ -103,20 +104,9 @@ const RequestSessionModal = ({ onClose, onRequest }) => {
 };
 
 const SessionItem = ({ session }) => {
-    // Hydrate mentor name from ID
-    const allUsersRaw = localStorage.getItem('vanguard_users');
-    let allUsers = {};
-    try {
-        allUsers = JSON.parse(allUsersRaw || '{}');
-        if (Array.isArray(allUsers)) {
-            allUsers = allUsers.reduce((acc, u) => {
-                if (u.uid || u.id) acc[u.uid || u.id] = u;
-                return acc;
-            }, {});
-        }
-    } catch (e) { allUsers = {}; }
-
-    const mentor = allUsers[session.mentorId];
+    // Get mentor name from system state
+    const system = getSystem();
+    const mentor = system.users?.[session.mentorId];
     const mentorName = mentor?.name || mentor?.email?.split('@')[0] || 'Unknown Mentor';
     const mentorTitle = mentor?.title || 'Expert Mentor';
 

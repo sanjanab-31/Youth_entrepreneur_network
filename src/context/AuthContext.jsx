@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     createUserWithEmailAndPassword,
@@ -13,13 +13,6 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-// legacy keys for reference in migration logic inside system.js
-const USER_KEY = 'vanguard_users';
-const STARTUPS_KEY = 'vanguard_startups';
-const MENTOR_REQUESTS_KEY = 'vanguard_mentorRequests';
-const SESSIONS_KEY = 'vanguard_sessions';
-const APPLICATIONS_KEY = 'vanguard_applications';
-
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'admin@vanguard.com';
 
 const ROLE_PATHS = {
@@ -33,68 +26,16 @@ const ROLE_PATHS = {
 
 // Helper: get user from system by uid
 const getUserProfile = (uid) => {
-    // Priority 1: Direct Key (Profile-specific single source)
-    const profileKey = `profile_${uid}`;
-    let profile = localStorage.getItem(profileKey);
-
-    if (profile) {
-        try {
-            const normalized = normalizeUserProfile(JSON.parse(profile));
-
-            // Auto-heal: ensure centralized users map always contains this profile.
-            const system = getSystem();
-            if (!system.users[uid]) {
-                system.users[uid] = normalized;
-                saveSystem(system);
-            }
-
-            return normalized;
-        } catch (e) {
-            console.error('Error parsing profile for:', uid, e);
-        }
-    }
-
-    // Priority 2: System Object
     const system = getSystem();
     if (system.users[uid]) {
-        // Standardize: ensure uid profile exists
-        const normalized = normalizeUserProfile(system.users[uid]);
-        localStorage.setItem(profileKey, JSON.stringify(normalized));
-        return normalized;
+        return normalizeUserProfile(system.users[uid]);
     }
-
-    // Migration from legacy registry if still exists
-    let legacyRaw = localStorage.getItem(USER_KEY);
-    if (legacyRaw) {
-        try {
-            const users = JSON.parse(legacyRaw);
-            const user = Array.isArray(users) ? users.find(u => u.uid === uid || u.id === uid) : users[uid];
-            if (user) {
-                const normalized = normalizeUserProfile(user);
-                localStorage.setItem(profileKey, JSON.stringify(normalized));
-
-                // Auto-heal from legacy: persist into centralized users map.
-                const system = getSystem();
-                system.users[uid] = normalized;
-                saveSystem(system);
-
-                return normalized;
-            }
-        } catch (e) {
-            console.warn('Failed to parse legacy users during profile migration', e);
-        }
-    }
-
     return null;
 };
 
 // Helper: save user to system
 const saveUserProfile = (uid, data) => {
     const normalizedData = normalizeUserProfile({ ...data, uid });
-    // 1. Save to direct key
-    localStorage.setItem(`profile_${uid}`, JSON.stringify(normalizedData));
-
-    // 2. Save to centralized system
     const system = getSystem();
     system.users[uid] = normalizedData;
     saveSystem(system);
@@ -103,11 +44,12 @@ const saveUserProfile = (uid, data) => {
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const processingAuthRef = useRef(false);
     const navigate = useNavigate();
 
-    // Initialize/Migrate on mount
+    // Initialize in-memory system store on mount.
     useEffect(() => {
-        getSystem(); // Triggers migration if needed
+        getSystem();
     }, []);
 
     // ─── AUTH STATE LISTENER ──────────────────────────────────────────────────
@@ -118,7 +60,6 @@ export const AuthProvider = ({ children }) => {
                 if (firebaseUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
                     const adminUser = { uid: firebaseUser.uid, email: firebaseUser.email, role: 'admin' };
                     setUser(adminUser);
-                    localStorage.setItem('vanguard_session_currentUser', JSON.stringify(adminUser));
                     setLoading(false);
                     return;
                 }
@@ -128,7 +69,6 @@ export const AuthProvider = ({ children }) => {
 
                 if (userData) {
                     setUser(userData);
-                    localStorage.setItem('vanguard_session_currentUser', JSON.stringify(userData));
 
                     // Redirect from auth pages to dashboard if already logged in
                     const authPaths = ['/', '/auth/login', '/auth/signup', '/auth/role-selection'];
@@ -138,16 +78,14 @@ export const AuthProvider = ({ children }) => {
                 } else {
                     // Critical: if Firebase user exists but NO local profile found
                     // We only sign out if we're not currently in the middle of a signup/login flow
-                    const isNewUser = sessionStorage.getItem('vanguard_processing_auth') === 'true';
+                    const isNewUser = processingAuthRef.current;
                     if (!isNewUser) {
                         signOut(auth);
                         setUser(null);
-                        localStorage.removeItem('vanguard_session_currentUser');
                     }
                 }
             } else {
                 setUser(null);
-                localStorage.removeItem('vanguard_session_currentUser');
             }
             setLoading(false);
         });
@@ -157,7 +95,7 @@ export const AuthProvider = ({ children }) => {
 
     // ─── SIGNUP ───────────────────────────────────────────────────────────────
     const signup = async (email, password, role, profileData) => {
-        sessionStorage.setItem('vanguard_processing_auth', 'true');
+        processingAuthRef.current = true;
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const firebaseUser = userCredential.user;
@@ -382,13 +320,13 @@ export const AuthProvider = ({ children }) => {
             navigate(ROLE_PATHS[finalRole] || '/founder');
             return newUser;
         } finally {
-            sessionStorage.removeItem('vanguard_processing_auth');
+            processingAuthRef.current = false;
         }
     };
 
     // ─── LOGIN ────────────────────────────────────────────────────────────────
     const login = async (email, password, selectedRole = 'founder') => {
-        sessionStorage.setItem('vanguard_processing_auth', 'true');
+        processingAuthRef.current = true;
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const firebaseUser = userCredential.user;
@@ -448,21 +386,19 @@ export const AuthProvider = ({ children }) => {
             // Keep profile role as source of truth even when selected role differs in login form.
 
             setUser(profile);
-            localStorage.setItem('vanguard_session_currentUser', JSON.stringify(profile));
 
             const targetPath = ROLE_PATHS[profile.role] || '/founder';
             navigate(targetPath);
 
             return profile;
         } finally {
-            sessionStorage.removeItem('vanguard_processing_auth');
+            processingAuthRef.current = false;
         }
     };
 
     const logout = async () => {
         await signOut(auth);
         setUser(null);
-        localStorage.removeItem('vanguard_session_currentUser');
         navigate('/');
     };
 

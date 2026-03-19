@@ -1,4 +1,22 @@
-export const SYSTEM_KEY = 'vanguard_system';
+// In-memory system store
+let systemStore = null;
+const listeners = new Set();
+
+const initializeSystem = () => ({
+    users: {},
+    startups: [],
+    incubators: [],
+    applications: [],
+    cohorts: [],
+    mentorRequests: [],
+    sessions: [],
+    invitations: [],
+    joinRequests: [],
+    messages: [],
+    announcements: [],
+    reports: [],
+    settings: {}
+});
 
 const normalizeStringArray = (value) => {
     if (Array.isArray(value)) return value.filter(Boolean).map(String);
@@ -185,145 +203,44 @@ const recoverIncubatorsFromUsers = (incubators, usersMap) => {
 };
 
 const mergeUsersWithProfileKeys = (usersMap) => {
-    const merged = { ...(usersMap || {}) };
-
-    try {
-        for (let i = 0; i < localStorage.length; i += 1) {
-            const key = localStorage.key(i);
-            if (!key || !key.startsWith('profile_')) continue;
-
-            const raw = localStorage.getItem(key);
-            if (!raw) continue;
-
-            const parsed = JSON.parse(raw);
-            const normalized = normalizeUserProfile(parsed);
-
-            if (normalized?.uid) {
-                merged[normalized.uid] = normalized;
-            }
-        }
-    } catch (error) {
-        console.error('Error merging profile keys into system users:', error);
-    }
-
-    return merged;
+    // In-memory version
+    return { ...(usersMap || {}) };
 };
 
 export const getSystem = () => {
-    let system = {
-        users: {},
-        startups: [],
-        incubators: [],
-        applications: [],
-        cohorts: [],
-        mentorRequests: [],
-        sessions: [],
-        invitations: [],
-        joinRequests: [],
-        messages: [],
-        announcements: [],
-        reports: [],
-        settings: {}
-    };
-
-    try {
-        const stored = localStorage.getItem(SYSTEM_KEY);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            // AUTO-HEALING: Ensure all required keys exist
-            const parsedUsers = mergeUsersWithProfileKeys(normalizeUsersMap(parsed.users || {}));
-            system = {
-                ...system,
-                ...parsed,
-                users: parsedUsers,
-                startups: (parsed.startups || []).map(s => ({
-                    ...s,
-                    milestones: s.milestones || [],
-                    activity: s.activity || [],
-                    documents: s.documents || [],
-                    messages: s.messages || [],
-                    coFounders: s.coFounders || [],
-                    activeUsers: s.activeUsers || 0,
-                    burnRate: s.burnRate || 0,
-                    teamSize: s.teamSize || 1,
-                    startupName: s.startupName || 'Unnamed Venture',
-                    sector: s.sector || 'General',
-                    stage: s.stage || 'Idea'
-                })),
-                incubators: recoverIncubatorsFromUsers(parsed.incubators || [], parsedUsers),
-                applications: parsed.applications || [],
-                cohorts: parsed.cohorts || [],
-                mentorRequests: parsed.mentorRequests || [],
-                sessions: parsed.sessions || [],
-                invitations: parsed.invitations || [],
-                joinRequests: parsed.joinRequests || [],
-                messages: parsed.messages || [],
-                announcements: parsed.announcements || [],
-                reports: parsed.reports || [],
-                settings: parsed.settings || {}
-            };
-        } else {
-            // MIGRATION LOGIC
-            const legacyUsersRaw = localStorage.getItem('vanguard_users');
-            const legacyStartupsRaw = localStorage.getItem('vanguard_startups');
-            const legacyApplicationsRaw = localStorage.getItem('vanguard_applications');
-            const legacyIncubatorsRaw = localStorage.getItem('vanguard_incubators');
-            const legacyCohortsRaw = localStorage.getItem('vanguard_cohorts');
-            const legacyRequestsRaw = localStorage.getItem('vanguard_mentorRequests');
-            const legacySessionsRaw = localStorage.getItem('vanguard_sessions');
-
-            const legacyUsers = legacyUsersRaw ? JSON.parse(legacyUsersRaw) : {};
-            const legacyStartups = (legacyStartupsRaw ? JSON.parse(legacyStartupsRaw) : []).map(s => ({
-                ...s,
-                milestones: s.milestones || [],
-                activity: s.activity || [],
-                documents: s.documents || [],
-                messages: s.messages || [],
-                coFounders: s.coFounders || [],
-                activeUsers: s.activeUsers || 0,
-                burnRate: s.burnRate || 0,
-                teamSize: s.teamSize || 1
-            }));
-            const legacyApplications = legacyApplicationsRaw ? JSON.parse(legacyApplicationsRaw) : [];
-            const legacyIncubators = legacyIncubatorsRaw ? JSON.parse(legacyIncubatorsRaw) : [];
-            const legacyCohorts = legacyCohortsRaw ? JSON.parse(legacyCohortsRaw) : [];
-            const legacyRequests = legacyRequestsRaw ? JSON.parse(legacyRequestsRaw) : [];
-            const legacySessions = legacySessionsRaw ? JSON.parse(legacySessionsRaw) : [];
-
-            // Normalize users
-            const normalizedUsers = Array.isArray(legacyUsers)
-                ? legacyUsers.reduce((acc, u) => { if (u.uid || u.id) acc[u.uid || u.id] = u; return acc; }, {})
-                : legacyUsers;
-
-            const legacyMergedUsers = mergeUsersWithProfileKeys(normalizeUsersMap(normalizedUsers));
-            system = {
-                users: legacyMergedUsers,
-                startups: legacyStartups,
-                incubators: recoverIncubatorsFromUsers(legacyIncubators, legacyMergedUsers),
-                applications: legacyApplications,
-                cohorts: legacyCohorts,
-                mentorRequests: legacyRequests,
-                sessions: legacySessions,
-                announcements: [],
-                reports: [],
-                settings: {}
-            };
-
-            saveSystem(system);
-        }
-    } catch (e) {
-        console.error("Error reading system object:", e);
+    // Initialize system store on first call
+    if (!systemStore) {
+        systemStore = initializeSystem();
     }
-    return system;
+    // Return a deep copy to prevent direct mutations
+    return JSON.parse(JSON.stringify(systemStore));
 };
 
 export const saveSystem = (system) => {
+    // Update in-memory store
+    if (!systemStore) {
+        systemStore = initializeSystem();
+    }
+    
     const normalizedUsers = mergeUsersWithProfileKeys(normalizeUsersMap(system.users || {}));
     const normalizedSystem = {
         ...system,
         users: normalizedUsers,
         incubators: recoverIncubatorsFromUsers(system.incubators || [], normalizedUsers)
     };
-    localStorage.setItem(SYSTEM_KEY, JSON.stringify(normalizedSystem));
+    
+    systemStore = normalizedSystem;
+    
+    // Notify all listeners of the change
+    listeners.forEach(callback => callback(normalizedSystem));
+    
+    // Dispatch storage event for backward compatibility with existing event listeners
     window.dispatchEvent(new Event('storage'));
+};
+
+// Subscribe to system changes (for React components to listen for updates)
+export const subscribeToSystem = (callback) => {
+    listeners.add(callback);
+    // Return unsubscribe function
+    return () => listeners.delete(callback);
 };

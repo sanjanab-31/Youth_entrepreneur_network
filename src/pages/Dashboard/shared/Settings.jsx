@@ -4,38 +4,31 @@ import { User, Bell, Eye, Shield, CheckCircle2, ChevronRight, Lock } from 'lucid
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 
-const SETTINGS_KEY = 'vanguard_userSettings';
-const AUTH_SESSION_KEY = 'vanguard_session_currentUser';
-
 const Settings = ({ role: initialRole }) => {
     const { user: authUser, updateProfile: authUpdate } = useAuth();
     const [user, setUser] = useState(null);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
 
-    // Initialization: overlay saved local settings on top of Auth SSOT
+    // Initialization: use Auth SSOT for all settings (in-memory only)
     useEffect(() => {
         if (!authUser) return;
-
-        // Get any previously saved local preferences (notifications, etc)
-        const savedRaw = localStorage.getItem(`${SETTINGS_KEY}_${authUser.uid}`);
-        const saved = savedRaw ? JSON.parse(savedRaw) : {};
 
         const profile = {
             fullName: authUser.name || '',
             email: authUser.email || '',
             role: authUser.role || initialRole || 'founder',
-            commitmentLevel: authUser.commitmentLevel || saved.commitmentLevel || '',
-            bio: authUser.bio || saved.bio || '',
+            commitmentLevel: authUser.commitmentLevel || '',
+            bio: authUser.bio || '',
             preferences: {
                 emailNotifications: true,
                 mentorAlerts: true,
-                ...(authUser.preferences || saved.preferences || {})
+                ...(authUser.preferences || {})
             },
             visibility: {
                 profile: 'public',
                 startup: 'visible',
-                ...(authUser.visibility || saved.visibility || {})
+                ...(authUser.visibility || {})
             }
         };
 
@@ -57,8 +50,6 @@ const Settings = ({ role: initialRole }) => {
         if (field === 'fullName') updates.name = value;
         authUpdate(updates);
 
-        // Also persist local-only settings
-        localStorage.setItem(`${SETTINGS_KEY}_${authUser.uid}`, JSON.stringify(newUser));
         triggerToast("Changes Saved");
     };
 
@@ -70,8 +61,6 @@ const Settings = ({ role: initialRole }) => {
         // Sync with Auth SSOT
         authUpdate({ [section]: newSection });
 
-        // Also persist local-only settings
-        localStorage.setItem(`${SETTINGS_KEY}_${authUser.uid}`, JSON.stringify(newUser));
         triggerToast("Changes Saved");
     };
 

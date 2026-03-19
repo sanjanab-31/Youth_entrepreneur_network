@@ -54,17 +54,6 @@ const UserManagement = () => {
             sys.users[uid].verified = !sys.users[uid].verified;
             saveSystem(sys);
         }
-        const profileKey = `profile_${uid}`;
-        const raw = localStorage.getItem(profileKey);
-        if (raw) {
-            try {
-                const profile = JSON.parse(raw);
-                profile.verified = !profile.verified;
-                localStorage.setItem(profileKey, JSON.stringify(profile));
-            } catch {
-                // Ignore malformed profile cache.
-            }
-        }
         setSystemData(getSystem());
     };
 
@@ -75,17 +64,6 @@ const UserManagement = () => {
             const current = sys.users[uid].status || 'active';
             sys.users[uid].status = current === 'suspended' ? 'active' : 'suspended';
             saveSystem(sys);
-        }
-        const profileKey = `profile_${uid}`;
-        const raw = localStorage.getItem(profileKey);
-        if (raw) {
-            try {
-                const profile = JSON.parse(raw);
-                profile.status = profile.status === 'suspended' ? 'active' : 'suspended';
-                localStorage.setItem(profileKey, JSON.stringify(profile));
-            } catch {
-                // Ignore malformed profile cache.
-            }
         }
         setSystemData(getSystem());
     };

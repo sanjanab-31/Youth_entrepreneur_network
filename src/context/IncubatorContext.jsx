@@ -54,10 +54,9 @@ export const IncubatorProvider = ({ children }) => {
         const mentorList = Object.values(system.users).filter(u => u.role === 'mentor');
         setMentors(mentorList);
 
-        // 5. Settings & Profile
+        // 5. Settings & Profile (React state only)
         setProfile({ ...user, ...(user.portalData || {}), id: user.uid });
-        const savedSettings = localStorage.getItem(`vanguard_incubatorSettings_${user.uid}`);
-        setSettings(savedSettings ? JSON.parse(savedSettings) : DEFAULT_SETTINGS);
+        setSettings(s => s); // Keep existing state from React
 
         setLoading(false);
     };
@@ -498,7 +497,7 @@ export const IncubatorProvider = ({ children }) => {
         activityFeed,
         nextBatch,
         settings,
-        updateSettings: (s) => { setSettings(s); localStorage.setItem(`vanguard_incubatorSettings_${user.uid}`, JSON.stringify(s)); refreshData(); },
+        updateSettings: (s) => { setSettings(s); refreshData(); },
         loading
     };
 

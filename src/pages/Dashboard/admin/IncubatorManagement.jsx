@@ -60,18 +60,6 @@ const IncubatorManagement = () => {
         }
 
         saveSystem(sys);
-
-        const profileKey = `profile_${incubatorId}`;
-        const raw = localStorage.getItem(profileKey);
-        if (raw) {
-            try {
-                const profile = JSON.parse(raw);
-                const updatedProfile = updater(profile);
-                localStorage.setItem(profileKey, JSON.stringify(updatedProfile));
-            } catch {
-                // Ignore malformed profile cache.
-            }
-        }
         setSystemData(getSystem());
     };
 

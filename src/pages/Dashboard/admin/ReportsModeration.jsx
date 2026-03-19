@@ -61,18 +61,6 @@ const ReportsModeration = () => {
             sys.users[uid].status = nextStatus;
             saveSystem(sys);
         }
-
-        const profileKey = `profile_${uid}`;
-        const raw = localStorage.getItem(profileKey);
-        if (raw) {
-            try {
-                const profile = JSON.parse(raw);
-                profile.status = nextStatus;
-                localStorage.setItem(profileKey, JSON.stringify(profile));
-            } catch {
-                // Ignore malformed profile cache.
-            }
-        }
         setSystemData(getSystem());
     };
 

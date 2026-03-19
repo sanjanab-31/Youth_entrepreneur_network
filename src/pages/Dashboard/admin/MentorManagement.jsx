@@ -66,18 +66,6 @@ const MentorManagement = () => {
             sys.users[uid] = updater(sys.users[uid]);
             saveSystem(sys);
         }
-
-        const profileKey = `profile_${uid}`;
-        const raw = localStorage.getItem(profileKey);
-        if (raw) {
-            try {
-                const profile = JSON.parse(raw);
-                const updated = updater(profile);
-                localStorage.setItem(profileKey, JSON.stringify(updated));
-            } catch {
-                // Ignore malformed profile cache.
-            }
-        }
         setSystemData(getSystem());
     };
 

@@ -24,7 +24,7 @@ import { getSystem } from '../../../utils/system';
 
 /**
  * Given a raw request (IDs only), hydrate it with live startup + founder data
- * fetched fresh from localStorage every render.
+ * fetched from the in-memory system state every render.
  */
 const hydrateRequest = (request) => {
     const system = getSystem();
