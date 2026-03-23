@@ -69,17 +69,17 @@ const AdminSettings = () => {
                     <h1 className="text-3xl font-bold text-white mb-2">System Settings</h1>
                     <p className="text-gray-400">Configure core platform behavior and management rules</p>
                 </div>
-                <button onClick={saveAll} className="px-6 py-2.5 bg-[#8B5CF6] hover:bg-[#7C3AED] rounded-xl text-sm font-bold transition-all shadow-lg flex items-center gap-2">
+                <button onClick={saveAll} className="px-6 py-2.5 bg-[#8B5CF6] hover:bg-[#7C3AED] rounded-xl text-sm font-bold transition-all shadow-lg shadow-[#8B5CF6]/30 hover:shadow-[#8B5CF6]/40 hover:-translate-y-0.5 flex items-center gap-2">
                     <Save size={18} /> Save All Changes
                 </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Feature Toggles */}
-                <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 space-y-6">
+                <div className="admin-panel p-8 space-y-6">
                     <div className="flex items-center gap-3 mb-4">
                         <Zap size={20} className="text-[#8B5CF6]" />
-                        <h3 className="text-lg font-bold text-white">Platform Features</h3>
+                        <h3 className="admin-section-title">Platform Features</h3>
                     </div>
 
                     <div className="space-y-4">
@@ -109,10 +109,10 @@ const AdminSettings = () => {
                 </div>
 
                 {/* Badge Management */}
-                <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 space-y-6">
+                <div className="admin-panel p-8 space-y-6">
                     <div className="flex items-center gap-3 mb-4">
                         <Shield size={20} className="text-[#8B5CF6]" />
-                        <h3 className="text-lg font-bold text-white">Badge & Verification Rules</h3>
+                        <h3 className="admin-section-title">Badge & Verification Rules</h3>
                     </div>
 
                     <div className="space-y-4">
@@ -149,14 +149,14 @@ const AdminSettings = () => {
                 </div>
 
                 {/* System Comms */}
-                <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 space-y-6">
+                <div className="admin-panel p-8 space-y-6">
                     <div className="flex items-center gap-3 mb-4">
                         <Mail size={20} className="text-[#8B5CF6]" />
-                        <h3 className="text-lg font-bold text-white">Email & Notif Templates</h3>
+                        <h3 className="admin-section-title">Email & Notif Templates</h3>
                     </div>
                     <div className="space-y-2">
                         {settings.templates.map((t, i) => (
-                            <button key={i} className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all text-sm font-medium text-gray-300">
+                            <button key={i} className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all text-sm font-medium text-gray-300 hover:text-white">
                                 {t}
                                 <Eye size={16} className="text-gray-600" />
                             </button>
@@ -165,11 +165,11 @@ const AdminSettings = () => {
                 </div>
 
                 {/* Infrastructure Stats */}
-                <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 flex flex-col justify-between">
+                <div className="admin-panel p-8 flex flex-col justify-between">
                     <div>
                         <div className="flex items-center gap-3 mb-6">
                             <Database size={20} className="text-[#8B5CF6]" />
-                            <h3 className="text-lg font-bold text-white">System Logs</h3>
+                            <h3 className="admin-section-title">System Logs</h3>
                         </div>
                         <div className="space-y-4 mb-8">
                             <div className="flex justify-between items-center text-sm">

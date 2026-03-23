@@ -82,6 +82,26 @@ html {
     @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-brand-purple/10 border border-transparent hover:border-brand-purple/30;
   }
 
+  .admin-panel {
+    @apply bg-brand-card rounded-2xl border border-white/5 shadow-lg shadow-black/20;
+  }
+
+  .admin-panel-soft {
+    @apply bg-brand-card/90 rounded-2xl border border-white/5 shadow-md shadow-black/10;
+  }
+
+  .admin-panel-hover {
+    @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/25 hover:border-brand-purple/20;
+  }
+
+  .admin-section-title {
+    @apply text-lg font-bold text-white tracking-tight;
+  }
+
+  .admin-subtitle {
+    @apply text-sm text-gray-400;
+  }
+
   /* Hide scrollbar for Chrome, Safari and Opera */
   .scrollbar-hide::-webkit-scrollbar {
     display: none;

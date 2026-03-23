@@ -117,9 +117,9 @@ const AdminDashboard = () => {
                 {stats.map((stat, index) => (
                     <div
                         key={index}
-                        className="bg-[#1E1E2F] p-6 rounded-2xl border border-white/5 hover:border-[#8B5CF6]/30 transition-all duration-200 group"
+                        className="admin-panel-soft admin-panel-hover p-6 group"
                     >
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <div className="w-10 h-10 rounded-xl bg-white/5 ring-1 ring-white/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                             <stat.icon size={20} style={{ color: stat.color }} />
                         </div>
                         <p className="text-gray-400 text-sm font-medium mb-1">{stat.label}</p>
@@ -129,11 +129,11 @@ const AdminDashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 flex flex-col">
+                <div className="lg:col-span-2 admin-panel p-8 flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                         <div>
-                            <h3 className="text-lg font-bold text-white">Recent Platform Activity</h3>
-                            <p className="text-sm text-gray-400">Latest events across all portals</p>
+                            <h3 className="admin-section-title">Recent Platform Activity</h3>
+                            <p className="admin-subtitle">Latest events across all portals</p>
                         </div>
                     </div>
                     <div className="space-y-3 flex-1">
@@ -155,10 +155,10 @@ const AdminDashboard = () => {
                     </div>
                 </div>
 
-                <div className="bg-[#1E1E2F] p-8 rounded-2xl border border-white/5 space-y-4">
-                    <h3 className="text-lg font-bold text-white mb-2">Quality Indicators</h3>
+                <div className="admin-panel p-8 space-y-4">
+                    <h3 className="admin-section-title mb-2">Quality Indicators</h3>
                     {qualityIndicators.map((indicator, index) => (
-                        <div key={index} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
+                        <div key={index} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5 admin-panel-hover">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center text-[#8B5CF6]">
                                     <indicator.icon size={16} />
