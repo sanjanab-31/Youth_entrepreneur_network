@@ -1,20 +1,27 @@
 import { Router } from 'express';
+import {
+  cancelSession,
+  completeSession,
+  confirmSession,
+  createSession,
+  deleteSession,
+  getSessionById,
+  getSessions,
+  rescheduleSession,
+  updateSession
+} from '../controllers/sessions.controller.js';
 
 const router = Router();
 
-const routeWorking = (name) => (req, res) => {
-  res.json({ message: 'Route working', route: name });
-};
+router.get('/', getSessions);
+router.get('/:session_id', getSessionById);
+router.post('/', createSession);
+router.put('/:session_id', updateSession);
+router.delete('/:session_id', deleteSession);
 
-router.get('/', routeWorking('GET /sessions'));
-router.get('/:session_id', routeWorking('GET /sessions/:session_id'));
-router.post('/', routeWorking('POST /sessions'));
-router.put('/:session_id', routeWorking('PUT /sessions/:session_id'));
-router.delete('/:session_id', routeWorking('DELETE /sessions/:session_id'));
-
-router.post('/:session_id/confirm', routeWorking('POST /sessions/:session_id/confirm'));
-router.post('/:session_id/cancel', routeWorking('POST /sessions/:session_id/cancel'));
-router.post('/:session_id/complete', routeWorking('POST /sessions/:session_id/complete'));
-router.post('/:session_id/reschedule', routeWorking('POST /sessions/:session_id/reschedule'));
+router.post('/:session_id/confirm', confirmSession);
+router.post('/:session_id/cancel', cancelSession);
+router.post('/:session_id/complete', completeSession);
+router.post('/:session_id/reschedule', rescheduleSession);
 
 export default router;

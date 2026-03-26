@@ -1,18 +1,23 @@
 import { Router } from 'express';
+import {
+  createCohort,
+  deleteCohort,
+  getCohortById,
+  getCohorts,
+  joinCohort,
+  leaveCohort,
+  updateCohort
+} from '../controllers/cohorts.controller.js';
 
 const router = Router();
 
-const routeWorking = (name) => (req, res) => {
-  res.json({ message: 'Route working', route: name });
-};
+router.get('/', getCohorts);
+router.get('/:cohort_id', getCohortById);
+router.post('/', createCohort);
+router.put('/:cohort_id', updateCohort);
+router.delete('/:cohort_id', deleteCohort);
 
-router.get('/', routeWorking('GET /cohorts'));
-router.get('/:cohort_id', routeWorking('GET /cohorts/:cohort_id'));
-router.post('/', routeWorking('POST /cohorts'));
-router.put('/:cohort_id', routeWorking('PUT /cohorts/:cohort_id'));
-router.delete('/:cohort_id', routeWorking('DELETE /cohorts/:cohort_id'));
-
-router.post('/:cohort_id/join', routeWorking('POST /cohorts/:cohort_id/join'));
-router.post('/:cohort_id/leave', routeWorking('POST /cohorts/:cohort_id/leave'));
+router.post('/:cohort_id/join', joinCohort);
+router.post('/:cohort_id/leave', leaveCohort);
 
 export default router;

@@ -1,20 +1,27 @@
 import { Router } from 'express';
+import {
+  addCoFounder,
+  assignIncubator,
+  assignMentor,
+  createStartup,
+  deleteStartup,
+  getStartupById,
+  getStartups,
+  removeCoFounder,
+  updateStartup
+} from '../controllers/startups.controller.js';
 
 const router = Router();
 
-const routeWorking = (name) => (req, res) => {
-  res.json({ message: 'Route working', route: name });
-};
+router.get('/', getStartups);
+router.get('/:startup_id', getStartupById);
+router.post('/', createStartup);
+router.put('/:startup_id', updateStartup);
+router.delete('/:startup_id', deleteStartup);
 
-router.get('/', routeWorking('GET /startups'));
-router.get('/:startup_id', routeWorking('GET /startups/:startup_id'));
-router.post('/', routeWorking('POST /startups'));
-router.put('/:startup_id', routeWorking('PUT /startups/:startup_id'));
-router.delete('/:startup_id', routeWorking('DELETE /startups/:startup_id'));
-
-router.post('/:startup_id/co-founders', routeWorking('POST /startups/:startup_id/co-founders'));
-router.delete('/:startup_id/co-founders/:user_id', routeWorking('DELETE /startups/:startup_id/co-founders/:user_id'));
-router.post('/:startup_id/assign-mentor', routeWorking('POST /startups/:startup_id/assign-mentor'));
-router.post('/:startup_id/assign-incubator', routeWorking('POST /startups/:startup_id/assign-incubator'));
+router.post('/:startup_id/co-founders', addCoFounder);
+router.delete('/:startup_id/co-founders/:user_id', removeCoFounder);
+router.post('/:startup_id/assign-mentor', assignMentor);
+router.post('/:startup_id/assign-incubator', assignIncubator);
 
 export default router;

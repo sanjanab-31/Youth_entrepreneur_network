@@ -1,18 +1,23 @@
 import { Router } from 'express';
+import {
+  acceptMentorRequest,
+  createMentorRequest,
+  deleteMentorRequest,
+  getMentorRequestById,
+  getMentorRequests,
+  rejectMentorRequest,
+  updateMentorRequest
+} from '../controllers/mentorRequests.controller.js';
 
 const router = Router();
 
-const routeWorking = (name) => (req, res) => {
-  res.json({ message: 'Route working', route: name });
-};
+router.get('/', getMentorRequests);
+router.get('/:request_id', getMentorRequestById);
+router.post('/', createMentorRequest);
+router.put('/:request_id', updateMentorRequest);
+router.delete('/:request_id', deleteMentorRequest);
 
-router.get('/', routeWorking('GET /mentor-requests'));
-router.get('/:request_id', routeWorking('GET /mentor-requests/:request_id'));
-router.post('/', routeWorking('POST /mentor-requests'));
-router.put('/:request_id', routeWorking('PUT /mentor-requests/:request_id'));
-router.delete('/:request_id', routeWorking('DELETE /mentor-requests/:request_id'));
-
-router.post('/:request_id/accept', routeWorking('POST /mentor-requests/:request_id/accept'));
-router.post('/:request_id/reject', routeWorking('POST /mentor-requests/:request_id/reject'));
+router.post('/:request_id/accept', acceptMentorRequest);
+router.post('/:request_id/reject', rejectMentorRequest);
 
 export default router;

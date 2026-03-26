@@ -1,15 +1,18 @@
 import { Router } from 'express';
+import {
+  createUser,
+  deleteUser,
+  getUserById,
+  getUsers,
+  updateUser
+} from '../controllers/users.controller.js';
 
 const router = Router();
 
-const routeWorking = (name) => (req, res) => {
-  res.json({ message: 'Route working', route: name });
-};
-
-router.get('/', routeWorking('GET /users'));
-router.get('/:user_id', routeWorking('GET /users/:user_id'));
-router.post('/', routeWorking('POST /users'));
-router.put('/:user_id', routeWorking('PUT /users/:user_id'));
-router.delete('/:user_id', routeWorking('DELETE /users/:user_id'));
+router.get('/', getUsers);
+router.get('/:user_id', getUserById);
+router.post('/', createUser);
+router.put('/:user_id', updateUser);
+router.delete('/:user_id', deleteUser);
 
 export default router;
