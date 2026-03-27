@@ -1,44 +1,53 @@
-const users = [
-  { id: 'u1', name: 'Alice Founder', email: 'alice@example.com', role: 'founder' },
-  { id: 'u2', name: 'Mark Mentor', email: 'mark@example.com', role: 'mentor' }
-];
+import pool from '../config/db.js';
+import { randomUUID } from 'crypto';
 
-export function getAllUsers() {
-  return users;
+export async function getAllUsers() {
+  const { rows } = await pool.query('SELECT * FROM users');
+  return rows;
 }
 
-export function getUserById(userId) {
-  return users.find((user) => user.id === userId) || null;
+export async function getUserById(userId) {
+  const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+  return rows[0] || null;
 }
 
-export function createUser(payload = {}) {
-  const newUser = {
-    id: `u${users.length + 1}`,
-    name: payload.name || 'New User',
-    email: payload.email || `new-user-${users.length + 1}@example.com`,
-    role: payload.role || 'founder'
-  };
+export async function createUser(payload = {}) {
+  const id = payload.id || randomUUID();
+  const name = payload.name || 'New User';
+  const email = payload.email || `new-user-${Date.now()}@example.com`;
+  const role = payload.role || 'founder';
 
-  users.push(newUser);
-  return newUser;
+  const { rows } = await pool.query(
+    `
+      INSERT INTO users (id, name, email, role)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `,
+    [id, name, email, role]
+  );
+
+  return rows[0];
 }
 
-export function updateUser(userId, payload = {}) {
-  const user = getUserById(userId);
-  if (!user) {
-    return null;
-  }
+export async function updateUser(userId, payload = {}) {
+  const { rows } = await pool.query(
+    `
+      UPDATE users
+      SET
+        name = COALESCE($2, name),
+        email = COALESCE($3, email),
+        role = COALESCE($4, role),
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+    [userId, payload.name ?? null, payload.email ?? null, payload.role ?? null]
+  );
 
-  Object.assign(user, payload);
-  return user;
+  return rows[0] || null;
 }
 
-export function deleteUser(userId) {
-  const index = users.findIndex((user) => user.id === userId);
-  if (index === -1) {
-    return null;
-  }
-
-  const [deletedUser] = users.splice(index, 1);
-  return deletedUser;
+export async function deleteUser(userId) {
+  const { rows } = await pool.query('DELETE FROM users WHERE id = $1 RETURNING *', [userId]);
+  return rows[0] || null;
 }
