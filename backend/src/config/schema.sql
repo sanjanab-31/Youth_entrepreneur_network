@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
     badge TEXT,
     response_rate NUMERIC(5,2),
     company TEXT,
-    current_role TEXT,
+    user_role TEXT,
     linkedin TEXT,
     capacity INTEGER,
     portal_data JSONB NOT NULL DEFAULT '{}'::jsonb,

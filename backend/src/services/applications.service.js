@@ -1,73 +1,199 @@
-const applications = [
-  { id: 'a1', startupId: 's1', cohortId: 'c1', status: 'pending' }
-];
+import { randomUUID } from 'crypto';
+import pool from '../config/db.js';
 
-export function getAllApplications() {
-  return applications;
-}
-
-export function getApplicationById(applicationId) {
-  return applications.find((application) => application.id === applicationId) || null;
-}
-
-export function createApplication(payload = {}) {
-  const newApplication = {
-    id: `a${applications.length + 1}`,
-    startupId: payload.startupId || null,
-    cohortId: payload.cohortId || null,
-    status: 'pending'
-  };
-
-  applications.push(newApplication);
-  return newApplication;
-}
-
-export function updateApplication(applicationId, payload = {}) {
-  const application = getApplicationById(applicationId);
-  if (!application) {
-    return null;
+export async function getAllApplications() {
+  try {
+    const { rows } = await pool.query('SELECT * FROM applications');
+    return rows;
+  } catch (error) {
+    throw new Error(`Failed to fetch applications: ${error.message}`);
   }
-
-  Object.assign(application, payload);
-  return application;
 }
 
-export function deleteApplication(applicationId) {
-  const index = applications.findIndex((application) => application.id === applicationId);
-  if (index === -1) {
-    return null;
+export async function getApplicationById(applicationId) {
+  try {
+    const { rows } = await pool.query('SELECT * FROM applications WHERE id = $1', [applicationId]);
+    return rows[0] || null;
+  } catch (error) {
+    throw new Error(`Failed to fetch application with id ${applicationId}: ${error.message}`);
   }
-
-  const [deletedApplication] = applications.splice(index, 1);
-  return deletedApplication;
 }
 
-export function acceptApplication(applicationId) {
-  const application = getApplicationById(applicationId);
-  if (!application) {
-    return null;
-  }
+export async function createApplication(payload = {}) {
+  try {
+    const id = payload.id || randomUUID();
+    const startupId = payload.startupId ?? payload.startup_id ?? null;
+    const founderId = payload.founderId ?? payload.founder_id ?? null;
+    const incubatorId = payload.incubatorId ?? payload.incubator_id ?? null;
+    const startupName = payload.startupName ?? payload.startup_name ?? null;
+    const sector = payload.sector ?? null;
+    const teamSize = payload.teamSize ?? payload.team_size ?? null;
+    const status = payload.status ?? 'pending';
+    const message = payload.message ?? null;
+    const cohortId = payload.cohortId ?? payload.cohort_id ?? null;
 
-  application.status = 'accepted';
-  return application;
+    const { rows } = await pool.query(
+      `
+        INSERT INTO applications (
+          id,
+          startup_id,
+          founder_id,
+          incubator_id,
+          startup_name,
+          sector,
+          team_size,
+          status,
+          message,
+          cohort_id,
+          created_at,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        RETURNING *
+      `,
+      [id, startupId, founderId, incubatorId, startupName, sector, teamSize, status, message, cohortId]
+    );
+
+    return rows[0];
+  } catch (error) {
+    throw new Error(`Failed to create application: ${error.message}`);
+  }
 }
 
-export function rejectApplication(applicationId) {
-  const application = getApplicationById(applicationId);
-  if (!application) {
-    return null;
-  }
+export async function updateApplication(applicationId, payload = {}) {
+  try {
+    const startupId = payload.startupId ?? payload.startup_id;
+    const founderId = payload.founderId ?? payload.founder_id;
+    const incubatorId = payload.incubatorId ?? payload.incubator_id;
+    const startupName = payload.startupName ?? payload.startup_name;
+    const sector = payload.sector;
+    const teamSize = payload.teamSize ?? payload.team_size;
+    const status = payload.status;
+    const message = payload.message;
+    const cohortId = payload.cohortId ?? payload.cohort_id;
 
-  application.status = 'rejected';
-  return application;
+    const updates = [];
+    const values = [];
+    let param = 2;
+
+    if (startupId !== undefined) {
+      updates.push(`startup_id = $${param++}`);
+      values.push(startupId);
+    }
+    if (founderId !== undefined) {
+      updates.push(`founder_id = $${param++}`);
+      values.push(founderId);
+    }
+    if (incubatorId !== undefined) {
+      updates.push(`incubator_id = $${param++}`);
+      values.push(incubatorId);
+    }
+    if (startupName !== undefined) {
+      updates.push(`startup_name = $${param++}`);
+      values.push(startupName);
+    }
+    if (sector !== undefined) {
+      updates.push(`sector = $${param++}`);
+      values.push(sector);
+    }
+    if (teamSize !== undefined) {
+      updates.push(`team_size = $${param++}`);
+      values.push(teamSize);
+    }
+    if (status !== undefined) {
+      updates.push(`status = $${param++}`);
+      values.push(status);
+    }
+    if (message !== undefined) {
+      updates.push(`message = $${param++}`);
+      values.push(message);
+    }
+    if (cohortId !== undefined) {
+      updates.push(`cohort_id = $${param++}`);
+      values.push(cohortId);
+    }
+
+    if (updates.length === 0) {
+      return getApplicationById(applicationId);
+    }
+
+    updates.push('updated_at = NOW()');
+
+    const { rows } = await pool.query(
+      `
+        UPDATE applications
+        SET ${updates.join(', ')}
+        WHERE id = $1
+        RETURNING *
+      `,
+      [applicationId, ...values]
+    );
+
+    return rows[0] || null;
+  } catch (error) {
+    throw new Error(`Failed to update application with id ${applicationId}: ${error.message}`);
+  }
 }
 
-export function waitlistApplication(applicationId) {
-  const application = getApplicationById(applicationId);
-  if (!application) {
-    return null;
+export async function deleteApplication(applicationId) {
+  try {
+    const { rows } = await pool.query(
+      'DELETE FROM applications WHERE id = $1 RETURNING *',
+      [applicationId]
+    );
+    return rows[0] || null;
+  } catch (error) {
+    throw new Error(`Failed to delete application with id ${applicationId}: ${error.message}`);
   }
+}
 
-  application.status = 'waitlisted';
-  return application;
+export async function acceptApplication(applicationId) {
+  try {
+    const { rows } = await pool.query(
+      `
+        UPDATE applications
+        SET status = $2, updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `,
+      [applicationId, 'accepted']
+    );
+    return rows[0] || null;
+  } catch (error) {
+    throw new Error(`Failed to accept application with id ${applicationId}: ${error.message}`);
+  }
+}
+
+export async function rejectApplication(applicationId) {
+  try {
+    const { rows } = await pool.query(
+      `
+        UPDATE applications
+        SET status = $2, updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `,
+      [applicationId, 'rejected']
+    );
+    return rows[0] || null;
+  } catch (error) {
+    throw new Error(`Failed to reject application with id ${applicationId}: ${error.message}`);
+  }
+}
+
+export async function waitlistApplication(applicationId) {
+  try {
+    const { rows } = await pool.query(
+      `
+        UPDATE applications
+        SET status = $2, updated_at = NOW() 
+        WHERE id = $1
+        RETURNING *
+      `,
+      [applicationId, 'waitlisted']
+    );
+    return rows[0] || null;
+  } catch (error) {
+    throw new Error(`Failed to waitlist application with id ${applicationId}: ${error.message}`);
+  }
 }
