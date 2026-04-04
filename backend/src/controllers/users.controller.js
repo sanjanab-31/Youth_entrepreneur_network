@@ -5,7 +5,7 @@ export async function getUsers(req, res) {
     const users = await usersService.getAllUsers();
     return res.status(200).json({ data: users });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to fetch users' });
+    return res.status(500).json({ error: error.message });
   }
 }
 
@@ -18,7 +18,7 @@ export async function getUserById(req, res) {
 
     return res.status(200).json({ data: user });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to fetch user' });
+    return res.status(500).json({ error: error.message });
   }
 }
 
@@ -27,7 +27,7 @@ export async function createUser(req, res) {
     const user = await usersService.createUser(req.body);
     return res.status(201).json({ data: user });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to create user' });
+    return res.status(500).json({ error: error.message });
   }
 }
 
@@ -40,7 +40,7 @@ export async function updateUser(req, res) {
 
     return res.status(200).json({ data: user });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to update user' });
+    return res.status(500).json({ error: error.message });
   }
 }
 
@@ -53,6 +53,6 @@ export async function deleteUser(req, res) {
 
     return res.status(200).json({ data: user });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to delete user' });
+    return res.status(500).json({ error: error.message });
   }
 }
