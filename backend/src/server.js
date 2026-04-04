@@ -24,8 +24,8 @@ app.use('/api/v1/startups', authenticateFirebaseToken, startupsRoutes);
 app.use('/api/v1/mentor-requests', authenticateFirebaseToken, mentorRequestsRoutes);
 app.use('/api/v1/applications', authenticateFirebaseToken, applicationsRoutes);
 app.use('/api/v1/sessions', authenticateFirebaseToken, sessionsRoutes);
-app.use('/api/v1/incubators', authenticateFirebaseToken, incubatorsRoutes);
-app.use('/api/v1/cohorts', authenticateFirebaseToken, cohortsRoutes);
+app.use('/api/v1/incubators', incubatorsRoutes);
+app.use('/api/v1/cohorts', cohortsRoutes);
 app.use('/api/v1/messages', authenticateFirebaseToken, messagesRoutes);
 
 const startServer = async () => {

@@ -15,7 +15,7 @@ export const authenticateFirebaseToken = async (req, res, next) => {
 
   if (!token) {
     return res.status(401).json({
-      message: 'Unauthorized: Missing or invalid Authorization header',
+      message: 'Unauthorized',
     });
   }
 
@@ -25,15 +25,12 @@ export const authenticateFirebaseToken = async (req, res, next) => {
     req.user = {
       uid: decodedToken.uid,
       email: decodedToken.email || null,
-      name: decodedToken.name || null,
-      picture: decodedToken.picture || null,
-      claims: decodedToken,
     };
 
     return next();
   } catch (error) {
     return res.status(401).json({
-      message: 'Unauthorized: Invalid or expired token',
+      message: 'Unauthorized',
     });
   }
 };
