@@ -11,45 +11,61 @@ import {
     Users,
     DollarSign
 } from 'lucide-react';
-import { getSystem, saveSystem } from '../../../utils/system';
+import api from '../../../../services/api';
+
+const mapStartupFromApi = (startup = {}, index = 0) => {
+    const completion = Number(
+        startup.profileCompletion || startup.completion ||
+        (startup.description ? 40 : 10) +
+        (startup.pitch ? 20 : 0) +
+        (startup.sector ? 15 : 0) +
+        (startup.stage ? 15 : 0) +
+        ((startup.teamSize || 1) > 1 ? 10 : 0)
+    );
+
+    return {
+        id: startup.id || startup.uid || startup.startupId || `startup-${index}`,
+        startupName: startup.startupName || startup.name || 'Unnamed Startup',
+        founderName: startup.founderName || startup.founder || startup.founderId || 'Unknown Founder',
+        stage: startup.stage || startup.status || 'Idea',
+        traction: startup.traction || `${startup.activeUsers || 0} active users`,
+        revenue: startup.revenue || '$0',
+        completion: Math.min(100, Math.max(0, completion)),
+        verified: Boolean(startup.verified),
+        featured: Boolean(startup.featured),
+        flagged: Boolean(startup.flagged),
+    };
+};
 
 const StartupManagement = () => {
-    const [systemData, setSystemData] = useState(() => getSystem());
+    const [startupsData, setStartupsData] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState('all');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [creatingStartup, setCreatingStartup] = useState(false);
 
     useEffect(() => {
-        const refresh = () => setSystemData(getSystem());
-        window.addEventListener('storage', refresh);
-        return () => window.removeEventListener('storage', refresh);
+        const fetchStartups = async () => {
+            setLoading(true);
+            setError('');
+
+            try {
+                const response = await api.get('/v1/startups');
+                const apiStartups = Array.isArray(response.data?.data) ? response.data.data : [];
+                setStartupsData(apiStartups.map(mapStartupFromApi));
+            } catch (fetchError) {
+                setError(fetchError.response?.data?.error || 'Failed to load startups');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStartups();
     }, []);
 
     const startups = useMemo(() => {
-        const users = systemData.users || {};
-        return (systemData.startups || [])
-            .map((startup, index) => {
-                const founder = users[startup.founderId] || users[startup.uid] || {};
-                const completion = Number(
-                    startup.profileCompletion || startup.completion ||
-                    (startup.description ? 40 : 10) +
-                    (startup.pitch ? 20 : 0) +
-                    (startup.sector ? 15 : 0) +
-                    (startup.stage ? 15 : 0) +
-                    ((startup.teamSize || 1) > 1 ? 10 : 0)
-                );
-                return {
-                    id: startup.id || startup.uid || startup.startupId || `startup-${index}`,
-                    startupName: startup.startupName || startup.name || 'Unnamed Startup',
-                    founderName: founder.name || startup.founderName || startup.founder || 'Unknown Founder',
-                    stage: startup.stage || 'Idea',
-                    traction: startup.traction || `${startup.activeUsers || 0} active users`,
-                    revenue: startup.revenue || '$0',
-                    completion: Math.min(100, Math.max(0, completion)),
-                    verified: Boolean(startup.verified),
-                    featured: Boolean(startup.featured),
-                    flagged: Boolean(startup.flagged),
-                };
-            })
+        return startupsData
             .filter((startup) => {
                 const q = searchQuery.toLowerCase();
                 const matchesSearch = !q ||
@@ -61,18 +77,64 @@ const StartupManagement = () => {
                     (viewMode === 'featured' && startup.featured);
                 return matchesSearch && matchesMode;
             });
-    }, [searchQuery, systemData, viewMode]);
+    }, [searchQuery, startupsData, viewMode]);
 
-    const updateStartup = (id, updater) => {
-        const sys = getSystem();
-        const next = (sys.startups || []).map((startup, index) => {
-            const startupId = startup.id || startup.uid || startup.startupId || `startup-${index}`;
-            if (startupId !== id) return startup;
-            return updater(startup);
-        });
-        sys.startups = next;
-        saveSystem(sys);
-        setSystemData(getSystem());
+    const createStartup = async () => {
+        setCreatingStartup(true);
+        setError('');
+
+        try {
+            const payload = {
+                name: `Startup ${startupsData.length + 1}`,
+                founderId: null,
+                status: 'draft'
+            };
+            const response = await api.post('/v1/startups', payload);
+            const created = mapStartupFromApi(response.data?.data || payload, startupsData.length);
+            setStartupsData((prev) => [created, ...prev]);
+        } catch (createError) {
+            setError(createError.response?.data?.error || 'Failed to create startup');
+        } finally {
+            setCreatingStartup(false);
+        }
+    };
+
+    const updateStartup = async (id, updater) => {
+        const current = startupsData.find((startup) => startup.id === id);
+        if (!current) return;
+
+        const nextState = updater(current);
+        setError('');
+
+        try {
+            const response = await api.put(`/v1/startups/${id}`, {
+                name: nextState.startupName,
+                status: nextState.stage,
+                traction: nextState.traction,
+                revenue: nextState.revenue,
+                profileCompletion: nextState.completion,
+                verified: nextState.verified,
+                featured: nextState.featured,
+                flagged: nextState.flagged,
+                founderName: nextState.founderName,
+            });
+
+            const updated = mapStartupFromApi(response.data?.data || nextState);
+            setStartupsData((prev) => prev.map((startup) => (startup.id === id ? updated : startup)));
+        } catch (updateError) {
+            setError(updateError.response?.data?.error || 'Failed to update startup');
+        }
+    };
+
+    const deleteStartup = async (id) => {
+        setError('');
+
+        try {
+            await api.delete(`/v1/startups/${id}`);
+            setStartupsData((prev) => prev.filter((startup) => startup.id !== id));
+        } catch (deleteError) {
+            setError(deleteError.response?.data?.error || 'Failed to delete startup');
+        }
     };
 
     return (
@@ -94,6 +156,13 @@ const StartupManagement = () => {
                             className="bg-[#1E1E2F] border border-white/5 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#8B5CF6]/50"
                         />
                     </div>
+                    <button
+                        onClick={createStartup}
+                        disabled={creatingStartup}
+                        className="px-4 py-2 rounded-xl text-sm font-bold transition-all border bg-[#8B5CF6]/10 text-[#8B5CF6] border-[#8B5CF6]/20 hover:bg-[#8B5CF6]/20 disabled:opacity-60"
+                    >
+                        {creatingStartup ? 'Creating...' : 'Create Startup'}
+                    </button>
                 </div>
                 <div className="flex gap-2">
                     <button
@@ -104,7 +173,7 @@ const StartupManagement = () => {
                                 : 'bg-white/5 text-gray-300 border-white/5 hover:bg-white/10'
                         }`}
                     >
-                        Pending Verification ({(systemData.startups || []).filter(s => !s.verified).length})
+                        Pending Verification ({startupsData.filter((s) => !s.verified).length})
                     </button>
                     <button
                         onClick={() => setViewMode('featured')}
@@ -130,12 +199,22 @@ const StartupManagement = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {startups.length === 0 && (
+                {loading && (
+                    <div className="col-span-full bg-[#1E1E2F] p-10 rounded-2xl border border-white/5 text-center text-gray-500">
+                        Loading startups...
+                    </div>
+                )}
+                {!loading && error && (
+                    <div className="col-span-full bg-[#1E1E2F] p-10 rounded-2xl border border-red-500/20 text-center text-red-400">
+                        {error}
+                    </div>
+                )}
+                {!loading && !error && startups.length === 0 && (
                     <div className="col-span-full bg-[#1E1E2F] p-10 rounded-2xl border border-white/5 text-center text-gray-500">
                         No startups found for this filter.
                     </div>
                 )}
-                {startups.map((startup) => (
+                {!loading && !error && startups.map((startup) => (
                     <div key={startup.id} className="bg-[#1E1E2F] p-6 rounded-2xl border border-white/5 hover:border-[#8B5CF6]/30 transition-all duration-300 group relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-4">
                             {startup.verified ? (
@@ -221,6 +300,13 @@ const StartupManagement = () => {
                                 title={startup.flagged ? 'Remove Flag' : 'Flag Startup'}
                             >
                                 <Flag size={14} />
+                            </button>
+                            <button
+                                onClick={() => deleteStartup(startup.id)}
+                                className="p-2 hover:bg-red-500/10 text-red-400 rounded-lg transition-all border border-transparent hover:border-red-500/20 text-xs font-bold"
+                                title="Delete Startup"
+                            >
+                                Del
                             </button>
                         </div>
                     </div>

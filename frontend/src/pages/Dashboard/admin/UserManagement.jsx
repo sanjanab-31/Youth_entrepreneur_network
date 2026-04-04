@@ -5,37 +5,58 @@ import {
     ShieldCheck,
     Ban
 } from 'lucide-react';
-import { getSystem, saveSystem } from '../../../utils/system';
+import api from '../../../../services/api';
+
+const mapUserFromApi = (u = {}) => ({
+    uid: u.id || u.uid,
+    name: u.name || u.email?.split('@')[0] || 'Unknown',
+    email: u.email || '',
+    role: u.role || 'user',
+    roleLabel: (u.role || 'user').charAt(0).toUpperCase() + (u.role || 'user').slice(1),
+    sector: Array.isArray(u.expertise)
+        ? u.expertise[0]
+        : (u.sector || u.portalData?.sector || 'General'),
+    joinDate: u.created_at || u.createdAt
+        ? new Date(u.created_at || u.createdAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        })
+        : '—',
+    verified: Boolean(u.verified),
+    active: u.status !== 'suspended' && u.status !== 'banned',
+});
 
 const UserManagement = () => {
     const [filterRole, setFilterRole] = useState('All Roles');
     const [filterVerified, setFilterVerified] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
-    const [systemData, setSystemData] = useState(() => getSystem());
+    const [usersData, setUsersData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [creatingUser, setCreatingUser] = useState(false);
 
     useEffect(() => {
-        const refresh = () => setSystemData(getSystem());
-        window.addEventListener('storage', refresh);
-        return () => window.removeEventListener('storage', refresh);
+        const fetchUsers = async () => {
+            setLoading(true);
+            setError('');
+
+            try {
+                const response = await api.get('/v1/users');
+                const apiUsers = Array.isArray(response.data?.data) ? response.data.data : [];
+                setUsersData(apiUsers.map(mapUserFromApi));
+            } catch (fetchError) {
+                setError(fetchError.response?.data?.error || 'Failed to load users');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUsers();
     }, []);
 
     const users = useMemo(() => {
-        return Object.values(systemData.users || {})
-            .map(u => ({
-                uid: u.uid || u.id,
-                name: u.name || u.email?.split('@')[0] || 'Unknown',
-                email: u.email || '',
-                role: (u.role || 'user'),
-                roleLabel: (u.role || 'user').charAt(0).toUpperCase() + (u.role || 'user').slice(1),
-                sector: Array.isArray(u.expertise) ? u.expertise[0] :
-                    (u.sector || u.portalData?.sector || 'General'),
-                joinDate: u.createdAt
-                    ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                    : '—',
-                verified: Boolean(u.verified),
-                active: u.status !== 'suspended' && u.status !== 'banned',
-            }))
-            .filter(u => {
+        return usersData.filter(u => {
                 const matchRole = filterRole === 'All Roles' || u.roleLabel.toLowerCase() === filterRole.toLowerCase();
                 const matchVerify = filterVerified === 'All' ||
                     (filterVerified === 'Verified' && u.verified) ||
@@ -45,31 +66,44 @@ const UserManagement = () => {
                     u.email.toLowerCase().includes(q) || (u.uid || '').toLowerCase().includes(q);
                 return matchRole && matchVerify && matchSearch;
             });
-    }, [systemData, filterRole, filterVerified, searchQuery]);
+    }, [usersData, filterRole, filterVerified, searchQuery]);
+
+    const createUser = async () => {
+        setCreatingUser(true);
+        setError('');
+
+        try {
+            const payload = {
+                name: `New User ${usersData.length + 1}`,
+                email: `new-user-${Date.now()}@example.com`,
+                role: 'founder',
+            };
+            const response = await api.post('/v1/users', payload);
+            const created = mapUserFromApi(response.data?.data || payload);
+            setUsersData(prev => [created, ...prev]);
+        } catch (createError) {
+            setError(createError.response?.data?.error || 'Failed to create user');
+        } finally {
+            setCreatingUser(false);
+        }
+    };
 
     const toggleVerify = (uid) => {
         if (!uid) return;
-        const sys = getSystem();
-        if (sys.users?.[uid]) {
-            sys.users[uid].verified = !sys.users[uid].verified;
-            saveSystem(sys);
-        }
-        setSystemData(getSystem());
+        setUsersData(prev => prev.map(user => (
+            user.uid === uid ? { ...user, verified: !user.verified } : user
+        )));
     };
 
     const toggleSuspend = (uid) => {
         if (!uid) return;
-        const sys = getSystem();
-        if (sys.users?.[uid]) {
-            const current = sys.users[uid].status || 'active';
-            sys.users[uid].status = current === 'suspended' ? 'active' : 'suspended';
-            saveSystem(sys);
-        }
-        setSystemData(getSystem());
+        setUsersData(prev => prev.map(user => (
+            user.uid === uid ? { ...user, active: !user.active } : user
+        )));
     };
 
     const roleCounts = useMemo(() => {
-        const all = Object.values(systemData.users || {});
+        const all = usersData;
         return {
             All: all.length,
             Founder: all.filter(u => u.role === 'founder').length,
@@ -77,7 +111,7 @@ const UserManagement = () => {
             Incubator: all.filter(u => u.role === 'incubator').length,
             'Co-Founder': all.filter(u => ['co-founder', 'cofounder'].includes(u.role)).length,
         };
-    }, [systemData]);
+    }, [usersData]);
 
     return (
         <div className="space-y-8">
@@ -87,6 +121,13 @@ const UserManagement = () => {
                     <p className="text-gray-400">Monitor and control all platform participants</p>
                 </div>
                 <div className="flex gap-3">
+                    <button
+                        onClick={createUser}
+                        disabled={creatingUser}
+                        className="px-4 py-2.5 rounded-xl text-sm font-black uppercase transition-all border border-[#8B5CF6]/30 bg-[#8B5CF6]/20 text-[#8B5CF6] hover:bg-[#8B5CF6]/30 disabled:opacity-60"
+                    >
+                        {creatingUser ? 'Creating...' : 'Create User'}
+                    </button>
                     {Object.entries(roleCounts).map(([role, count]) => (
                         <button
                             key={role}
@@ -140,11 +181,21 @@ const UserManagement = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                        {users.length === 0 ? (
+                        {loading ? (
+                            <tr>
+                                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">Loading users...</td>
+                            </tr>
+                        ) : null}
+                        {!loading && error ? (
+                            <tr>
+                                <td colSpan={6} className="px-6 py-6 text-center text-red-400">{error}</td>
+                            </tr>
+                        ) : null}
+                        {!loading && !error && users.length === 0 ? (
                             <tr>
                                 <td colSpan={6} className="px-6 py-12 text-center text-gray-500">No users found</td>
                             </tr>
-                        ) : users.map((user, index) => (
+                        ) : !loading && !error && users.map((user, index) => (
                             <tr key={user.uid || index} className="hover:bg-white/2 transition-all group">
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
