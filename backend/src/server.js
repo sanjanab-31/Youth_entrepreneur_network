@@ -1,5 +1,6 @@
 import express from 'express';
 import { connectDB } from './config/db.js';
+import { authenticateFirebaseToken } from './middlewares/auth.middleware.js';
 import usersRoutes from './routes/users.routes.js';
 import startupsRoutes from './routes/startups.routes.js';
 import mentorRequestsRoutes from './routes/mentorRequests.routes.js';
@@ -19,13 +20,13 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/v1/users', usersRoutes);
-app.use('/api/v1/startups', startupsRoutes);
-app.use('/api/v1/mentor-requests', mentorRequestsRoutes);
-app.use('/api/v1/applications', applicationsRoutes);
-app.use('/api/v1/sessions', sessionsRoutes);
-app.use('/api/v1/incubators', incubatorsRoutes);
-app.use('/api/v1/cohorts', cohortsRoutes);
-app.use('/api/v1/messages', messagesRoutes);
+app.use('/api/v1/startups', authenticateFirebaseToken, startupsRoutes);
+app.use('/api/v1/mentor-requests', authenticateFirebaseToken, mentorRequestsRoutes);
+app.use('/api/v1/applications', authenticateFirebaseToken, applicationsRoutes);
+app.use('/api/v1/sessions', authenticateFirebaseToken, sessionsRoutes);
+app.use('/api/v1/incubators', authenticateFirebaseToken, incubatorsRoutes);
+app.use('/api/v1/cohorts', authenticateFirebaseToken, cohortsRoutes);
+app.use('/api/v1/messages', authenticateFirebaseToken, messagesRoutes);
 
 const startServer = async () => {
   const isDbConnected = await connectDB();
