@@ -24,7 +24,10 @@ const Cohorts = () => {
         mentors,
         applications,
         assignStartupToCohort,
-        removeStartupFromCohort
+        removeStartupFromCohort,
+        cohortsLoading,
+        cohortsError,
+        cohortActionKey
     } = useIncubator();
 
     const [selectedCohortId, setSelectedCohortId] = useState(null);
@@ -51,7 +54,12 @@ const Cohorts = () => {
         return 'active';
     };
 
-    const getCohortStartups = (cohortId) => pipeline.filter(startup => startup.cohortId === cohortId);
+    const getCohortStartups = (cohort) => {
+        const startupIds = Array.isArray(cohort?.startupIds) ? cohort.startupIds : [];
+        if (startupIds.length === 0) return [];
+        const startupIdSet = new Set(startupIds);
+        return pipeline.filter((startup) => startupIdSet.has(startup.startupId));
+    };
 
     const getCohortProgress = (startups) => {
         if (!startups.length) return 0;
@@ -108,7 +116,7 @@ const Cohorts = () => {
     const cohortCards = useMemo(() => {
         return cohorts
             .map(cohort => {
-                const startups = getCohortStartups(cohort.id);
+                const startups = getCohortStartups(cohort);
                 const progress = getCohortProgress(startups);
                 const milestoneCompletion = getMilestoneCompletion(startups);
                 const status = getCohortStatus(cohort);
@@ -140,16 +148,17 @@ const Cohorts = () => {
 
     const assignableStartups = useMemo(() => {
         if (!selectedCohort) return [];
-        return pipeline.filter(startup => startup.cohortId !== selectedCohort.id);
+        const selectedStartupIds = new Set(selectedCohort.startupIds || []);
+        return pipeline.filter((startup) => !selectedStartupIds.has(startup.startupId));
     }, [pipeline, selectedCohort]);
 
-    const handleCreate = (e) => {
+    const handleCreate = async (e) => {
         e.preventDefault();
 
         if (!newCohort.name || !newCohort.startDate || !newCohort.endDate) return;
         if (new Date(newCohort.startDate) > new Date(newCohort.endDate)) return;
 
-        createCohort({
+        await createCohort({
             name: newCohort.name.trim(),
             startDate: newCohort.startDate,
             endDate: newCohort.endDate,
@@ -184,7 +193,17 @@ const Cohorts = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {cohortCards.map((cohort, index) => (
+                {cohortsError && (
+                    <div className="lg:col-span-2 p-4 rounded-2xl border border-red-500/20 bg-red-500/10 text-red-300 text-sm font-semibold">
+                        {cohortsError}
+                    </div>
+                )}
+                {cohortsLoading && (
+                    <div className="lg:col-span-2 p-6 rounded-2xl border border-white/10 bg-[#1A1A2B] text-center text-gray-400">
+                        Loading cohorts...
+                    </div>
+                )}
+                {!cohortsLoading && cohortCards.map((cohort, index) => (
                     <motion.button
                         key={cohort.id}
                         type="button"
@@ -273,7 +292,7 @@ const Cohorts = () => {
                 ))}
             </div>
 
-            {cohortCards.length === 0 && (
+            {!cohortsLoading && cohortCards.length === 0 && (
                 <div className="p-10 rounded-2xl border border-dashed border-white/10 bg-[#1A1A2B] text-center text-gray-400">
                     No cohorts found. Launch your first cohort to start tracking batches.
                 </div>
@@ -450,10 +469,13 @@ const Cohorts = () => {
                                                         </div>
                                                         <button
                                                             type="button"
-                                                            onClick={() => removeStartupFromCohort(startup.startupId, selectedCohort.id)}
+                                                            onClick={async () => {
+                                                                await removeStartupFromCohort(startup.startupId, selectedCohort.id);
+                                                            }}
+                                                            disabled={cohortActionKey === `remove:${startup.startupId}:${selectedCohort.id}`}
                                                             className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg"
                                                         >
-                                                            Remove
+                                                            {cohortActionKey === `remove:${startup.startupId}:${selectedCohort.id}` ? 'Removing...' : 'Remove'}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -482,10 +504,13 @@ const Cohorts = () => {
                                                     </div>
                                                     <button
                                                         type="button"
-                                                        onClick={() => assignStartupToCohort(startup.startupId, selectedCohort.id)}
+                                                        onClick={async () => {
+                                                            await assignStartupToCohort(startup.startupId, selectedCohort.id);
+                                                        }}
+                                                        disabled={cohortActionKey === `assign:${startup.startupId}:${selectedCohort.id}`}
                                                         className="text-xs px-3 py-2 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white rounded-lg font-bold"
                                                     >
-                                                        Assign
+                                                        {cohortActionKey === `assign:${startup.startupId}:${selectedCohort.id}` ? 'Assigning...' : 'Assign'}
                                                     </button>
                                                 </div>
                                             ))}

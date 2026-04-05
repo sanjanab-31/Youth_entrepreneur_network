@@ -137,15 +137,17 @@ const RequestCard = ({ hydrated, onAccept, onDecline, onViewProfile }) => {
                 <div className="flex gap-2">
                     <button
                         onClick={() => onAccept(hydrated.id)}
+                        disabled={hydrated.actionLoading}
                         className="flex-1 py-3 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#8B5CF6]/20 transition-all"
                     >
-                        Accept
+                        {hydrated.actionLoading ? 'Working...' : 'Accept'}
                     </button>
                     <button
                         onClick={() => onDecline(hydrated.id)}
+                        disabled={hydrated.actionLoading}
                         className="flex-1 py-3 bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-white/10"
                     >
-                        Decline
+                        {hydrated.actionLoading ? 'Working...' : 'Decline'}
                     </button>
                 </div>
                 <button
@@ -357,7 +359,7 @@ const StartupDetailModal = ({ hydrated, onClose, onAccept, onDecline }) => {
 // ─── FounderRequests ──────────────────────────────────────────────────────────
 
 const FounderRequests = () => {
-    const { requests, acceptRequest, declineRequest } = useMentor();
+    const { requests, acceptRequest, declineRequest, requestsLoading, requestsError, requestActionId } = useMentor();
     const [selectedHydrated, setSelectedHydrated] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('pending'); // pending | accepted | declined
@@ -385,13 +387,13 @@ const FounderRequests = () => {
         declined: hydratedRequests.filter(r => r.status === 'declined').length,
     }), [hydratedRequests]);
 
-    const handleAccept = (id) => {
-        acceptRequest(id);
+    const handleAccept = async (id) => {
+        await acceptRequest(id);
         setSelectedHydrated(null);
     };
 
-    const handleDecline = (id) => {
-        declineRequest(id);
+    const handleDecline = async (id) => {
+        await declineRequest(id);
         setSelectedHydrated(null);
     };
 
@@ -447,7 +449,17 @@ const FounderRequests = () => {
 
             {/* Request Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filtered.length === 0 ? (
+                {requestsLoading ? (
+                    <div className="col-span-full py-20 text-center">
+                        <Clock className="mx-auto text-gray-700 mb-4 animate-pulse" size={48} />
+                        <h3 className="text-xl font-bold text-gray-500">Loading mentor requests...</h3>
+                    </div>
+                ) : requestsError ? (
+                    <div className="col-span-full py-20 text-center">
+                        <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
+                        <h3 className="text-xl font-bold text-red-400">{requestsError}</h3>
+                    </div>
+                ) : filtered.length === 0 ? (
                     <div className="col-span-full py-20 text-center">
                         <Users className="mx-auto text-gray-700 mb-4" size={48} />
                         <h3 className="text-xl font-bold text-gray-500">
@@ -464,7 +476,7 @@ const FounderRequests = () => {
                         activeTab === 'pending' ? (
                             <RequestCard
                                 key={hydrated.id}
-                                hydrated={hydrated}
+                                hydrated={{ ...hydrated, actionLoading: requestActionId === hydrated.id }}
                                 onAccept={handleAccept}
                                 onDecline={handleDecline}
                                 onViewProfile={setSelectedHydrated}

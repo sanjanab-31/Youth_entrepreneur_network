@@ -31,15 +31,34 @@ export const MentorProvider = ({ children }) => {
     const [sessions, setSessions] = useState([]);
     const [mentees, setMentees] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [requestsLoading, setRequestsLoading] = useState(true);
+    const [requestsError, setRequestsError] = useState('');
+    const [requestActionId, setRequestActionId] = useState(null);
+    const [sessionsLoading, setSessionsLoading] = useState(true);
+    const [sessionsError, setSessionsError] = useState('');
+    const [sessionActionId, setSessionActionId] = useState(null);
 
     const refreshData = useCallback(async () => {
         setLoading(true);
-        const state = await loadMentorState(user);
-        setProfile(state.profile);
-        setRequests(state.requests);
-        setSessions(state.sessions);
-        setMentees(state.mentees);
+        setRequestsLoading(true);
+        setSessionsLoading(true);
+        setRequestsError('');
+        setSessionsError('');
+        try {
+            const state = await loadMentorState(user);
+            setProfile(state.profile);
+            setRequests(state.requests);
+            setSessions(state.sessions);
+            setMentees(state.mentees);
+        } catch (error) {
+            setRequests([]);
+            setSessions([]);
+            setRequestsError(error.response?.data?.error || 'Failed to load mentor requests');
+            setSessionsError(error.response?.data?.error || 'Failed to load sessions');
+        }
         setLoading(false);
+        setRequestsLoading(false);
+        setSessionsLoading(false);
     }, [user]);
 
     useEffect(() => {
@@ -57,38 +76,87 @@ export const MentorProvider = ({ children }) => {
     };
 
     const updateSession = async (sessionId, updates) => {
-        await updateMentorSession(sessionId, updates);
+        setSessionActionId(sessionId);
+        setSessionsError('');
+        try {
+            await updateMentorSession(sessionId, updates);
+        } catch (error) {
+            setSessionsError(error.response?.data?.error || 'Failed to update session');
+        }
         await refreshData();
+        setSessionActionId(null);
     };
 
     const acceptRequest = async (requestId) => {
-        await acceptMentorRequest(requestId, user);
+        setRequestActionId(requestId);
+        setRequestsError('');
+        try {
+            await acceptMentorRequest(requestId);
+        } catch (error) {
+            setRequestsError(error.response?.data?.error || 'Failed to accept mentor request');
+        }
         await refreshData();
+        setRequestActionId(null);
     };
 
     const declineRequest = async (requestId) => {
-        await declineMentorRequest(requestId, user);
+        setRequestActionId(requestId);
+        setRequestsError('');
+        try {
+            await declineMentorRequest(requestId);
+        } catch (error) {
+            setRequestsError(error.response?.data?.error || 'Failed to reject mentor request');
+        }
         await refreshData();
+        setRequestActionId(null);
     };
 
     const scheduleSession = async (startupId, date, time, topic = 'Mentorship Session', meetingLink = '') => {
-        await scheduleMentorSession(startupId, date, time, topic, meetingLink, user);
+        setSessionActionId('create');
+        setSessionsError('');
+        try {
+            await scheduleMentorSession(startupId, date, time, topic, meetingLink, user);
+        } catch (error) {
+            setSessionsError(error.response?.data?.error || 'Failed to create session');
+        }
         await refreshData();
+        setSessionActionId(null);
     };
 
     const confirmSessionRequest = async (sessionId, schedule) => {
-        await confirmMentorSessionRequest(sessionId, schedule, user);
+        setSessionActionId(sessionId);
+        setSessionsError('');
+        try {
+            await confirmMentorSessionRequest(sessionId, schedule, user);
+        } catch (error) {
+            setSessionsError(error.response?.data?.error || 'Failed to confirm session');
+        }
         await refreshData();
+        setSessionActionId(null);
     };
 
     const declineSessionRequest = async (sessionId) => {
-        await declineMentorSessionRequest(sessionId, user);
+        setSessionActionId(sessionId);
+        setSessionsError('');
+        try {
+            await declineMentorSessionRequest(sessionId, user);
+        } catch (error) {
+            setSessionsError(error.response?.data?.error || 'Failed to cancel session');
+        }
         await refreshData();
+        setSessionActionId(null);
     };
 
     const completeSession = async (sessionId, feedback) => {
-        await completeMentorSession(sessionId, feedback, user);
+        setSessionActionId(sessionId);
+        setSessionsError('');
+        try {
+            await completeMentorSession(sessionId, feedback, user);
+        } catch (error) {
+            setSessionsError(error.response?.data?.error || 'Failed to complete session');
+        }
         await refreshData();
+        setSessionActionId(null);
     };
 
     const addFocusArea = async (startupId, area) => {
@@ -129,7 +197,13 @@ export const MentorProvider = ({ children }) => {
         removeFocusArea,
         sendMessage,
         refreshData,
-        loading
+        loading,
+        requestsLoading,
+        requestsError,
+        requestActionId,
+        sessionsLoading,
+        sessionsError,
+        sessionActionId
     };
 
     return (

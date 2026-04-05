@@ -1,11 +1,5 @@
-import { getSystem, saveSystem } from './system';
-
-const nowIso = () => new Date().toISOString();
-
-const isStartupMember = (startup, userId) => {
-    if (!startup || !userId) return false;
-    return startup.founderId === userId || (startup.coFounders || []).includes(userId);
-};
+import api from '../../services/api';
+import { getSystem } from './system';
 
 const matchesConversationMessage = ({ message, conversation }) => {
     if (!message || !conversation) return false;
@@ -20,86 +14,42 @@ const matchesConversationMessage = ({ message, conversation }) => {
     return false;
 };
 
-export const backfillLegacyMentorMessageReceivers = (system) => {
-    const startups = system.startups || [];
-    const mentorRequests = system.mentorRequests || [];
-    const allMessages = [...(system.messages || [])];
-    const startupById = new Map(startups.map((s) => [s.startupId, s]));
-    let changed = false;
+const normalizeMessage = (message = {}) => ({
+    ...message,
+    id: message.id,
+    startupId: message.startupId ?? message.startup_id ?? null,
+    senderId: message.senderId ?? message.sender_id ?? null,
+    senderName: message.senderName ?? message.sender_name ?? 'User',
+    senderRole: message.senderRole ?? message.sender_role ?? null,
+    receiverId: message.receiverId ?? message.receiver_id ?? null,
+    conversationType: message.conversationType ?? message.conversation_type ?? 'startup',
+    message: message.message ?? message.content ?? '',
+    content: message.message ?? message.content ?? '',
+    createdAt: message.createdAt ?? message.created_at ?? null,
+    updatedAt: message.updatedAt ?? message.updated_at ?? null,
+    read: Boolean(message.read),
+});
 
-    const candidateMentorsByStartup = new Map();
-
-    startups.forEach((startup) => {
-        const mentorIds = new Set();
-        if (startup.mentorAssigned) mentorIds.add(startup.mentorAssigned);
-
-        mentorRequests
-            .filter((r) => r.startupId === startup.startupId && r.status === 'accepted' && r.mentorId)
-            .forEach((r) => mentorIds.add(r.mentorId));
-
-        allMessages
-            .filter((m) => m.startupId === startup.startupId && m.conversationType === 'mentor' && m.senderRole === 'mentor' && m.senderId)
-            .forEach((m) => mentorIds.add(m.senderId));
-
-        candidateMentorsByStartup.set(startup.startupId, mentorIds);
-    });
-
-    const mentorMessagesByStartup = new Map();
-    allMessages.forEach((message, index) => {
-        if (message.conversationType !== 'mentor' || !message.startupId) return;
-        const group = mentorMessagesByStartup.get(message.startupId) || [];
-        group.push({ index, message });
-        mentorMessagesByStartup.set(message.startupId, group);
-    });
-
-    mentorMessagesByStartup.forEach((entries, startupId) => {
-        const startup = startupById.get(startupId);
-        if (!startup) return;
-
-        const sorted = [...entries].sort((a, b) =>
-            new Date(a.message.createdAt || 0).getTime() - new Date(b.message.createdAt || 0).getTime()
-        );
-
-        let activeMentorId = null;
-        const mentorCandidates = Array.from(candidateMentorsByStartup.get(startupId) || []);
-
-        sorted.forEach(({ index, message }) => {
-            if (message.receiverId) {
-                if (message.senderRole === 'mentor' && message.senderId) activeMentorId = message.senderId;
-                return;
-            }
-
-            if (message.senderRole === 'mentor' && message.senderId) {
-                const resolvedFounderId = startup.founderId || null;
-                if (resolvedFounderId) {
-                    allMessages[index] = { ...message, receiverId: resolvedFounderId, updatedAt: nowIso() };
-                    changed = true;
-                }
-                activeMentorId = message.senderId;
-                return;
-            }
-
-            if (!isStartupMember(startup, message.senderId)) return;
-
-            let resolvedMentorId = activeMentorId;
-            if (!resolvedMentorId && mentorCandidates.length === 1) resolvedMentorId = mentorCandidates[0];
-
-            if (resolvedMentorId) {
-                allMessages[index] = { ...message, receiverId: resolvedMentorId, updatedAt: nowIso() };
-                changed = true;
-            }
-        });
-    });
-
-    if (changed) system.messages = allMessages;
-    return changed;
+export const fetchAllMessages = async () => {
+    const response = await api.get('/v1/messages');
+    const raw = Array.isArray(response.data?.data) ? response.data.data : [];
+    return raw.map(normalizeMessage);
 };
 
-export const loadMessagingState = async () => {
-    const system = getSystem();
-    const changed = backfillLegacyMentorMessageReceivers(system);
-    if (changed) saveSystem(system);
-    return { messages: system.messages || [] };
+export const fetchStartupConversationMessages = async (startupId) => {
+    const response = await api.get(`/v1/messages/conversations/${startupId}`);
+    const raw = Array.isArray(response.data?.data) ? response.data.data : [];
+    return raw.map(normalizeMessage);
+};
+
+export const sendApiMessage = async (payload = {}) => {
+    const response = await api.post('/v1/messages/send', payload);
+    return normalizeMessage(response.data?.data || payload);
+};
+
+export const markMessageAsReadApi = async (messageId) => {
+    const response = await api.post(`/v1/messages/${messageId}/read`);
+    return normalizeMessage(response.data?.data || {});
 };
 
 export const buildConversations = (user, messages) => {
@@ -132,7 +82,7 @@ export const buildConversations = (user, messages) => {
                 name: `${myStartup.startupName} (Team)`,
                 type: 'startup',
                 lastMessage: teamMessages[teamMessages.length - 1],
-                unreadCount: teamMessages.filter((m) => !m.readBy.includes(user.uid)).length
+                unreadCount: teamMessages.filter((m) => !m.read && m.senderId !== user.uid).length
             });
 
             if (linkedMentorId) mentorParticipants.add(linkedMentorId);
@@ -154,7 +104,7 @@ export const buildConversations = (user, messages) => {
                 convoMap.set(`mentor_${sid}_${mentorId}`, {
                     ...mentorConversation,
                     lastMessage: mentorMsgs[mentorMsgs.length - 1],
-                    unreadCount: mentorMsgs.filter((m) => !m.readBy.includes(user.uid)).length
+                    unreadCount: mentorMsgs.filter((m) => !m.read && m.senderId !== user.uid).length
                 });
             });
 
@@ -171,7 +121,7 @@ export const buildConversations = (user, messages) => {
                 convoMap.set(`incubator_${sid}_${participantId}`, {
                     ...incubatorConversation,
                     lastMessage: incMsgs[incMsgs.length - 1],
-                    unreadCount: incMsgs.filter((m) => !m.readBy.includes(user.uid)).length
+                    unreadCount: incMsgs.filter((m) => !m.read && m.senderId !== user.uid).length
                 });
             }
         }
@@ -201,7 +151,7 @@ export const buildConversations = (user, messages) => {
             convoMap.set(`mentor_${startupId}_${user.uid}`, {
                 ...conversation,
                 lastMessage: mentorMsgs[mentorMsgs.length - 1],
-                unreadCount: mentorMsgs.filter((m) => !m.readBy.includes(user.uid)).length
+                unreadCount: mentorMsgs.filter((m) => !m.read && m.senderId !== user.uid).length
             });
         });
     }
@@ -221,7 +171,7 @@ export const buildConversations = (user, messages) => {
             convoMap.set(`incubator_${sid}_${user.uid}`, {
                 ...incubatorConversation,
                 lastMessage: incMsgs[incMsgs.length - 1],
-                unreadCount: incMsgs.filter((m) => !m.readBy.includes(user.uid)).length
+                unreadCount: incMsgs.filter((m) => !m.read && m.senderId !== user.uid).length
             });
 
             if (s.mentorAssigned) {
@@ -238,7 +188,7 @@ export const buildConversations = (user, messages) => {
                     name: `${allUsers[s.mentorAssigned]?.name || 'Mentor'} (${s.startupName})`,
                     type: 'direct',
                     lastMessage: directMsgs[directMsgs.length - 1],
-                    unreadCount: directMsgs.filter((m) => !m.readBy.includes(user.uid)).length
+                    unreadCount: directMsgs.filter((m) => !m.read && m.senderId !== user.uid).length
                 });
             }
         });
@@ -251,99 +201,10 @@ export const buildConversations = (user, messages) => {
     });
 };
 
-export const sendSystemMessage = async (user, payload) => {
-    if (!user) return false;
-    const system = getSystem();
+export const getMessagesForConversation = (messages, conversation) => {
+    if (!conversation) return [];
 
-    let isValid = false;
-    const targetStartup = (system.startups || []).find((s) => s.startupId === payload.startupId);
-    if (!targetStartup) return false;
-
-    const acceptedMentorRequest = (system.mentorRequests || []).find((r) => r.startupId === payload.startupId && r.status === 'accepted');
-    const linkedMentorId = targetStartup.mentorAssigned || acceptedMentorRequest?.mentorId || null;
-
-    const relatedMentorIds = new Set();
-    if (linkedMentorId) relatedMentorIds.add(linkedMentorId);
-
-    (system.mentorRequests || []).filter((r) => r.startupId === payload.startupId && r.status === 'accepted' && r.mentorId).forEach((r) => relatedMentorIds.add(r.mentorId));
-    (system.messages || []).filter((m) => m.startupId === payload.startupId && m.conversationType === 'mentor').forEach((m) => {
-        if (m.senderRole === 'mentor' && m.senderId) relatedMentorIds.add(m.senderId);
-        if (m.receiverId && system.users?.[m.receiverId]?.role === 'mentor') relatedMentorIds.add(m.receiverId);
-    });
-
-    if (user.role === 'founder' || user.role === 'co-founder') {
-        const isMember = targetStartup.founderId === user.uid || (targetStartup.coFounders || []).includes(user.uid);
-        if (isMember) {
-            if (payload.conversationType === 'startup') isValid = true;
-            if (payload.conversationType === 'mentor') isValid = payload.receiverId ? relatedMentorIds.has(payload.receiverId) : !!linkedMentorId;
-            if (payload.conversationType === 'incubator' && targetStartup.incubatorAssigned) isValid = true;
-        }
-    } else if (user.role === 'mentor') {
-        if (linkedMentorId === user.uid) {
-            if (payload.conversationType === 'mentor') isValid = true;
-            if (payload.conversationType === 'direct' && targetStartup.incubatorAssigned) isValid = true;
-        }
-    } else if (user.role === 'incubator') {
-        if (targetStartup.incubatorAssigned === user.uid) {
-            if (payload.conversationType === 'incubator') isValid = true;
-            if (payload.conversationType === 'direct' && targetStartup.mentorAssigned) isValid = true;
-        }
-    }
-
-    if (!isValid) return false;
-
-    const message = {
-        id: null,
-        startupId: payload.startupId,
-        senderId: user.uid,
-        senderName: user.name || 'User',
-        senderRole: user.role,
-        receiverId: payload.receiverId
-            || (payload.conversationType === 'mentor' ? linkedMentorId : null)
-            || (payload.conversationType === 'incubator' ? targetStartup.incubatorAssigned : null)
-            || (payload.conversationType === 'direct' ? (user.role === 'incubator' ? targetStartup.mentorAssigned : targetStartup.incubatorAssigned) : null),
-        conversationType: payload.conversationType,
-        message: payload.message,
-        readBy: [user.uid],
-        createdAt: nowIso(),
-        updatedAt: nowIso()
-    };
-
-    system.messages = [...(system.messages || []), message];
-
-    if (user.role === 'mentor' && payload.conversationType === 'mentor') {
-        targetStartup.activity = [{ id: null, message: 'Mentor sent strategic message', type: 'mentor', timestamp: nowIso() }, ...(targetStartup.activity || [])].slice(0, 50);
-    }
-    if (user.role === 'incubator' && payload.conversationType === 'incubator') {
-        targetStartup.activity = [{ id: null, message: 'Incubator sent decision message', type: 'incubator', timestamp: nowIso() }, ...(targetStartup.activity || [])].slice(0, 50);
-    }
-
-    saveSystem(system);
-    return true;
-};
-
-export const getMessagesForConversation = (user, conversation) => {
-    if (!user || !conversation) return [];
-    const system = getSystem();
-
-    return (system.messages || [])
-        .filter((message) => matchesConversationMessage({ message, conversation, startup: (system.startups || []).find((s) => s.startupId === conversation.startupId) }))
+    return (messages || [])
+        .filter((message) => matchesConversationMessage({ message, conversation }))
         .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-};
-
-export const markConversationAsRead = async (user, conversation) => {
-    if (!user || !conversation) return;
-    const system = getSystem();
-    let changed = false;
-
-    system.messages = (system.messages || []).map((m) => {
-        const isInConversation = matchesConversationMessage({ message: m, conversation });
-        if (isInConversation && !m.readBy.includes(user.uid)) {
-            changed = true;
-            return { ...m, readBy: [...m.readBy, user.uid] };
-        }
-        return m;
-    });
-
-    if (changed) saveSystem(system);
 };

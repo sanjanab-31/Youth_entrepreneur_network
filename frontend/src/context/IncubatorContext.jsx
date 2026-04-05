@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import {
     acceptIncubatorApplication,
     assignMentorForIncubatorStartup,
+    deleteIncubatorCohort,
     assignStartupToIncubatorCohort,
     buildIncubatorDerivedState,
     createIncubatorCohort,
@@ -12,7 +13,8 @@ import {
     onboardIncubatorStartup,
     rejectIncubatorApplication,
     removeMentorForIncubatorStartup,
-    removeStartupFromIncubatorCohort
+    removeStartupFromIncubatorCohort,
+    updateIncubatorCohort
 } from '../utils/incubatorService';
 
 const IncubatorContext = createContext();
@@ -34,25 +36,45 @@ export const IncubatorProvider = ({ children }) => {
     const [activityFeed, setActivityFeed] = useState([]);
     const [nextBatch, setNextBatch] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [applicationsLoading, setApplicationsLoading] = useState(true);
+    const [applicationsError, setApplicationsError] = useState('');
+    const [applicationActionId, setApplicationActionId] = useState(null);
+    const [cohortsLoading, setCohortsLoading] = useState(true);
+    const [cohortsError, setCohortsError] = useState('');
+    const [cohortActionKey, setCohortActionKey] = useState(null);
 
     const refreshData = useCallback(async () => {
         setLoading(true);
-        const state = await loadIncubatorState(user);
+        setApplicationsLoading(true);
+        setCohortsLoading(true);
+        setApplicationsError('');
+        setCohortsError('');
 
-        setPipeline(state.pipeline);
-        setApplications(state.applications);
-        setCohorts(state.cohorts);
-        setMentors(state.mentors);
-        setProfile(state.profile);
+        try {
+            const state = await loadIncubatorState(user);
 
-        const derived = buildIncubatorDerivedState(state.pipeline, state.applications, state.cohorts);
-        setAnalytics(derived.analytics);
-        setAlerts(derived.alerts);
-        setHighPotentialStartups(derived.highPotentialStartups);
-        setActivityFeed(derived.activityFeed);
-        setNextBatch(derived.nextBatch);
+            setPipeline(state.pipeline);
+            setApplications(state.applications);
+            setCohorts(state.cohorts);
+            setMentors(state.mentors);
+            setProfile(state.profile);
+
+            const derived = buildIncubatorDerivedState(state.pipeline, state.applications, state.cohorts);
+            setAnalytics(derived.analytics);
+            setAlerts(derived.alerts);
+            setHighPotentialStartups(derived.highPotentialStartups);
+            setActivityFeed(derived.activityFeed);
+            setNextBatch(derived.nextBatch);
+        } catch (error) {
+            setApplications([]);
+            setCohorts([]);
+            setApplicationsError(error.response?.data?.error || 'Failed to load applications');
+            setCohortsError(error.response?.data?.error || 'Failed to load cohorts');
+        }
 
         setLoading(false);
+        setApplicationsLoading(false);
+        setCohortsLoading(false);
     }, [user]);
 
     useEffect(() => {
@@ -65,13 +87,27 @@ export const IncubatorProvider = ({ children }) => {
     }, [refreshData]);
 
     const acceptApplication = async (appId, cohortId) => {
-        await acceptIncubatorApplication(user, appId, cohortId);
+        setApplicationActionId(appId);
+        setApplicationsError('');
+        try {
+            await acceptIncubatorApplication(user, appId, cohortId);
+        } catch (error) {
+            setApplicationsError(error.response?.data?.error || 'Failed to accept application');
+        }
         await refreshData();
+        setApplicationActionId(null);
     };
 
     const rejectApplication = async (appId) => {
-        await rejectIncubatorApplication(appId);
+        setApplicationActionId(appId);
+        setApplicationsError('');
+        try {
+            await rejectIncubatorApplication(appId);
+        } catch (error) {
+            setApplicationsError(error.response?.data?.error || 'Failed to reject application');
+        }
         await refreshData();
+        setApplicationActionId(null);
     };
 
     const assignMentorToStartup = async (mentorId, startupId) => {
@@ -80,7 +116,7 @@ export const IncubatorProvider = ({ children }) => {
     };
 
     const removeMentorAssignment = async (mentorId, startupId) => {
-        await removeMentorForIncubatorStartup(mentorId, startupId);
+        await removeMentorForIncubatorStartup(mentorId, startupId, user?.uid);
         await refreshData();
     };
 
@@ -97,18 +133,63 @@ export const IncubatorProvider = ({ children }) => {
     };
 
     const createCohort = async (cohortData) => {
-        await createIncubatorCohort(user, cohortData);
+        setCohortActionKey('create');
+        setCohortsError('');
+        try {
+            await createIncubatorCohort(user, cohortData);
+        } catch (error) {
+            setCohortsError(error.response?.data?.error || 'Failed to create cohort');
+        }
         await refreshData();
+        setCohortActionKey(null);
     };
 
     const assignStartupToCohort = async (startupId, cohortId) => {
-        await assignStartupToIncubatorCohort(user, startupId, cohortId);
+        setCohortActionKey(`assign:${startupId}:${cohortId}`);
+        setCohortsError('');
+        try {
+            await assignStartupToIncubatorCohort(user, startupId, cohortId);
+        } catch (error) {
+            setCohortsError(error.response?.data?.error || 'Failed to add startup to cohort');
+        }
         await refreshData();
+        setCohortActionKey(null);
     };
 
     const removeStartupFromCohort = async (startupId, cohortId) => {
-        await removeStartupFromIncubatorCohort(user, startupId, cohortId);
+        setCohortActionKey(`remove:${startupId}:${cohortId}`);
+        setCohortsError('');
+        try {
+            await removeStartupFromIncubatorCohort(user, startupId, cohortId);
+        } catch (error) {
+            setCohortsError(error.response?.data?.error || 'Failed to remove startup from cohort');
+        }
         await refreshData();
+        setCohortActionKey(null);
+    };
+
+    const updateCohort = async (cohortId, cohortData) => {
+        setCohortActionKey(`update:${cohortId}`);
+        setCohortsError('');
+        try {
+            await updateIncubatorCohort(cohortId, cohortData);
+        } catch (error) {
+            setCohortsError(error.response?.data?.error || 'Failed to update cohort');
+        }
+        await refreshData();
+        setCohortActionKey(null);
+    };
+
+    const deleteCohort = async (cohortId) => {
+        setCohortActionKey(`delete:${cohortId}`);
+        setCohortsError('');
+        try {
+            await deleteIncubatorCohort(cohortId);
+        } catch (error) {
+            setCohortsError(error.response?.data?.error || 'Failed to delete cohort');
+        }
+        await refreshData();
+        setCohortActionKey(null);
     };
 
     const updateSettings = async (nextSettings) => {
@@ -128,6 +209,8 @@ export const IncubatorProvider = ({ children }) => {
         assignMentorToStartup,
         removeMentorAssignment,
         createCohort,
+        updateCohort,
+        deleteCohort,
         assignStartupToCohort,
         removeStartupFromCohort,
         analytics,
@@ -137,7 +220,13 @@ export const IncubatorProvider = ({ children }) => {
         nextBatch,
         settings,
         updateSettings,
-        loading
+        loading,
+        applicationsLoading,
+        applicationsError,
+        applicationActionId,
+        cohortsLoading,
+        cohortsError,
+        cohortActionKey
     };
 
     return (

@@ -22,7 +22,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
-import { getSystem, normalizeApplication, saveSystem } from '../../../utils/system';
+import { createApplication, fetchApplications } from '../../../utils/applicationsApi';
+import { fetchCohorts } from '../../../utils/cohortsApi';
+import { fetchIncubators } from '../../../utils/incubatorsApi';
 
 const normalizeToArray = (value) => {
     if (Array.isArray(value)) return value.filter(Boolean);
@@ -74,14 +76,15 @@ const getCohortCurrentCapacity = (cohort, applications) => {
 
 const Incubators = () => {
     const { user } = useAuth();
-    const { startup } = useStartup();
+    const { startup, allStartups } = useStartup();
 
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [applyLoadingId, setApplyLoadingId] = useState(null);
     const [systemState, setSystemState] = useState({
         incubators: [],
         cohorts: [],
-        applications: [],
-        startups: []
+        applications: []
     });
     const [selectedIncubator, setSelectedIncubator] = useState(null);
 
@@ -95,25 +98,33 @@ const Incubators = () => {
     const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
     useEffect(() => {
-        const refreshData = () => {
+        const refreshData = async () => {
             setLoading(true);
+            setError('');
             try {
-                const system = getSystem();
+                const [incubators, cohorts, applications] = await Promise.all([
+                    fetchIncubators(),
+                    fetchCohorts(),
+                    fetchApplications()
+                ]);
                 setSystemState({
-                    incubators: system.incubators || [],
-                    cohorts: system.cohorts || [],
-                    applications: system.applications || [],
-                    startups: system.startups || []
+                    incubators,
+                    cohorts,
+                    applications
                 });
             } catch (error) {
-                console.error('Error loading incubator discovery data:', error);
+                setError(error.response?.data?.error || 'Error loading incubator discovery data');
             } finally {
                 setLoading(false);
             }
         };
 
-        queueMicrotask(refreshData);
-        const handleStorage = () => refreshData();
+        queueMicrotask(() => {
+            void refreshData();
+        });
+        const handleStorage = () => {
+            void refreshData();
+        };
         window.addEventListener('storage', handleStorage);
         return () => window.removeEventListener('storage', handleStorage);
     }, []);
@@ -122,24 +133,24 @@ const Incubators = () => {
         if (!user) return null;
 
         if (startup?.startupId) {
-            const fromSystem = systemState.startups.find(s => s.startupId === startup.startupId);
+            const fromSystem = (allStartups || []).find(s => s.startupId === startup.startupId);
             if (fromSystem) return fromSystem;
         }
 
         if (user.role === 'founder') {
-            return systemState.startups.find(s => s.founderId === user.uid) || null;
+            return (allStartups || []).find(s => s.founderId === user.uid) || null;
         }
 
         if (['co-founder', 'cofounder'].includes(user.role)) {
             return (
-                systemState.startups.find(
+                (allStartups || []).find(
                     s => Array.isArray(s.coFounders) && s.coFounders.includes(user.uid)
                 ) || null
             );
         }
 
         return null;
-    }, [startup, systemState.startups, user]);
+    }, [allStartups, startup, user]);
 
     const myApplications = useMemo(() => {
         if (!currentStartup) return [];
@@ -298,40 +309,32 @@ const Incubators = () => {
         setSearchQuery('');
     };
 
-    const handleApply = (incubator) => {
+    const handleApply = async (incubator) => {
         if (!currentStartup || !user) return;
 
         const existing = myApplications.find(app => app.incubatorId === incubator.id);
         if (existing) return;
 
-        const system = getSystem();
-        const duplicate = (system.applications || []).find(
-            app => app.startupId === currentStartup.startupId && app.incubatorId === incubator.id
-        );
-        if (duplicate) return;
+        setApplyLoadingId(incubator.id);
+        setError('');
+        try {
+            await createApplication({
+                founderId: currentStartup.founderId || user.uid,
+                startupId: currentStartup.startupId,
+                incubatorId: incubator.id,
+                startupName: currentStartup.startupName || 'Unnamed Startup',
+                sector: currentStartup.sector || 'General',
+                teamSize: Number(currentStartup.teamSize) || 1,
+                status: 'pending',
+                message: ''
+            });
 
-        const newApplication = {
-            id: null,
-            founderId: currentStartup.founderId || user.uid,
-            startupId: currentStartup.startupId,
-            incubatorId: incubator.id,
-            startupName: currentStartup.startupName || 'Unnamed Startup',
-            sector: currentStartup.sector || 'General',
-            teamSize: Number(currentStartup.teamSize) || 1,
-            appliedDate: new Date().toISOString(),
-            status: 'pending',
-            message: ''
-        };
-
-        const normalizedApplication = normalizeApplication(newApplication);
-
-        system.applications = [...(system.applications || []), normalizedApplication];
-        saveSystem(system);
-
-        setSystemState(prev => ({
-            ...prev,
-            applications: [...prev.applications, normalizedApplication]
-        }));
+            const applications = await fetchApplications();
+            setSystemState((prev) => ({ ...prev, applications }));
+        } catch (applyError) {
+            setError(applyError.response?.data?.error || 'Failed to apply to incubator');
+        }
+        setApplyLoadingId(null);
     };
 
     const getApplicationState = (incubator) => {
@@ -503,6 +506,11 @@ const Incubators = () => {
                 </aside>
 
                 <div className="lg:col-span-3 space-y-6">
+                    {error && (
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-300 text-sm font-semibold">
+                            {error}
+                        </div>
+                    )}
                     {filteredIncubators.length === 0 ? (
                         <div className="flex flex-col items-center justify-center p-20 bg-[#1E1E2F] rounded-3xl border border-dashed border-white/10 text-center">
                             <RefreshCw size={40} className="text-gray-600 mb-4 animate-spin-slow" />
@@ -559,7 +567,6 @@ const Incubators = () => {
                                                 </div>
 
                                                 <button
-                                                    disabled={disableApply}
                                                     onClick={() => handleApply(incubator)}
                                                     className={`hidden md:flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black border transition-all shadow-xl ${state.tone === 'accepted' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
                                                         state.tone === 'rejected' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
@@ -567,6 +574,7 @@ const Incubators = () => {
                                                                 !canApply || !currentStartup ? 'bg-gray-800 text-gray-500 cursor-not-allowed border-transparent' :
                                                                     'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-blue-500/20'
                                                         }`}
+                                                    disabled={disableApply || applyLoadingId === incubator.id}
                                                 >
                                                     {state.tone === 'accepted' ? (
                                                         <>Accepted <CheckCircle2 size={18} /></>
@@ -574,6 +582,8 @@ const Incubators = () => {
                                                         <>Rejected <AlertCircle size={18} /></>
                                                     ) : state.tone === 'pending' ? (
                                                         <>Applied <Clock size={18} /></>
+                                                    ) : applyLoadingId === incubator.id ? (
+                                                        'Applying...'
                                                     ) : !currentStartup ? (
                                                         'No Startup Linked'
                                                     ) : !canApply ? (
@@ -656,7 +666,7 @@ const Incubators = () => {
                                                                 : 'bg-blue-600 text-white shadow-lg'
                                                     }`}
                                             >
-                                                {state.label}
+                                                {applyLoadingId === incubator.id ? 'Applying...' : state.label}
                                             </button>
                                         </div>
                                     </div>
@@ -832,7 +842,7 @@ const Incubators = () => {
                                                                     'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/30'
                                                         }`}
                                                 >
-                                                    {state.label}
+                                                    {applyLoadingId === selectedIncubator.id ? 'Applying...' : state.label}
                                                 </button>
                                             );
                                         })()}

@@ -343,6 +343,9 @@ const Sessions = () => {
     const sessions = isMentor ? mentorCtx.sessions : startupCtx.sessions;
     const startup = !isMentor ? startupCtx.startup : null;
     const mentees = isMentor ? mentorCtx.mentees : [];
+    const sessionsLoading = isMentor ? mentorCtx.sessionsLoading : startupCtx.sessionsLoading;
+    const sessionsError = isMentor ? mentorCtx.sessionsError : startupCtx.sessionsError;
+    const sessionActionId = isMentor ? mentorCtx.sessionActionId : startupCtx.sessionActionId;
 
     // Helper to get startup/founder details for mentor view
     const hydrateSession = (s) => {
@@ -470,7 +473,23 @@ const Sessions = () => {
             {/* Sessions List */}
             <div className="grid grid-cols-1 gap-6 max-w-6xl">
                 <AnimatePresence mode="popLayout">
-                    {filteredSessions.length > 0 ? (
+                    {sessionsLoading ? (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="min-h-[40vh] flex flex-col items-center justify-center text-center p-20 bg-[#1E1E2F] rounded-[4rem] border border-white/5 border-dashed"
+                        >
+                            <h3 className="text-3xl font-black text-white mb-3">Loading sessions...</h3>
+                        </motion.div>
+                    ) : sessionsError ? (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="min-h-[40vh] flex flex-col items-center justify-center text-center p-20 bg-[#1E1E2F] rounded-[4rem] border border-rose-500/20"
+                        >
+                            <h3 className="text-3xl font-black text-rose-400 mb-3">{sessionsError}</h3>
+                        </motion.div>
+                    ) : filteredSessions.length > 0 ? (
                         filteredSessions.map((session, index) => (
                             <motion.div
                                 key={session.id}
@@ -529,12 +548,14 @@ const Sessions = () => {
                                             <div className="grid grid-cols-2 gap-2">
                                                 <button
                                                     onClick={() => setSessionToConfirm(session)}
+                                                    disabled={sessionActionId === session.id}
                                                     className="p-4 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-2xl border border-emerald-500/20 transition-all flex items-center justify-center"
                                                 >
                                                     <CheckCircle2 size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => mentorCtx.declineSessionRequest(session.id)}
+                                                    disabled={sessionActionId === session.id}
                                                     className="p-4 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-2xl border border-rose-500/20 transition-all flex items-center justify-center"
                                                 >
                                                     <XCircle size={18} />
@@ -545,18 +566,20 @@ const Sessions = () => {
                                         {isMentor && session.status === 'upcoming' && (
                                             <button
                                                 onClick={() => setCompletingSession(session)}
+                                                disabled={sessionActionId === session.id}
                                                 className="w-full py-4 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-[#8B5CF6]/20 transition-all flex items-center justify-center gap-2"
                                             >
-                                                <CheckCircle2 size={16} /> Mark Completed
+                                                <CheckCircle2 size={16} /> {sessionActionId === session.id ? 'Working...' : 'Mark Completed'}
                                             </button>
                                         )}
 
                                         {!isMentor && session.status === 'pending_confirmation' && (
                                             <button
                                                 onClick={() => startupCtx.cancelSession(session.id)}
+                                                disabled={sessionActionId === session.id}
                                                 className="w-full py-4 bg-white/5 hover:bg-rose-500/10 text-gray-500 hover:text-rose-500 text-[10px] font-black uppercase tracking-widest rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-2"
                                             >
-                                                <XCircle size={16} /> Cancel Request
+                                                <XCircle size={16} /> {sessionActionId === session.id ? 'Working...' : 'Cancel Request'}
                                             </button>
                                         )}
 

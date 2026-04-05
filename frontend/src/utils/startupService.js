@@ -1,14 +1,14 @@
 import {
     getSystem,
-    normalizeApplication,
     normalizeInvitation,
     normalizeJoinRequest,
-    normalizeMentorRequest,
-    normalizeSession,
     normalizeStartup,
     saveSystem
 } from './system';
 import { calculateExecutionScore } from './executionScore';
+import api from '../../services/api';
+import { createApplication, fetchApplications } from './applicationsApi';
+import { cancelSession, createSession, fetchSessions } from './sessionsApi';
 
 const nowIso = () => new Date().toISOString();
 
@@ -61,14 +61,43 @@ export const loadStartupState = async (user) => {
         || (user.role === 'co-founder' && r.requesterId === user.uid)
     );
 
+    let mentorRequests = [];
+    try {
+        const response = await api.get('/v1/mentor-requests');
+        const apiRequests = Array.isArray(response.data?.data) ? response.data.data : [];
+        mentorRequests = apiRequests
+            .map((r) => ({
+                ...r,
+                startupId: r.startupId ?? r.startup_id ?? null,
+                founderId: r.founderId ?? r.founder_id ?? null,
+                mentorId: r.mentorId ?? r.mentor_id ?? null,
+                status: r.status === 'rejected' ? 'declined' : r.status,
+                createdAt: r.createdAt ?? r.created_at ?? null,
+                updatedAt: r.updatedAt ?? r.updated_at ?? null,
+            }))
+            .filter((r) => r.founderId === user?.uid);
+    } catch {
+        mentorRequests = [];
+    }
+
+    let applications = [];
+    try {
+        const allApplications = await fetchApplications();
+        applications = allApplications.filter((a) => a.founderId === user?.uid);
+    } catch {
+        applications = [];
+    }
+
     return {
         startup,
         joinRequests,
         allStartups: system.startups || [],
         invitations: (system.invitations || []).filter((i) => i.startupId === startup?.startupId),
-        applications: (system.applications || []).filter((a) => a.founderId === user?.uid),
-        mentorRequests: (system.mentorRequests || []).filter((r) => r.founderId === user?.uid),
-        sessions: (system.sessions || []).filter((s) => s.startupId === startup?.startupId)
+        applications,
+        mentorRequests,
+        sessions: startup?.startupId
+            ? (await fetchSessions()).filter((s) => s.startupId === startup.startupId)
+            : []
     };
 };
 
@@ -169,22 +198,16 @@ export const renameStartupDocument = async (startup, index, newName) => {
 
 export const applyStartupToIncubator = async (startup, user, incubatorId, message) => {
     if (!startup || !user) return;
-    const system = getSystem();
-    const newApp = {
-        id: null,
+    await createApplication({
         founderId: user.uid,
         startupId: startup.startupId,
         incubatorId,
         startupName: startup.startupName,
         sector: startup.sector || 'General',
         teamSize: Number(startup.teamSize) || 1,
-        appliedDate: nowIso(),
         status: 'pending',
         message: message || ''
-    };
-    system.applications = system.applications || [];
-    system.applications.push(normalizeApplication(newApp));
-    saveSystem(system);
+    });
     await addStartupActivity(startup, 'Sent application to incubator', 'incubator');
 };
 
@@ -192,38 +215,24 @@ export const requestStartupMentorship = async (startup, user, mentorId, message)
     if (!startup || !user) return { error: 'Invalid request' };
     if (startup.mentorAssigned) return { error: 'You already have an assigned mentor.' };
 
-    const system = getSystem();
-    system.mentorRequests = system.mentorRequests || [];
-
-    const existing = system.mentorRequests.find((r) =>
-        r.startupId === startup.startupId && r.mentorId === mentorId && r.status === 'pending'
-    );
-    if (existing) return { error: 'Mentorship request already pending for this mentor.' };
-
-    const mentor = system.users?.[mentorId];
-    const mentorName = mentor?.name || mentor?.email?.split('@')[0] || 'Mentor';
-
-    const request = {
-        id: null,
-        mentorId,
-        startupId: startup.startupId,
-        founderId: user.uid,
-        message: message || '',
-        status: 'pending',
-        createdAt: nowIso()
-    };
-
-    system.mentorRequests.push(normalizeMentorRequest(request));
-    saveSystem(system);
-    await addStartupActivity(startup, `Mentorship request sent to ${mentorName}`, 'mentor');
-    return { success: true };
+    try {
+        await api.post('/v1/mentor-requests', {
+            mentorId,
+            startupId: startup.startupId,
+            founderId: user.uid,
+            message: message || '',
+            status: 'pending'
+        });
+        await addStartupActivity(startup, 'Mentorship request sent', 'mentor');
+        return { success: true };
+    } catch (error) {
+        return { error: error.response?.data?.error || 'Failed to send mentorship request' };
+    }
 };
 
 export const requestStartupSession = async (startup, user, date, time, topic) => {
     if (!startup || !user || !startup.mentorAssigned) return;
-    const system = getSystem();
-    const newSession = {
-        id: null,
+    await createSession({
         startupId: startup.startupId,
         founderId: user.uid,
         mentorId: startup.mentorAssigned,
@@ -231,11 +240,7 @@ export const requestStartupSession = async (startup, user, date, time, topic) =>
         time,
         topic,
         status: 'pending_confirmation',
-        createdAt: nowIso()
-    };
-    system.sessions = system.sessions || [];
-    system.sessions.push(normalizeSession(newSession));
-    saveSystem(system);
+    });
     await addStartupActivity(startup, `Requested session for ${date}`, 'info');
 };
 
@@ -262,14 +267,8 @@ export const removeStartupMentor = async (startup) => {
 
 export const cancelStartupSession = async (startup, sessionId) => {
     if (!startup) return;
-    const system = getSystem();
-    const session = (system.sessions || []).find((s) => s.id === sessionId);
-    if (!session) return;
-
-    session.status = 'cancelled';
-    session.updatedAt = nowIso();
-    saveSystem(system);
-    await addStartupActivity(startup, `Session for ${session.date} was cancelled`, 'warning');
+    const updated = await cancelSession(sessionId);
+    await addStartupActivity(startup, `Session for ${updated.date || 'upcoming date'} was cancelled`, 'warning');
 };
 
 export const leaveStartupTeam = async (startup, user) => {

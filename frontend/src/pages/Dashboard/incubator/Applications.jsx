@@ -20,7 +20,17 @@ import {
 import { useIncubator } from '../../../context/IncubatorContext';
 
 const Applications = () => {
-    const { applications, acceptApplication, rejectApplication, cohorts, mentors, assignMentorToStartup } = useIncubator();
+    const {
+        applications,
+        acceptApplication,
+        rejectApplication,
+        cohorts,
+        mentors,
+        assignMentorToStartup,
+        applicationsLoading,
+        applicationsError,
+        applicationActionId
+    } = useIncubator();
     const [selectedApp, setSelectedApp] = useState(null);
     const [activeTab, setActiveTab] = useState('All');
     const [selectedCohort, setSelectedCohort] = useState('');
@@ -87,7 +97,21 @@ const Applications = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {filteredApplications.map((app) => (
+                                {applicationsLoading && (
+                                    <tr>
+                                        <td colSpan="6" className="py-20 text-center text-gray-500">
+                                            Loading applications...
+                                        </td>
+                                    </tr>
+                                )}
+                                {!applicationsLoading && applicationsError && (
+                                    <tr>
+                                        <td colSpan="6" className="py-20 text-center text-rose-400">
+                                            {applicationsError}
+                                        </td>
+                                    </tr>
+                                )}
+                                {!applicationsLoading && !applicationsError && filteredApplications.map((app) => (
                                 <tr
                                     key={app.id}
                                     className="group hover:bg-white/[0.02] transition-colors cursor-pointer"
@@ -125,7 +149,7 @@ const Applications = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {filteredApplications.length === 0 && (
+                            {!applicationsLoading && !applicationsError && filteredApplications.length === 0 && (
                                 <tr>
                                     <td colSpan="6" className="py-20 text-center text-gray-500">
                                         No applications found in this category.
@@ -232,22 +256,24 @@ const Applications = () => {
 
                             <div className="p-8 border-t border-white/5 bg-[#1E1E2F] flex gap-4">
                                 <button
-                                    onClick={() => {
-                                        acceptApplication(selectedApp.id, selectedCohort);
+                                    onClick={async () => {
+                                        await acceptApplication(selectedApp.id, selectedCohort);
                                         if (selectedMentor) {
-                                            assignMentorToStartup(selectedMentor, selectedApp.startupId);
+                                            await assignMentorToStartup(selectedMentor, selectedApp.startupId);
                                         }
                                         setSelectedApp(null);
                                     }}
+                                    disabled={applicationActionId === selectedApp.id}
                                     className="flex-1 py-4 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-black uppercase tracking-widest text-sm rounded-2xl shadow-xl shadow-[#8B5CF6]/20 transition-all flex items-center justify-center gap-2"
                                 >
-                                    <Check size={20} /> Accept Venture
+                                    <Check size={20} /> {applicationActionId === selectedApp.id ? 'Processing...' : 'Accept Venture'}
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        rejectApplication(selectedApp.id);
+                                    onClick={async () => {
+                                        await rejectApplication(selectedApp.id);
                                         setSelectedApp(null);
                                     }}
+                                    disabled={applicationActionId === selectedApp.id}
                                     className="px-6 py-4 bg-white/5 hover:bg-rose-500/10 text-gray-400 hover:text-rose-400 rounded-2xl border border-white/10 hover:border-rose-500/20 transition-all flex items-center justify-center font-bold"
                                 >
                                     Reject

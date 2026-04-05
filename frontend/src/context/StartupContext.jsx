@@ -48,18 +48,29 @@ export const StartupProvider = ({ children }) => {
     const [mentorRequests, setMentorRequests] = useState([]);
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [sessionsLoading, setSessionsLoading] = useState(true);
+    const [sessionsError, setSessionsError] = useState('');
+    const [sessionActionId, setSessionActionId] = useState(null);
 
     const syncData = useCallback(async () => {
         setLoading(true);
-        const state = await loadStartupState(user);
-        setStartup(state.startup);
-        setJoinRequests(state.joinRequests);
-        setAllStartups(state.allStartups);
-        setInvitations(state.invitations);
-        setApplications(state.applications);
-        setMentorRequests(state.mentorRequests);
-        setSessions(state.sessions);
+        setSessionsLoading(true);
+        setSessionsError('');
+        try {
+            const state = await loadStartupState(user);
+            setStartup(state.startup);
+            setJoinRequests(state.joinRequests);
+            setAllStartups(state.allStartups);
+            setInvitations(state.invitations);
+            setApplications(state.applications);
+            setMentorRequests(state.mentorRequests);
+            setSessions(state.sessions);
+        } catch (error) {
+            setSessions([]);
+            setSessionsError(error.response?.data?.error || 'Failed to load sessions');
+        }
         setLoading(false);
+        setSessionsLoading(false);
     }, [user]);
 
     useEffect(() => {
@@ -125,8 +136,15 @@ export const StartupProvider = ({ children }) => {
     };
 
     const requestSession = async (date, time, topic) => {
-        await requestStartupSession(startup, user, date, time, topic);
+        setSessionActionId('create');
+        setSessionsError('');
+        try {
+            await requestStartupSession(startup, user, date, time, topic);
+        } catch (error) {
+            setSessionsError(error.response?.data?.error || 'Failed to create session');
+        }
         await syncData();
+        setSessionActionId(null);
     };
 
     const removeAssignedMentor = async () => {
@@ -135,8 +153,15 @@ export const StartupProvider = ({ children }) => {
     };
 
     const cancelSession = async (sessionId) => {
-        await cancelStartupSession(startup, sessionId);
+        setSessionActionId(sessionId);
+        setSessionsError('');
+        try {
+            await cancelStartupSession(startup, sessionId);
+        } catch (error) {
+            setSessionsError(error.response?.data?.error || 'Failed to cancel session');
+        }
         await syncData();
+        setSessionActionId(null);
     };
 
     const leaveStartup = async () => {
@@ -262,7 +287,10 @@ export const StartupProvider = ({ children }) => {
         invitations,
         applications,
         mentorRequests,
-        sessions
+        sessions,
+        sessionsLoading,
+        sessionsError,
+        sessionActionId
     };
 
     return (

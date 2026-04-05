@@ -1,10 +1,27 @@
 import {
     getSystem,
-    normalizeCohort,
     normalizeStartup,
     normalizeUserProfile,
     saveSystem
 } from './system';
+import {
+    acceptApplication,
+    fetchApplications,
+    rejectApplication
+} from './applicationsApi';
+import {
+    addMentorToIncubator,
+    fetchIncubators,
+    removeMentorFromIncubator
+} from './incubatorsApi';
+import {
+    createCohort,
+    fetchCohorts,
+    joinCohort,
+    leaveCohort,
+    updateCohort,
+    deleteCohort
+} from './cohortsApi';
 
 const nowIso = () => new Date().toISOString();
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -35,12 +52,48 @@ export const loadIncubatorState = async (user) => {
     }
 
     const system = getSystem();
+    let applications = [];
+    let cohorts = [];
+    let incubatorRecord = null;
+
+    try {
+        const allApplications = await fetchApplications();
+        applications = allApplications.filter((a) => a.incubatorId === user.uid);
+    } catch {
+        applications = [];
+    }
+
+    try {
+        const allCohorts = await fetchCohorts();
+        cohorts = allCohorts.filter((c) => c.incubatorId === user.uid);
+    } catch {
+        cohorts = [];
+    }
+
+    try {
+        const allIncubators = await fetchIncubators();
+        incubatorRecord = allIncubators.find((incubator) => incubator.id === user.uid || incubator.incubatorId === user.uid) || null;
+    } catch {
+        incubatorRecord = null;
+    }
+
+    const allMentors = Object.values(system.users || {}).filter((u) => u.role === 'mentor');
+    const mentorIds = Array.isArray(incubatorRecord?.mentorIds) ? incubatorRecord.mentorIds : [];
+    const mentors = mentorIds.length > 0
+        ? allMentors.filter((mentor) => mentorIds.includes(mentor.uid || mentor.id))
+        : allMentors;
+
     return {
-        applications: (system.applications || []).filter((a) => a.incubatorId === user.uid),
+        applications,
         pipeline: (system.startups || []).filter((s) => s.incubatorAssigned === user.uid),
-        cohorts: (system.cohorts || []).filter((c) => c.incubatorId === user.uid),
-        mentors: Object.values(system.users || {}).filter((u) => u.role === 'mentor'),
-        profile: { ...user, ...(user.portalData || {}), id: user.uid }
+        cohorts,
+        mentors,
+        profile: {
+            ...user,
+            ...(user.portalData || {}),
+            ...(incubatorRecord || {}),
+            id: user.uid
+        }
     };
 };
 
@@ -51,8 +104,10 @@ const mutateSystem = (mutationFn) => {
 };
 
 export const acceptIncubatorApplication = async (user, appId, cohortId) => {
+    await acceptApplication(appId);
+
     mutateSystem((system) => {
-        const app = (system.applications || []).find((a) => a.id === appId);
+        const app = (system.applications || []).find((a) => a.id === appId || a.applicationId === appId);
         if (!app) return;
 
         app.status = 'accepted';
@@ -73,8 +128,10 @@ export const acceptIncubatorApplication = async (user, appId, cohortId) => {
 };
 
 export const rejectIncubatorApplication = async (appId) => {
+    await rejectApplication(appId);
+
     mutateSystem((system) => {
-        const app = (system.applications || []).find((a) => a.id === appId);
+        const app = (system.applications || []).find((a) => a.id === appId || a.applicationId === appId);
         if (!app) return;
 
         app.status = 'rejected';
@@ -105,7 +162,9 @@ export const assignMentorForIncubatorStartup = async (mentorId, startupId) => {
     });
 };
 
-export const removeMentorForIncubatorStartup = async (mentorId, startupId) => {
+export const removeMentorForIncubatorStartup = async (mentorId, startupId, incubatorId = null) => {
+    let shouldRemoveMentorLink = false;
+
     mutateSystem((system) => {
         const mentor = system.users?.[mentorId];
         const mentorName = mentor?.name || mentor?.email?.split('@')[0] || 'Mentor';
@@ -120,7 +179,17 @@ export const removeMentorForIncubatorStartup = async (mentorId, startupId) => {
                 }
                 : s
         );
+
+        if (incubatorId) {
+            shouldRemoveMentorLink = !(system.startups || []).some((startup) =>
+                startup.incubatorAssigned === incubatorId && startup.mentorAssigned === mentorId
+            );
+        }
     });
+
+    if (incubatorId && shouldRemoveMentorLink) {
+        await removeMentorFromIncubator(incubatorId, mentorId);
+    }
 };
 
 export const onboardIncubatorStartup = async (user, startupData) => {
@@ -205,79 +274,44 @@ export const onboardIncubatorMentor = async (user, mentorData) => {
         system.users[mentorId] = mentor;
     });
 
+    if (mentorId) {
+        await addMentorToIncubator(user.uid, mentorId);
+    }
+
     return mentor;
 };
 
+export const removeMentorFromIncubatorDirectory = async (incubatorId, mentorId) => {
+    if (!incubatorId || !mentorId) return;
+    await removeMentorFromIncubator(incubatorId, mentorId);
+};
+
 export const createIncubatorCohort = async (user, cohortData) => {
-    const cohort = {
+    await createCohort({
         id: cohortData?.id || null,
         incubatorId: user.uid,
         name: cohortData.name,
         startDate: cohortData.startDate,
         endDate: cohortData.endDate,
         maxCapacity: Number(cohortData.maxCapacity) || 20,
-        sectorFocus: Array.isArray(cohortData.sectorFocus) ? cohortData.sectorFocus : (cohortData.sectorFocus ? [cohortData.sectorFocus] : []),
-        startupIds: [],
-        status: 'upcoming',
-        createdAt: nowIso(),
-        updatedAt: nowIso()
-    };
-
-    mutateSystem((system) => {
-        system.cohorts = system.cohorts || [];
-        system.cohorts.push(normalizeCohort(cohort));
+        status: 'upcoming'
     });
 };
 
 export const assignStartupToIncubatorCohort = async (user, startupId, cohortId) => {
-    mutateSystem((system) => {
-        const target = (system.cohorts || []).find((c) => c.id === cohortId && c.incubatorId === user.uid);
-        if (!target) return;
-        const startup = (system.startups || []).find((s) => s.startupId === startupId && s.incubatorAssigned === user.uid);
-        if (!startup) return;
-
-        const previousCohortId = startup.cohortId;
-
-        system.startups = (system.startups || []).map((s) =>
-            s.startupId !== startupId
-                ? s
-                : {
-                    ...s,
-                    cohortId,
-                    updatedAt: nowIso(),
-                    activity: [{ id: null, message: `Added to cohort ${target.name}`, type: 'cohort', timestamp: nowIso() }, ...(s.activity || [])].slice(0, 50)
-                }
-        );
-
-        system.cohorts = (system.cohorts || []).map((c) => {
-            const startupIds = Array.isArray(c.startupIds) ? c.startupIds : [];
-            if (c.id === previousCohortId) return { ...c, startupIds: startupIds.filter((id) => id !== startupId), updatedAt: nowIso() };
-            if (c.id === cohortId) return { ...c, startupIds: Array.from(new Set([...startupIds, startupId])), updatedAt: nowIso() };
-            return c;
-        });
-    });
+    await joinCohort(cohortId, startupId);
 };
 
 export const removeStartupFromIncubatorCohort = async (user, startupId, cohortId) => {
-    mutateSystem((system) => {
-        const cohort = (system.cohorts || []).find((c) => c.id === cohortId && c.incubatorId === user.uid);
-        if (!cohort) return;
+    await leaveCohort(cohortId, startupId);
+};
 
-        system.startups = (system.startups || []).map((s) =>
-            s.startupId !== startupId
-                ? s
-                : {
-                    ...s,
-                    cohortId: null,
-                    updatedAt: nowIso(),
-                    activity: [{ id: null, message: `Removed from cohort ${cohort.name}`, type: 'warning', timestamp: nowIso() }, ...(s.activity || [])].slice(0, 50)
-                }
-        );
+export const updateIncubatorCohort = async (cohortId, cohortData) => {
+    await updateCohort(cohortId, cohortData);
+};
 
-        system.cohorts = (system.cohorts || []).map((c) =>
-            c.id !== cohortId ? c : { ...c, startupIds: (c.startupIds || []).filter((id) => id !== startupId), updatedAt: nowIso() }
-        );
-    });
+export const deleteIncubatorCohort = async (cohortId) => {
+    await deleteCohort(cohortId);
 };
 
 const getLastUpdateTime = (startup) => {

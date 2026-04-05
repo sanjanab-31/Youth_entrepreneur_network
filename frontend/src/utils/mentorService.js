@@ -1,7 +1,33 @@
 import { calculateExecutionScore } from './executionScore';
-import { getSystem, normalizeSession, normalizeUserProfile, saveSystem } from './system';
+import { getSystem, normalizeUserProfile, saveSystem } from './system';
+import api from '../../services/api';
+import {
+    cancelSession,
+    completeSession,
+    confirmSession,
+    createSession,
+    fetchSessions,
+    updateSession
+} from './sessionsApi';
 
 const nowIso = () => new Date().toISOString();
+
+const normalizeMentorRequestFromApi = (request = {}) => ({
+    ...request,
+    id: request.id,
+    startupId: request.startupId ?? request.startup_id ?? null,
+    founderId: request.founderId ?? request.founder_id ?? null,
+    mentorId: request.mentorId ?? request.mentor_id ?? null,
+    status: request.status === 'rejected' ? 'declined' : request.status,
+    createdAt: request.createdAt ?? request.created_at ?? null,
+    updatedAt: request.updatedAt ?? request.updated_at ?? null,
+});
+
+export const fetchMentorRequests = async () => {
+    const response = await api.get('/v1/mentor-requests');
+    const raw = Array.isArray(response.data?.data) ? response.data.data : [];
+    return raw.map(normalizeMentorRequestFromApi);
+};
 
 export const loadMentorState = async (user) => {
     if (!user || user.role !== 'mentor') {
@@ -10,11 +36,13 @@ export const loadMentorState = async (user) => {
 
     const system = getSystem();
     const profile = normalizeUserProfile(system.users?.[user.uid] || user);
+    const allRequests = await fetchMentorRequests();
+    const requests = allRequests.filter((r) => r.mentorId === profile.uid);
 
     return {
         profile,
-        requests: (system.mentorRequests || []).filter((r) => r.mentorId === profile.uid),
-        sessions: (system.sessions || []).filter((s) => s.mentorId === user.uid),
+        requests,
+        sessions: (await fetchSessions()).filter((s) => s.mentorId === user.uid),
         mentees: (system.startups || []).filter((s) => s.mentorAssigned === user.uid)
     };
 };
@@ -26,65 +54,15 @@ export const updateMentorProfile = async (profile, updates, user, authUpdateProf
 };
 
 export const updateMentorSession = async (sessionId, updates) => {
-    const system = getSystem();
-    system.sessions = (system.sessions || []).map((s) =>
-        s.id === sessionId ? { ...s, ...updates, updatedAt: nowIso() } : s
-    );
-    saveSystem(system);
+    await updateSession(sessionId, updates);
 };
 
-export const acceptMentorRequest = async (requestId, user) => {
-    const system = getSystem();
-    const request = (system.mentorRequests || []).find((r) => r.id === requestId);
-    if (!request) return;
-
-    const startup = (system.startups || []).find((s) => s.startupId === request.startupId);
-    if (!startup || (startup.mentorAssigned && startup.mentorAssigned !== user.uid)) return;
-
-    system.mentorRequests = (system.mentorRequests || []).map((r) =>
-        r.id === requestId
-            ? { ...r, status: 'accepted', updatedAt: nowIso() }
-            : r.startupId === request.startupId && r.status === 'pending'
-                ? { ...r, status: 'declined', updatedAt: nowIso() }
-                : r
-    );
-
-    system.startups = (system.startups || []).map((s) => {
-        if (s.startupId !== request.startupId) return s;
-        const updated = {
-            ...s,
-            mentorAssigned: user.uid,
-            mentorshipStartDate: nowIso(),
-            activity: [{ id: null, message: `Mentor ${user.name || 'Advisor'} accepted your request`, type: 'mentor', timestamp: nowIso() }, ...(s.activity || [])].slice(0, 20),
-            updatedAt: nowIso()
-        };
-        updated.executionScore = calculateExecutionScore(updated);
-        return updated;
-    });
-
-    saveSystem(system);
+export const acceptMentorRequest = async (requestId) => {
+    await api.post(`/v1/mentor-requests/${requestId}/accept`);
 };
 
-export const declineMentorRequest = async (requestId, user) => {
-    const system = getSystem();
-    const request = (system.mentorRequests || []).find((r) => r.id === requestId);
-    if (!request) return;
-
-    system.mentorRequests = (system.mentorRequests || []).map((r) =>
-        r.id === requestId ? { ...r, status: 'declined', updatedAt: nowIso() } : r
-    );
-
-    system.startups = (system.startups || []).map((s) =>
-        s.startupId !== request.startupId
-            ? s
-            : {
-                ...s,
-                activity: [{ id: null, message: `Mentor ${user.name || 'Advisor'} declined your request`, type: 'warning', timestamp: nowIso() }, ...(s.activity || [])].slice(0, 50),
-                updatedAt: nowIso()
-            }
-    );
-
-    saveSystem(system);
+export const declineMentorRequest = async (requestId) => {
+    await api.post(`/v1/mentor-requests/${requestId}/reject`);
 };
 
 export const scheduleMentorSession = async (startupId, date, time, topic, meetingLink, user) => {
@@ -92,8 +70,7 @@ export const scheduleMentorSession = async (startupId, date, time, topic, meetin
     const startup = (system.startups || []).find((s) => s.startupId === startupId);
     if (!startup || startup.mentorAssigned !== user.uid) return;
 
-    const newSession = {
-        id: null,
+    await createSession({
         mentorId: user.uid,
         startupId,
         founderId: startup.founderId,
@@ -102,11 +79,7 @@ export const scheduleMentorSession = async (startupId, date, time, topic, meetin
         topic,
         meetingLink,
         status: 'upcoming',
-        createdAt: nowIso()
-    };
-
-    system.sessions = system.sessions || [];
-    system.sessions.push(normalizeSession(newSession));
+    });
 
     system.startups = (system.startups || []).map((s) =>
         s.startupId !== startupId
@@ -123,7 +96,7 @@ export const scheduleMentorSession = async (startupId, date, time, topic, meetin
 
 export const confirmMentorSessionRequest = async (sessionId, schedule, user) => {
     const system = getSystem();
-    const session = (system.sessions || []).find((s) => s.id === sessionId);
+    const session = (await fetchSessions()).find((s) => s.id === sessionId);
     if (!session) return;
     const startup = (system.startups || []).find((s) => s.startupId === session.startupId);
     if (!startup || startup.mentorAssigned !== user.uid) return;
@@ -135,12 +108,13 @@ export const confirmMentorSessionRequest = async (sessionId, schedule, user) => 
 
     if (!resolvedDate || !resolvedTime || !resolvedMeetingLink) return;
 
-    session.status = 'upcoming';
-    session.date = resolvedDate;
-    session.time = resolvedTime;
-    session.topic = resolvedTopic;
-    session.meetingLink = resolvedMeetingLink;
-    session.updatedAt = nowIso();
+    await confirmSession(sessionId);
+    await updateSession(sessionId, {
+        date: resolvedDate,
+        time: resolvedTime,
+        topic: resolvedTopic,
+        meetingLink: resolvedMeetingLink
+    });
 
     system.startups = (system.startups || []).map((s) =>
         s.startupId !== session.startupId
@@ -157,13 +131,12 @@ export const confirmMentorSessionRequest = async (sessionId, schedule, user) => 
 
 export const declineMentorSessionRequest = async (sessionId, user) => {
     const system = getSystem();
-    const session = (system.sessions || []).find((s) => s.id === sessionId);
+    const session = (await fetchSessions()).find((s) => s.id === sessionId);
     if (!session) return;
     const startup = (system.startups || []).find((s) => s.startupId === session.startupId);
     if (!startup || startup.mentorAssigned !== user.uid) return;
 
-    session.status = 'declined';
-    session.updatedAt = nowIso();
+    await cancelSession(sessionId);
 
     system.startups = (system.startups || []).map((s) =>
         s.startupId !== session.startupId
@@ -180,16 +153,17 @@ export const declineMentorSessionRequest = async (sessionId, user) => {
 
 export const completeMentorSession = async (sessionId, feedback, user) => {
     const system = getSystem();
-    const session = (system.sessions || []).find((s) => s.id === sessionId);
+    const session = (await fetchSessions()).find((s) => s.id === sessionId);
     if (!session) return;
     const startup = (system.startups || []).find((s) => s.startupId === session.startupId);
     if (!startup || startup.mentorAssigned !== user.uid) return;
 
-    session.status = 'completed';
-    session.notes = feedback.advice;
-    session.actionItems = Array.isArray(feedback.actionItems) ? feedback.actionItems : [];
-    session.completedAt = nowIso();
-    session.updatedAt = nowIso();
+    await completeSession(sessionId);
+    await updateSession(sessionId, {
+        notes: feedback.advice,
+        actionItems: Array.isArray(feedback.actionItems) ? feedback.actionItems : [],
+        completedAt: nowIso()
+    });
 
     system.startups = (system.startups || []).map((s) => {
         if (s.startupId !== session.startupId) return s;

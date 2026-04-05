@@ -6,18 +6,54 @@ import {
     Search as SearchIcon,
     AlertCircle
 } from 'lucide-react';
-import { getSystem, saveSystem } from '../../../utils/system';
+import {
+    acceptApplication,
+    deleteApplication,
+    fetchApplications,
+    rejectApplication,
+    updateApplication,
+    waitlistApplication
+} from '../../../utils/applicationsApi';
+import { getSystem } from '../../../utils/system';
 
 const ApplicationsControl = () => {
-    const [systemData, setSystemData] = useState(() => getSystem());
+    const [systemData] = useState(() => getSystem());
+    const [applicationsData, setApplicationsData] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [tab, setTab] = useState('all');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [actionId, setActionId] = useState(null);
 
     useEffect(() => {
-        const refresh = () => setSystemData(getSystem());
-        window.addEventListener('storage', refresh);
-        return () => window.removeEventListener('storage', refresh);
+        const load = async () => {
+            setLoading(true);
+            setError('');
+            try {
+                const rows = await fetchApplications();
+                setApplicationsData(rows);
+            } catch (loadError) {
+                setError(loadError.response?.data?.error || 'Failed to load applications');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        load();
     }, []);
+
+    const refreshApplications = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const rows = await fetchApplications();
+            setApplicationsData(rows);
+        } catch (loadError) {
+            setError(loadError.response?.data?.error || 'Failed to load applications');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const applications = useMemo(() => {
         const startupMap = (systemData.startups || []).reduce((acc, startup, index) => {
@@ -31,7 +67,7 @@ const ApplicationsControl = () => {
             return acc;
         }, {});
 
-        return (systemData.applications || [])
+        return applicationsData
             .map((application, index) => {
                 const id = application.id || application.applicationId || `app-${index}`;
                 const normalizedStatus = (application.status || 'pending').toLowerCase();
@@ -56,21 +92,71 @@ const ApplicationsControl = () => {
                 const matchesTab = tab === 'all' ||
                     (tab === 'active' && ['pending', 'in review', 'in-review', 'accepted'].includes(application.status)) ||
                     (tab === 'stalled' && application.status === 'stalled') ||
-                    (tab === 'archive' && ['rejected', 'withdrawn'].includes(application.status));
+                    (tab === 'archive' && ['rejected', 'withdrawn', 'waitlisted'].includes(application.status));
                 return matchesSearch && matchesTab;
             });
-    }, [searchQuery, systemData, tab]);
+    }, [applicationsData, searchQuery, systemData, tab]);
 
-    const updateApplicationStatus = (applicationId, nextStatus) => {
-        const sys = getSystem();
-        sys.applications = (sys.applications || []).map((application, index) => {
-            const id = application.id || application.applicationId || `app-${index}`;
-            return id === applicationId
-                ? { ...application, status: nextStatus }
-                : application;
-        });
-        saveSystem(sys);
-        setSystemData(getSystem());
+    const runWithRefresh = async (applicationId, fn, fallbackMessage) => {
+        setActionId(applicationId);
+        setError('');
+        try {
+            await fn();
+        } catch (actionError) {
+            setError(actionError.response?.data?.error || fallbackMessage);
+        }
+        await refreshApplications();
+        setActionId(null);
+    };
+
+    const updateApplicationStatus = async (applicationId, nextStatus) => {
+        await runWithRefresh(
+            applicationId,
+            async () => {
+                await updateApplication(applicationId, { status: nextStatus });
+            },
+            'Failed to update application'
+        );
+    };
+
+    const acceptApp = async (applicationId) => {
+        await runWithRefresh(
+            applicationId,
+            async () => {
+                await acceptApplication(applicationId);
+            },
+            'Failed to accept application'
+        );
+    };
+
+    const rejectApp = async (applicationId) => {
+        await runWithRefresh(
+            applicationId,
+            async () => {
+                await rejectApplication(applicationId);
+            },
+            'Failed to reject application'
+        );
+    };
+
+    const waitlistApp = async (applicationId) => {
+        await runWithRefresh(
+            applicationId,
+            async () => {
+                await waitlistApplication(applicationId);
+            },
+            'Failed to waitlist application'
+        );
+    };
+
+    const deleteApp = async (applicationId) => {
+        await runWithRefresh(
+            applicationId,
+            async () => {
+                await deleteApplication(applicationId);
+            },
+            'Failed to delete application'
+        );
     };
 
     const prettyStatus = (status) => {
@@ -129,12 +215,22 @@ const ApplicationsControl = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                        {applications.length === 0 && (
+                        {loading && (
+                            <tr>
+                                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">Loading applications...</td>
+                            </tr>
+                        )}
+                        {!loading && error && (
+                            <tr>
+                                <td colSpan={6} className="px-6 py-12 text-center text-red-400">{error}</td>
+                            </tr>
+                        )}
+                        {!loading && !error && applications.length === 0 && (
                             <tr>
                                 <td colSpan={6} className="px-6 py-12 text-center text-gray-500">No applications found</td>
                             </tr>
                         )}
-                        {applications.map((app) => (
+                        {!loading && !error && applications.map((app) => (
                             <tr key={app.id} className="hover:bg-white/2 transition-all group">
                                 <td className="px-6 py-4">
                                     <p className="text-sm font-bold text-white mb-0.5">{app.startup}</p>
@@ -163,17 +259,29 @@ const ApplicationsControl = () => {
                                             <ArrowRight size={18} />
                                         </button>
                                         {app.status === 'stalled' && (
-                                            <button onClick={() => updateApplicationStatus(app.id, 'in review')} className="p-2 hover:bg-amber-500/20 text-amber-500 rounded-lg transition-all" title="Intervene / Notify Admin">
+                                            <button onClick={() => waitlistApp(app.id)} className="p-2 hover:bg-amber-500/20 text-amber-500 rounded-lg transition-all" title="Move to Waitlist">
                                                 <AlertCircle size={18} />
                                             </button>
                                         )}
                                         <button
-                                            onClick={() => updateApplicationStatus(app.id, app.status === 'accepted' ? 'rejected' : 'accepted')}
+                                            onClick={() => (app.status === 'accepted' ? rejectApp(app.id) : acceptApp(app.id))}
                                             className="p-2 hover:bg-white/10 text-gray-400 rounded-lg transition-all"
                                             title="Toggle Accepted/Rejected"
                                         >
                                             <MoreHorizontal size={18} />
                                         </button>
+                                        {tab === 'archive' && (
+                                            <button
+                                                onClick={() => deleteApp(app.id)}
+                                                className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg transition-all"
+                                                title="Delete Application"
+                                            >
+                                                <AlertCircle size={18} />
+                                            </button>
+                                        )}
+                                        {actionId === app.id && (
+                                            <span className="text-[10px] text-gray-500 font-bold">...</span>
+                                        )}
                                     </div>
                                 </td>
                             </tr>
