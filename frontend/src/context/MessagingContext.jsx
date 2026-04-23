@@ -26,6 +26,13 @@ export const MessagingProvider = ({ children }) => {
     const [markingRead, setMarkingRead] = useState(false);
 
     const refreshMessages = useCallback(async () => {
+        if (!user) {
+            setMessages([]);
+            setConversations([]);
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setError('');
         try {
@@ -41,10 +48,17 @@ export const MessagingProvider = ({ children }) => {
     }, [user]);
 
     useEffect(() => {
+        const handleRefresh = (event) => {
+            if (!event || event.key === 'vanguard_system') {
+                void refreshMessages();
+            }
+        };
+        window.addEventListener('storage', handleRefresh);
         void refreshMessages();
+        return () => window.removeEventListener('storage', handleRefresh);
     }, [refreshMessages]);
 
-    const sendMessage = async (payload) => {
+    const sendMessage = useCallback(async (payload) => {
         setSending(true);
         setConversationError('');
         try {
@@ -56,10 +70,10 @@ export const MessagingProvider = ({ children }) => {
         } finally {
             setSending(false);
         }
-    };
+    }, [refreshMessages]);
 
     const loadConversationMessages = useCallback(async (conversation) => {
-        if (!conversation?.startupId) {
+        if (!user || !conversation?.startupId) {
             setConversationMessages([]);
             return;
         }
@@ -82,8 +96,8 @@ export const MessagingProvider = ({ children }) => {
         return getMessagesForConversation(conversationMessages, conversation);
     };
 
-    const markAsRead = async (conversation) => {
-        if (!conversation?.startupId) return;
+    const markAsRead = useCallback(async (conversation) => {
+        if (!user || !conversation?.startupId) return;
 
         setMarkingRead(true);
         setConversationError('');
@@ -94,16 +108,15 @@ export const MessagingProvider = ({ children }) => {
 
             if (unread.length > 0) {
                 await Promise.all(unread.map((message) => markMessageAsReadApi(message.id)));
+                await refreshMessages();
+                await loadConversationMessages(conversation);
             }
-
-            await refreshMessages();
-            await loadConversationMessages(conversation);
         } catch (err) {
             setConversationError(err.response?.data?.error || 'Failed to mark messages as read');
         } finally {
             setMarkingRead(false);
         }
-    };
+    }, [user, refreshMessages, loadConversationMessages]);
 
     const value = {
         messages,

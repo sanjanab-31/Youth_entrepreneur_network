@@ -570,6 +570,74 @@ flowchart LR
 
 This DFD shows how each actor interacts with the system, which processes transform the data, and which database stores persist the results.
 
+### Use Case Diagram
+
+```mermaid
+flowchart LR
+  Founder([Founder])
+  Cofounder([Co-Founder])
+  Mentor([Mentor])
+  Incubator([Incubator])
+  Admin([Admin])
+
+  UC1((Register / Login))
+  UC2((Manage Startup Profile))
+  UC3((Send Mentor Request))
+  UC4((Submit Incubator Application))
+  UC5((Request Session))
+  UC6((Send / Read Messages))
+  UC7((Review Mentor Requests))
+  UC8((Accept / Reject Mentor Request))
+  UC9((Manage Sessions))
+  UC10((Review Applications))
+  UC11((Accept / Reject / Waitlist Application))
+  UC12((Manage Cohorts))
+  UC13((Assign Mentors))
+  UC14((Manage Users / Reports / Content))
+
+  Founder --> UC1
+  Founder --> UC2
+  Founder --> UC3
+  Founder --> UC4
+  Founder --> UC5
+  Founder --> UC6
+
+  Cofounder --> UC1
+  Cofounder --> UC2
+  Cofounder --> UC4
+  Cofounder --> UC5
+  Cofounder --> UC6
+
+  Mentor --> UC1
+  Mentor --> UC7
+  Mentor --> UC8
+  Mentor --> UC9
+  Mentor --> UC6
+
+  Incubator --> UC1
+  Incubator --> UC10
+  Incubator --> UC11
+  Incubator --> UC12
+  Incubator --> UC13
+  Incubator --> UC6
+
+  Admin --> UC1
+  Admin --> UC14
+  Admin --> UC10
+  Admin --> UC12
+
+  UC7 --> UC8
+  UC10 --> UC11
+
+  style Founder fill:#dbeafe,stroke:#2563eb,stroke-width:2px
+  style Cofounder fill:#dbeafe,stroke:#2563eb,stroke-width:2px
+  style Mentor fill:#fef3c7,stroke:#d97706,stroke-width:2px
+  style Incubator fill:#fde68a,stroke:#ca8a04,stroke-width:2px
+  style Admin fill:#f3e8ff,stroke:#7c3aed,stroke-width:2px
+```
+
+This use case diagram maps each role to the core platform capabilities and highlights key dependency flows across mentorship and application handling.
+
 ### Why JSONB and ARRAY Types Were Used
 
 YEN uses both `JSONB` and `ARRAY` intentionally, not accidentally.

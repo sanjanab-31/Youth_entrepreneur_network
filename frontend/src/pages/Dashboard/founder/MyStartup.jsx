@@ -545,7 +545,7 @@ const MyStartup = () => {
                             </div>
                         </SectionHeader>
 
-                        {startup.milestones.length === 0 ? (
+                        {startup?.milestones?.length === 0 ? (
                             <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-2xl text-center">
                                 <ClipboardList className="text-gray-700 mb-4" size={40} />
                                 <p className="text-gray-500 font-bold">No milestones added yet.</p>
@@ -553,7 +553,7 @@ const MyStartup = () => {
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {startup.milestones.map((item, i) => (
+                                {startup?.milestones?.map((item, i) => (
                                     <motion.div
                                         layout
                                         key={i}
@@ -713,7 +713,7 @@ const MyStartup = () => {
                             </div>
                         ) : (
                             <ul className="space-y-3">
-                                {startup.targetAudience.length === 0 ? (
+                                {(!startup.targetAudience || startup.targetAudience.length === 0) ? (
                                     <p className="text-gray-500 text-sm italic">No target audience defined.</p>
                                 ) : (
                                     startup.targetAudience.map((t, i) => (
@@ -853,7 +853,7 @@ const MyStartup = () => {
                             </button>
                         </SectionHeader>
 
-                        {startup.documents.length === 0 ? (
+                        {(!startup.documents || startup.documents.length === 0) ? (
                             <div className="py-8 text-center flex flex-col items-center">
                                 <FileText className="text-gray-700 mb-2" size={32} />
                                 <p className="text-gray-500 text-xs font-bold">No documents uploaded.</p>

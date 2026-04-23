@@ -62,10 +62,15 @@ export const MentorProvider = ({ children }) => {
     }, [user]);
 
     useEffect(() => {
-        const handler = () => {
-            void refreshData();
+        void refreshData();
+    }, [user, refreshData]);
+
+    useEffect(() => {
+        const handler = (event) => {
+            if (!event || event.key === 'vanguard_system') {
+                void refreshData();
+            }
         };
-        queueMicrotask(handler);
         window.addEventListener('storage', handler);
         return () => window.removeEventListener('storage', handler);
     }, [refreshData]);

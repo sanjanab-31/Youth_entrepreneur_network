@@ -3,14 +3,21 @@ import { getSystem } from './system';
 
 const matchesConversationMessage = ({ message, conversation }) => {
     if (!message || !conversation) return false;
-    if (message.startupId !== conversation.startupId || message.conversationType !== conversation.type) return false;
+    
+    const mStartupId = String(message.startupId || '');
+    const cStartupId = String(conversation.startupId || '');
+    if (mStartupId !== cStartupId || message.conversationType !== conversation.type) return false;
+    
     if (conversation.type === 'startup') return true;
 
-    const participantId = conversation.participantId;
+    const participantId = String(conversation.participantId || '');
     if (!participantId) return true;
 
-    if (message.senderId === participantId || message.receiverId === participantId) return true;
-    if (!message.receiverId) return message.senderId === participantId;
+    const mSenderId = String(message.senderId || '');
+    const mReceiverId = String(message.receiverId || '');
+    
+    if (mSenderId === participantId || mReceiverId === participantId) return true;
+    if (!mReceiverId) return mSenderId === participantId;
     return false;
 };
 
@@ -57,8 +64,9 @@ export const buildConversations = (user, messages) => {
     const system = getSystem();
     const allStartups = system.startups || [];
     const allUsers = system.users || {};
+    const userId = String(user.uid || user.id || '');
 
-    const getStartupById = (startupId) => allStartups.find((s) => s.startupId === startupId);
+    const getStartupById = (startupId) => allStartups.find((s) => String(s.startupId) === String(startupId));
     const getConvoMessages = (conversation) => {
         const startup = getStartupById(conversation.startupId);
         return (messages || []).filter((m) => matchesConversationMessage({ message: m, conversation, startup }));
@@ -67,29 +75,34 @@ export const buildConversations = (user, messages) => {
     const convoMap = new Map();
 
     if (user.role === 'founder' || user.role === 'co-founder') {
-        const myStartup = allStartups.find((s) => s.founderId === user.uid || (s.coFounders || []).includes(user.uid));
+        const myStartup = allStartups.find((s) => 
+            String(s.founderId) === userId || 
+            (Array.isArray(s.coFounders) && s.coFounders.map(String).includes(userId))
+        );
 
         if (myStartup) {
-            const sid = myStartup.startupId;
-            const acceptedMentorRequest = (system.mentorRequests || []).find((r) => r.startupId === sid && r.status === 'accepted');
-            const linkedMentorId = myStartup.mentorAssigned || acceptedMentorRequest?.mentorId || null;
-            const mentorParticipants = new Set();
-
-            const teamMessages = (messages || []).filter((m) => m.startupId === sid && m.conversationType === 'startup');
+            const sid = String(myStartup.startupId);
+            const teamMessages = (messages || []).filter((m) => String(m.startupId) === sid && m.conversationType === 'startup');
             convoMap.set(`startup_${sid}`, {
                 id: sid,
                 startupId: sid,
                 name: `${myStartup.startupName} (Team)`,
                 type: 'startup',
                 lastMessage: teamMessages[teamMessages.length - 1],
-                unreadCount: teamMessages.filter((m) => !m.read && m.senderId !== user.uid).length
+                unreadCount: teamMessages.filter((m) => !m.read && String(m.senderId) !== userId).length
             });
 
+            const mentorParticipants = new Set();
+            const linkedMentorId = myStartup.mentorAssigned ? String(myStartup.mentorAssigned) : null;
             if (linkedMentorId) mentorParticipants.add(linkedMentorId);
-            (system.mentorRequests || []).filter((r) => r.startupId === sid && r.status === 'accepted' && r.mentorId).forEach((r) => mentorParticipants.add(r.mentorId));
-            (messages || []).filter((m) => m.startupId === sid && m.conversationType === 'mentor').forEach((m) => {
-                if (m.senderRole === 'mentor' && m.senderId) mentorParticipants.add(m.senderId);
-                if (m.receiverId && allUsers[m.receiverId]?.role === 'mentor') mentorParticipants.add(m.receiverId);
+
+            (system.mentorRequests || []).filter((r) => String(r.startupId) === sid && r.status === 'accepted').forEach(r => {
+                if (r.mentorId) mentorParticipants.add(String(r.mentorId));
+            });
+
+            (messages || []).filter((m) => String(m.startupId) === sid && m.conversationType === 'mentor').forEach((m) => {
+                if (m.senderRole === 'mentor' && m.senderId) mentorParticipants.add(String(m.senderId));
+                if (m.receiverId && allUsers[m.receiverId]?.role === 'mentor') mentorParticipants.add(String(m.receiverId));
             });
 
             mentorParticipants.forEach((mentorId) => {
@@ -104,12 +117,12 @@ export const buildConversations = (user, messages) => {
                 convoMap.set(`mentor_${sid}_${mentorId}`, {
                     ...mentorConversation,
                     lastMessage: mentorMsgs[mentorMsgs.length - 1],
-                    unreadCount: mentorMsgs.filter((m) => !m.read && m.senderId !== user.uid).length
+                    unreadCount: mentorMsgs.filter((m) => !m.read && String(m.senderId) !== userId).length
                 });
             });
 
             if (myStartup.incubatorAssigned) {
-                const participantId = myStartup.incubatorAssigned;
+                const participantId = String(myStartup.incubatorAssigned);
                 const incubatorConversation = {
                     id: participantId,
                     startupId: sid,
@@ -121,74 +134,95 @@ export const buildConversations = (user, messages) => {
                 convoMap.set(`incubator_${sid}_${participantId}`, {
                     ...incubatorConversation,
                     lastMessage: incMsgs[incMsgs.length - 1],
-                    unreadCount: incMsgs.filter((m) => !m.read && m.senderId !== user.uid).length
+                    unreadCount: incMsgs.filter((m) => !m.read && String(m.senderId) !== userId).length
                 });
+
+                if (linkedMentorId) {
+                    const directMsgs = (messages || []).filter((m) => 
+                        String(m.startupId) === sid && 
+                        m.conversationType === 'direct' &&
+                        ((String(m.senderId) === userId && String(m.receiverId) === linkedMentorId) ||
+                         (String(m.senderId) === linkedMentorId && String(m.receiverId) === userId))
+                    );
+                    convoMap.set(`direct_${sid}_${linkedMentorId}`, {
+                        id: linkedMentorId,
+                        startupId: sid,
+                        participantId: linkedMentorId,
+                        name: `${allUsers[linkedMentorId]?.name || 'Mentor'} (Private)`,
+                        type: 'direct',
+                        lastMessage: directMsgs[directMsgs.length - 1],
+                        unreadCount: directMsgs.filter((m) => !m.read && String(m.senderId) !== userId).length
+                    });
+                }
             }
         }
     }
 
     if (user.role === 'mentor') {
         const startupIds = new Set(
-            allStartups.filter((s) => s.mentorAssigned === user.uid).map((s) => s.startupId)
+            allStartups.filter((s) => String(s.mentorAssigned) === userId).map((s) => String(s.startupId))
         );
 
-        (messages || [])
-            .filter((m) => m.conversationType === 'mentor' && (m.senderId === user.uid || m.receiverId === user.uid) && m.startupId)
-            .forEach((m) => startupIds.add(m.startupId));
+        (messages || []).filter((m) => 
+            m.conversationType === 'mentor' && 
+            (String(m.senderId) === userId || String(m.receiverId) === userId) && 
+            m.startupId
+        ).forEach((m) => startupIds.add(String(m.startupId)));
 
         Array.from(startupIds).forEach((startupId) => {
-            const startup = allStartups.find((s) => s.startupId === startupId);
+            const startup = getStartupById(startupId);
             if (!startup) return;
 
             const conversation = {
                 id: startupId,
                 startupId,
-                participantId: user.uid,
+                participantId: userId,
                 name: startup.startupName,
                 type: 'mentor'
             };
             const mentorMsgs = getConvoMessages(conversation);
-            convoMap.set(`mentor_${startupId}_${user.uid}`, {
+            convoMap.set(`mentor_${startupId}_${userId}`, {
                 ...conversation,
                 lastMessage: mentorMsgs[mentorMsgs.length - 1],
-                unreadCount: mentorMsgs.filter((m) => !m.read && m.senderId !== user.uid).length
+                unreadCount: mentorMsgs.filter((m) => !m.read && String(m.senderId) !== userId).length
             });
         });
     }
 
     if (user.role === 'incubator') {
-        const myStartups = allStartups.filter((s) => s.incubatorAssigned === user.uid);
+        const myStartups = allStartups.filter((s) => String(s.incubatorAssigned) === userId);
         myStartups.forEach((s) => {
-            const sid = s.startupId;
+            const sid = String(s.startupId);
             const incubatorConversation = {
                 id: sid,
                 startupId: sid,
-                participantId: user.uid,
+                participantId: userId,
                 name: s.startupName,
                 type: 'incubator'
             };
             const incMsgs = getConvoMessages(incubatorConversation);
-            convoMap.set(`incubator_${sid}_${user.uid}`, {
+            convoMap.set(`incubator_${sid}_${userId}`, {
                 ...incubatorConversation,
                 lastMessage: incMsgs[incMsgs.length - 1],
-                unreadCount: incMsgs.filter((m) => !m.read && m.senderId !== user.uid).length
+                unreadCount: incMsgs.filter((m) => !m.read && String(m.senderId) !== userId).length
             });
 
             if (s.mentorAssigned) {
+                const mid = String(s.mentorAssigned);
                 const directMsgs = (messages || []).filter((m) =>
-                    m.startupId === sid
-                    && m.conversationType === 'direct'
-                    && ((m.senderId === user.uid && m.receiverId === s.mentorAssigned)
-                        || (m.senderId === s.mentorAssigned && m.receiverId === user.uid))
+                    String(m.startupId) === sid &&
+                    m.conversationType === 'direct' &&
+                    ((String(m.senderId) === userId && String(m.receiverId) === mid) ||
+                     (String(m.senderId) === mid && String(m.receiverId) === userId))
                 );
 
-                convoMap.set(`direct_${sid}_${s.mentorAssigned}`, {
-                    id: s.mentorAssigned,
+                convoMap.set(`direct_${sid}_${mid}`, {
+                    id: mid,
                     startupId: sid,
-                    name: `${allUsers[s.mentorAssigned]?.name || 'Mentor'} (${s.startupName})`,
+                    name: `${allUsers[mid]?.name || 'Mentor'} (${s.startupName})`,
                     type: 'direct',
                     lastMessage: directMsgs[directMsgs.length - 1],
-                    unreadCount: directMsgs.filter((m) => !m.read && m.senderId !== user.uid).length
+                    unreadCount: directMsgs.filter((m) => !m.read && String(m.senderId) !== userId).length
                 });
             }
         });

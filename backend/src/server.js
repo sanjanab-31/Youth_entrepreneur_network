@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { connectDB } from './config/db.js';
 import { authenticateFirebaseToken } from './middlewares/auth.middleware.js';
 import usersRoutes from './routes/users.routes.js';
@@ -12,6 +13,12 @@ import messagesRoutes from './routes/messages.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json());
 

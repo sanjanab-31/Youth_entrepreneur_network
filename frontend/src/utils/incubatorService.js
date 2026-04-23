@@ -22,6 +22,7 @@ import {
     updateCohort,
     deleteCohort
 } from './cohortsApi';
+import { fetchStartups } from './startupsApi';
 
 const nowIso = () => new Date().toISOString();
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -77,6 +78,16 @@ export const loadIncubatorState = async (user) => {
         incubatorRecord = null;
     }
 
+    // Fetch live startups and update system
+    let allStartups = system.startups || [];
+    try {
+        allStartups = await fetchStartups();
+        system.startups = allStartups;
+        saveSystem(system);
+    } catch (err) {
+        console.error('Failed to fetch startups in loadIncubatorState:', err);
+    }
+
     const allMentors = Object.values(system.users || {}).filter((u) => u.role === 'mentor');
     const mentorIds = Array.isArray(incubatorRecord?.mentorIds) ? incubatorRecord.mentorIds : [];
     const mentors = mentorIds.length > 0
@@ -85,7 +96,7 @@ export const loadIncubatorState = async (user) => {
 
     return {
         applications,
-        pipeline: (system.startups || []).filter((s) => s.incubatorAssigned === user.uid),
+        pipeline: (allStartups).filter((s) => s.incubatorAssigned === user.uid),
         cohorts,
         mentors,
         profile: {

@@ -7,6 +7,7 @@ import {
 } from './system';
 import { calculateExecutionScore } from './executionScore';
 import api from '../../services/api';
+import { fetchStartups } from './startupsApi';
 import { createApplication, fetchApplications } from './applicationsApi';
 import { cancelSession, createSession, fetchSessions } from './sessionsApi';
 
@@ -53,13 +54,49 @@ export const loadStartupState = async (user) => {
         };
     }
 
+    // Try to get startup from API first
+    let startup = null;
+    let allStartupsData = [];
     const system = getSystem();
-    const startup = hydrateStartupMetrics(resolveUserStartup(system, user));
+    try {
+        allStartupsData = await fetchStartups();
+        console.log('Fetched startups from DB:', allStartupsData.length);
+        
+        system.startups = allStartupsData;
+        saveSystem(system);
+
+        const dbStartup = allStartupsData.find((s) => {
+            const founderId = s.founderId;
+            if (user.role === 'founder' && founderId === user.uid) return true;
+            
+            const coFounders = s.coFounders || [];
+            if (user.role === 'co-founder' && Array.isArray(coFounders) && coFounders.includes(user.uid)) return true;
+            
+            return false;
+        });
+
+        if (dbStartup) {
+            console.log('Found matching startup in DB:', dbStartup);
+            startup = hydrateStartupMetrics(dbStartup);
+        }
+    } catch (err) {
+        console.error('Failed to fetch startups from API:', err);
+    }
+
+
+    // Save to system store so messaging and other components can access them
+    system.mentorRequests = []; // This will be updated below
+
+    // Fallback to system if API failed or returned nothing
+    if (!startup) {
+        startup = hydrateStartupMetrics(resolveUserStartup(system, user));
+    }
 
     const joinRequests = (system.joinRequests || []).filter((r) =>
         (user.role === 'founder' && r.founderId === user.uid)
         || (user.role === 'co-founder' && r.requesterId === user.uid)
     );
+
 
     let mentorRequests = [];
     try {
@@ -79,6 +116,9 @@ export const loadStartupState = async (user) => {
     } catch {
         mentorRequests = [];
     }
+    
+    system.mentorRequests = mentorRequests;
+    saveSystem(system);
 
     let applications = [];
     try {
@@ -91,7 +131,7 @@ export const loadStartupState = async (user) => {
     return {
         startup,
         joinRequests,
-        allStartups: system.startups || [],
+        allStartups: allStartupsData.length > 0 ? allStartupsData : (system.startups || []),
         invitations: (system.invitations || []).filter((i) => i.startupId === startup?.startupId),
         applications,
         mentorRequests,
@@ -110,6 +150,15 @@ const persistStartup = (system, updatedStartup) => {
 
 export const updateStartupData = async (startup, updates) => {
     if (!startup) return null;
+
+    // Persist to Backend API
+    try {
+        const id = startup.startupId || startup.id;
+        await api.put(`/v1/startups/${id}`, updates);
+    } catch (err) {
+        console.error('Failed to update startup on backend:', err);
+    }
+
     const system = getSystem();
     const current = (system.startups || []).find((s) => s.startupId === startup.startupId) || startup;
     const updated = {
@@ -124,6 +173,7 @@ export const updateStartupData = async (startup, updates) => {
     persistStartup(system, updated);
     return updated;
 };
+
 
 export const addStartupActivity = async (startup, message, type = 'info') => {
     if (!startup) return null;
@@ -545,7 +595,6 @@ export const removeStartupJoinRequest = async (requestId) => {
 export const createStartupRecord = async (user, startupData) => {
     if (!user || user.role !== 'founder') return null;
 
-    const system = getSystem();
     const capitalizeStage = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Idea');
 
     const startup = {
@@ -592,6 +641,25 @@ export const createStartupRecord = async (user, startupData) => {
         status: 'active'
     };
 
+    // Persist to Backend API
+    try {
+        await api.post('/v1/startups', {
+            ...startup,
+            id: startup.startupId,
+            startup_name: startup.startupName,
+            founder_id: startup.founderId,
+            team_size: startup.teamSize,
+            problem_statement: startup.problemStatement,
+            target_audience: startup.targetAudience,
+            primary_skills: startup.primarySkills,
+            focus_areas: startup.focusAreas
+        });
+    } catch (err) {
+        console.error('Failed to create startup on backend:', err);
+    }
+
+
+    const system = getSystem();
     system.startups = system.startups || [];
     system.startups.push(normalizeStartup(startup));
     saveSystem(system);

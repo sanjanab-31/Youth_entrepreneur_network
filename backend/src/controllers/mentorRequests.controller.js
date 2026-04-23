@@ -1,56 +1,80 @@
 import * as mentorRequestsService from '../services/mentorRequests.service.js';
 
-export function getMentorRequests(req, res) {
-  const requests = mentorRequestsService.getAllMentorRequests();
-  res.status(200).json({ data: requests });
-}
-
-export function getMentorRequestById(req, res) {
-  const request = mentorRequestsService.getMentorRequestById(req.params.request_id);
-  if (!request) {
-    return res.status(404).json({ message: 'Mentor request not found' });
+export async function getMentorRequests(req, res) {
+  try {
+    const requests = await mentorRequestsService.getAllMentorRequests();
+    res.status(200).json({ data: requests });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: request });
 }
 
-export function createMentorRequest(req, res) {
-  const request = mentorRequestsService.createMentorRequest(req.body);
-  res.status(201).json({ data: request });
-}
-
-export function updateMentorRequest(req, res) {
-  const request = mentorRequestsService.updateMentorRequest(req.params.request_id, req.body);
-  if (!request) {
-    return res.status(404).json({ message: 'Mentor request not found' });
+export async function getMentorRequestById(req, res) {
+  try {
+    const request = await mentorRequestsService.getMentorRequestById(req.params.request_id);
+    if (!request) {
+      return res.status(404).json({ message: 'Mentor request not found' });
+    }
+    return res.status(200).json({ data: request });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: request });
 }
 
-export function deleteMentorRequest(req, res) {
-  const request = mentorRequestsService.deleteMentorRequest(req.params.request_id);
-  if (!request) {
-    return res.status(404).json({ message: 'Mentor request not found' });
+export async function createMentorRequest(req, res) {
+  try {
+    const request = await mentorRequestsService.createMentorRequest(req.body);
+    res.status(201).json({ data: request });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: request });
 }
 
-export function acceptMentorRequest(req, res) {
-  const request = mentorRequestsService.acceptMentorRequest(req.params.request_id);
-  if (!request) {
-    return res.status(404).json({ message: 'Mentor request not found' });
+export async function updateMentorRequest(req, res) {
+  try {
+    const request = await mentorRequestsService.updateMentorRequest(req.params.request_id, req.body);
+    if (!request) {
+      return res.status(404).json({ message: 'Mentor request not found' });
+    }
+    return res.status(200).json({ data: request });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: request });
 }
 
-export function rejectMentorRequest(req, res) {
-  const request = mentorRequestsService.rejectMentorRequest(req.params.request_id);
-  if (!request) {
-    return res.status(404).json({ message: 'Mentor request not found' });
+export async function deleteMentorRequest(req, res) {
+  try {
+    const request = await mentorRequestsService.deleteMentorRequest(req.params.request_id);
+    if (!request) {
+      return res.status(404).json({ message: 'Mentor request not found' });
+    }
+    return res.status(200).json({ data: request });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: request });
 }
+
+export async function acceptMentorRequest(req, res) {
+  try {
+    const request = await mentorRequestsService.acceptMentorRequest(req.params.request_id);
+    if (!request) {
+      return res.status(404).json({ message: 'Mentor request not found' });
+    }
+    return res.status(200).json({ data: request });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+export async function rejectMentorRequest(req, res) {
+  try {
+    const request = await mentorRequestsService.rejectMentorRequest(req.params.request_id);
+    if (!request) {
+      return res.status(404).json({ message: 'Mentor request not found' });
+    }
+    return res.status(200).json({ data: request });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+

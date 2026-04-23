@@ -1,74 +1,104 @@
 import * as sessionsService from '../services/sessions.service.js';
 
-export function getSessions(req, res) {
-  const sessions = sessionsService.getAllSessions();
-  res.status(200).json({ data: sessions });
-}
-
-export function getSessionById(req, res) {
-  const session = sessionsService.getSessionById(req.params.session_id);
-  if (!session) {
-    return res.status(404).json({ message: 'Session not found' });
+export async function getSessions(req, res) {
+  try {
+    const sessions = await sessionsService.getAllSessions();
+    res.status(200).json({ data: sessions });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: session });
 }
 
-export function createSession(req, res) {
-  const session = sessionsService.createSession(req.body);
-  res.status(201).json({ data: session });
-}
-
-export function updateSession(req, res) {
-  const session = sessionsService.updateSession(req.params.session_id, req.body);
-  if (!session) {
-    return res.status(404).json({ message: 'Session not found' });
+export async function getSessionById(req, res) {
+  try {
+    const session = await sessionsService.getSessionById(req.params.session_id);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    return res.status(200).json({ data: session });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: session });
 }
 
-export function deleteSession(req, res) {
-  const session = sessionsService.deleteSession(req.params.session_id);
-  if (!session) {
-    return res.status(404).json({ message: 'Session not found' });
+export async function createSession(req, res) {
+  try {
+    const session = await sessionsService.createSession(req.body);
+    res.status(201).json({ data: session });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: session });
 }
 
-export function confirmSession(req, res) {
-  const session = sessionsService.confirmSession(req.params.session_id);
-  if (!session) {
-    return res.status(404).json({ message: 'Session not found' });
+export async function updateSession(req, res) {
+  try {
+    const session = await sessionsService.updateSession(req.params.session_id, req.body);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    return res.status(200).json({ data: session });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: session });
 }
 
-export function cancelSession(req, res) {
-  const session = sessionsService.cancelSession(req.params.session_id);
-  if (!session) {
-    return res.status(404).json({ message: 'Session not found' });
+export async function deleteSession(req, res) {
+  try {
+    const session = await sessionsService.deleteSession(req.params.session_id);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    return res.status(200).json({ data: session });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: session });
 }
 
-export function completeSession(req, res) {
-  const session = sessionsService.completeSession(req.params.session_id);
-  if (!session) {
-    return res.status(404).json({ message: 'Session not found' });
+export async function confirmSession(req, res) {
+  try {
+    const session = await sessionsService.confirmSession(req.params.session_id);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    return res.status(200).json({ data: session });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: session });
 }
 
-export function rescheduleSession(req, res) {
-  const session = sessionsService.rescheduleSession(req.params.session_id, req.body.scheduledAt);
-  if (!session) {
-    return res.status(404).json({ message: 'Session not found' });
+export async function cancelSession(req, res) {
+  try {
+    const session = await sessionsService.cancelSession(req.params.session_id);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    return res.status(200).json({ data: session });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: session });
 }
+
+export async function completeSession(req, res) {
+  try {
+    const session = await sessionsService.completeSession(req.params.session_id);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    return res.status(200).json({ data: session });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+export async function rescheduleSession(req, res) {
+  try {
+    const session = await sessionsService.rescheduleSession(req.params.session_id, req.body.scheduledAt);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    return res.status(200).json({ data: session });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+

@@ -467,12 +467,12 @@ export const normalizeUserProfile = (user) => {
     );
     const role = inferredMentor ? 'mentor' : normalizedRole;
 
-    const uid = normalizeId(user.uid);
+    const uid = normalizeId(user.uid || user.id);
     if (!uid) return null;
-    const createdAt = toIsoOrNow(user.createdAt);
-    const updatedAt = toNullableIso(user.updatedAt);
-    const basePortalData = user.portalData && typeof user.portalData === 'object' ? user.portalData : {};
-    const normalizedProfileData = user.profileData && typeof user.profileData === 'object' ? user.profileData : {};
+    const createdAt = toIsoOrNow(user.createdAt || user.created_at);
+    const updatedAt = toNullableIso(user.updatedAt || user.updated_at);
+    const basePortalData = user.portalData && typeof user.portalData === 'object' ? user.portalData : (user.portal_data && typeof user.portal_data === 'object' ? user.portal_data : {});
+    const normalizedProfileData = user.profileData && typeof user.profileData === 'object' ? user.profileData : (user.profile_data && typeof user.profile_data === 'object' ? user.profile_data : {});
 
     if (role !== 'mentor') {
         const fallbackRole = role || normalizeRole(user.role) || 'founder';
@@ -577,12 +577,7 @@ export const normalizeUserProfile = (user) => {
 export const isValidMentorUser = (user) => {
     if (!user || normalizeRole(user.role) !== 'mentor') return false;
     if (!user.uid || !user.name || !user.email) return false;
-    if (!Array.isArray(user.expertise) || user.expertise.length === 0) return false;
-    if (!user.sector || !user.bio) return false;
-    if (!user.availability || typeof user.availability !== 'object') return false;
-    if (!user.portalData || typeof user.portalData !== 'object') return false;
-    if (!user.portalData.sector) return false;
-    if (!Number.isFinite(Number(user.portalData.capacity)) || Number(user.portalData.capacity) <= 0) return false;
+    // We relaxed validation to ensure basic mentor profiles show up even if details are missing.
     return true;
 };
 

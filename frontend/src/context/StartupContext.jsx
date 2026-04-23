@@ -74,10 +74,17 @@ export const StartupProvider = ({ children }) => {
     }, [user]);
 
     useEffect(() => {
-        const handleStorage = () => {
-            void syncData();
+        void syncData();
+    }, [user, syncData]);
+
+    useEffect(() => {
+        const handleStorage = (event) => {
+            // Only sync if the storage event was triggered by another window
+            // and it's our system key
+            if (!event || event.key === 'vanguard_system') {
+                void syncData();
+            }
         };
-        queueMicrotask(handleStorage);
         window.addEventListener('storage', handleStorage);
         return () => window.removeEventListener('storage', handleStorage);
     }, [syncData]);
@@ -295,7 +302,7 @@ export const StartupProvider = ({ children }) => {
 
     return (
         <StartupContext.Provider value={value}>
-            {!loading && children}
+            {children}
         </StartupContext.Provider>
     );
 };

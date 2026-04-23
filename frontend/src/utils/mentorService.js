@@ -1,6 +1,7 @@
 import { calculateExecutionScore } from './executionScore';
 import { getSystem, normalizeUserProfile, saveSystem } from './system';
 import api from '../../services/api';
+import { fetchStartups } from './startupsApi';
 import {
     cancelSession,
     completeSession,
@@ -18,7 +19,8 @@ const normalizeMentorRequestFromApi = (request = {}) => ({
     startupId: request.startupId ?? request.startup_id ?? null,
     founderId: request.founderId ?? request.founder_id ?? null,
     mentorId: request.mentorId ?? request.mentor_id ?? null,
-    status: request.status === 'rejected' ? 'declined' : request.status,
+    status: request.status === 'rejected' ? 'declined' : (request.status ?? 'pending'),
+    message: request.message ?? null,
     createdAt: request.createdAt ?? request.created_at ?? null,
     updatedAt: request.updatedAt ?? request.updated_at ?? null,
 });
@@ -35,15 +37,24 @@ export const loadMentorState = async (user) => {
     }
 
     const system = getSystem();
-    const profile = normalizeUserProfile(system.users?.[user.uid] || user);
+    const profile = normalizeUserProfile(system.users?.[user.uid || user.id] || user);
     const allRequests = await fetchMentorRequests();
-    const requests = allRequests.filter((r) => r.mentorId === profile.uid);
+    
+    // Save to system store so messaging and other components can access them
+    system.mentorRequests = allRequests;
+    
+    // Fetch live startups and update system
+    const allStartups = await fetchStartups();
+    system.startups = allStartups;
+    saveSystem(system);
+
+    const requests = allRequests.filter((r) => r.mentorId === profile.uid || r.mentorId === profile.id);
 
     return {
         profile,
         requests,
-        sessions: (await fetchSessions()).filter((s) => s.mentorId === user.uid),
-        mentees: (system.startups || []).filter((s) => s.mentorAssigned === user.uid)
+        sessions: (await fetchSessions()).filter((s) => s.mentorId === (user.uid || user.id)),
+        mentees: (system.startups || []).filter((s) => s.mentorAssigned === (user.uid || user.id))
     };
 };
 

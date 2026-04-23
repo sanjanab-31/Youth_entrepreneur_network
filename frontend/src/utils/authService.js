@@ -118,6 +118,21 @@ export const signupUser = async ({ auth, email, password, role, profileData }) =
 
     saveUserProfile(firebaseUser.uid, newUser);
 
+    // Sync user with backend database
+    try {
+        await api.post('/v1/users', {
+            id: firebaseUser.uid,
+            uid: firebaseUser.uid,
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role,
+            portal_data: newUser.portalData,
+            profile_data: profileData
+        });
+    } catch (err) {
+        console.error('Failed to sync user to database:', err);
+    }
+
     if (finalRole === 'founder') {
         const capitalizeStage = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Idea');
         const startupId = firebaseUser.uid || null;
@@ -157,8 +172,14 @@ export const signupUser = async ({ auth, email, password, role, profileData }) =
             status: 'active'
         };
 
+        // Persist to Backend API
+        import('./startupService').then(({ createStartupRecord }) => {
+            createStartupRecord({ uid: firebaseUser.uid, role: 'founder' }, newStartup);
+        });
+
         system.startups.push(normalizeStartup(newStartup));
     }
+
 
     if (normalizedRole === 'incubator') {
         const incubatorEntry = {

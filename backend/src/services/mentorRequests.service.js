@@ -3,7 +3,16 @@ import pool from '../config/db.js';
 
 export async function getAllMentorRequests() {
   try {
-    const { rows } = await pool.query('SELECT * FROM mentor_requests');
+    const { rows } = await pool.query(`
+      SELECT 
+        mr.*, 
+        u.name as founder_name, 
+        s.startup_name 
+      FROM mentor_requests mr
+      LEFT JOIN users u ON mr.founder_id = u.id
+      LEFT JOIN startups s ON mr.startup_id = s.id
+      ORDER BY mr.created_at DESC
+    `);
     return rows;
   } catch (error) {
     throw new Error(`Failed to fetch mentor requests: ${error.message}`);
@@ -124,7 +133,17 @@ export async function acceptMentorRequest(requestId) {
       `,
       [requestId, 'accepted']
     );
-    return rows[0] || null;
+
+    const request = rows[0];
+    if (request) {
+      // Automatically update the startup record to reflect the assigned mentor
+      await pool.query(
+        'UPDATE startups SET mentor_assigned = $1, updated_at = NOW() WHERE id = $2',
+        [request.mentor_id, request.startup_id]
+      );
+    }
+
+    return request || null;
   } catch (error) {
     throw new Error(`Failed to accept mentor request: ${error.message}`);
   }

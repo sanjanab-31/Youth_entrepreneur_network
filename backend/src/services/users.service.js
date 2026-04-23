@@ -12,22 +12,27 @@ export async function getUserById(userId) {
 }
 
 export async function createUser(payload = {}) {
-  const id = payload.id || randomUUID();
+  const id = payload.id || payload.uid || randomUUID();
   const name = payload.name || 'New User';
   const email = payload.email || `new-user-${Date.now()}@example.com`;
   const role = payload.role || 'founder';
+  const portalData = payload.portal_data || payload.portalData || {};
+  const profileData = payload.profile_data || payload.profileData || {};
 
   const { rows } = await pool.query(
     `
-      INSERT INTO users (id, name, email, role)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO users (id, name, email, role, portal_data, profile_data, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      ON CONFLICT (id) DO UPDATE 
+      SET name = EXCLUDED.name, role = EXCLUDED.role, updated_at = NOW()
       RETURNING *
     `,
-    [id, name, email, role]
+    [id, name, email, role, portalData, profileData]
   );
 
   return rows[0];
 }
+
 
 export async function updateUser(userId, payload = {}) {
   const { rows } = await pool.query(

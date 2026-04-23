@@ -1,56 +1,84 @@
 import * as incubatorsService from '../services/incubators.service.js';
 
-export function getIncubators(req, res) {
-  const incubators = incubatorsService.getAllIncubators();
-  res.status(200).json({ data: incubators });
-}
-
-export function getIncubatorById(req, res) {
-  const incubator = incubatorsService.getIncubatorById(req.params.incubator_id);
-  if (!incubator) {
-    return res.status(404).json({ message: 'Incubator not found' });
+export async function getIncubators(req, res) {
+  try {
+    const incubators = await incubatorsService.getAllIncubators();
+    res.status(200).json({ data: incubators });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: incubator });
 }
 
-export function createIncubator(req, res) {
-  const incubator = incubatorsService.createIncubator(req.body);
-  res.status(201).json({ data: incubator });
-}
+export async function getIncubatorById(req, res) {
+  try {
+    const incubator = await incubatorsService.getIncubatorById(req.params.incubator_id);
+    if (!incubator) {
+      return res.status(404).json({ message: 'Incubator not found' });
+    }
 
-export function updateIncubator(req, res) {
-  const incubator = incubatorsService.updateIncubator(req.params.incubator_id, req.body);
-  if (!incubator) {
-    return res.status(404).json({ message: 'Incubator not found' });
+    return res.status(200).json({ data: incubator });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: incubator });
 }
 
-export function deleteIncubator(req, res) {
-  const incubator = incubatorsService.deleteIncubator(req.params.incubator_id);
-  if (!incubator) {
-    return res.status(404).json({ message: 'Incubator not found' });
+export async function createIncubator(req, res) {
+  try {
+    const incubator = await incubatorsService.createIncubator(req.body);
+    res.status(201).json({ data: incubator });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  return res.status(200).json({ data: incubator });
 }
 
-export function addMentorToIncubator(req, res) {
-  const incubator = incubatorsService.addMentorToIncubator(req.params.incubator_id, req.body.mentorId);
-  if (!incubator) {
-    return res.status(404).json({ message: 'Incubator not found' });
-  }
+export async function updateIncubator(req, res) {
+  try {
+    const incubator = await incubatorsService.updateIncubator(req.params.incubator_id, req.body);
+    if (!incubator) {
+      return res.status(404).json({ message: 'Incubator not found' });
+    }
 
-  return res.status(200).json({ data: incubator });
+    return res.status(200).json({ data: incubator });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 }
 
-export function removeMentorFromIncubator(req, res) {
-  const incubator = incubatorsService.removeMentorFromIncubator(req.params.incubator_id, req.params.mentor_id);
-  if (!incubator) {
-    return res.status(404).json({ message: 'Incubator not found' });
-  }
+export async function deleteIncubator(req, res) {
+  try {
+    const incubator = await incubatorsService.deleteIncubator(req.params.incubator_id);
+    if (!incubator) {
+      return res.status(404).json({ message: 'Incubator not found' });
+    }
 
-  return res.status(200).json({ data: incubator });
+    return res.status(200).json({ data: incubator });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+export async function addMentorToIncubator(req, res) {
+  try {
+    const incubator = await incubatorsService.addMentorToIncubator(req.params.incubator_id, req.body.mentorId);
+    if (!incubator) {
+      return res.status(404).json({ message: 'Incubator not found' });
+    }
+
+    return res.status(200).json({ data: incubator });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+export async function removeMentorFromIncubator(req, res) {
+  try {
+    const incubator = await incubatorsService.removeMentorFromIncubator(req.params.incubator_id, req.params.mentor_id);
+    if (!incubator) {
+      return res.status(404).json({ message: 'Incubator not found' });
+    }
+
+    return res.status(200).json({ data: incubator });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 }

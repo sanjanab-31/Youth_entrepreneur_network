@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import pool from '../config/db.js';
+import * as usersService from './users.service.js';
 
 const mapMessageRow = (row) => {
   if (!row) return null;
@@ -49,12 +50,21 @@ export async function createMessage(payload = {}) {
   try {
     const id = payload.id || randomUUID();
     const startupId = payload.startupId ?? payload.startup_id ?? null;
-    const senderId = payload.senderId ?? payload.sender_id ?? null;
-    const senderName = payload.senderName ?? payload.sender_name ?? 'User';
-    const senderRole = payload.senderRole ?? payload.sender_role ?? null;
+    let senderId = payload.senderId ?? payload.sender_id ?? null;
+    let senderName = payload.senderName ?? payload.sender_name ?? 'User';
+    let senderRole = payload.senderRole ?? payload.sender_role ?? null;
     const receiverId = payload.receiverId ?? payload.receiver_id ?? null;
     const conversationType = payload.conversationType ?? payload.conversation_type ?? 'startup';
     const message = payload.message ?? payload.content ?? '';
+
+    // If we have a senderId but are missing name/role, try to fetch from user profile
+    if (senderId && (senderName === 'User' || !senderRole)) {
+      const user = await usersService.getUserById(senderId).catch(() => null);
+      if (user) {
+        senderName = user.name || senderName;
+        senderRole = user.role || senderRole;
+      }
+    }
 
     const { rows } = await pool.query(
       `

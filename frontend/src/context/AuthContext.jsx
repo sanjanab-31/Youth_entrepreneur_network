@@ -14,6 +14,7 @@ import {
     normalizeUserProfile,
     saveSystem
 } from '../utils/system';
+import api from '../../services/api';
 
 const AuthContext = createContext();
 
@@ -328,6 +329,21 @@ export const AuthProvider = ({ children }) => {
             }
 
             saveSystem(system);
+
+            // Sync with backend
+            try {
+                await api.post('/v1/users', {
+                    id: newUser.uid,
+                    name: newUser.name,
+                    email: newUser.email,
+                    role: newUser.role,
+                    portal_data: newUser.portalData || {},
+                    profile_data: newUser
+                });
+            } catch (backendError) {
+                console.warn('Backend sync failed, continuing with local profile', backendError);
+            }
+
             setUser(newUser);
             navigate(ROLE_PATHS[finalRole] || '/founder');
             return newUser;
@@ -393,6 +409,20 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 saveUserProfile(firebaseUser.uid, profile);
+            }
+
+            // Sync with backend
+            try {
+                await api.post('/v1/users', {
+                    id: profile.uid,
+                    name: profile.name,
+                    email: profile.email,
+                    role: profile.role,
+                    portal_data: profile.portalData,
+                    profile_data: profile
+                });
+            } catch (backendError) {
+                console.warn('Backend sync failed, continuing with local profile', backendError);
             }
 
             // Keep profile role as source of truth even when selected role differs in login form.
