@@ -83,7 +83,7 @@ export async function createMessage(payload = {}) {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
         RETURNING *
       `,
-      [id, startupId, senderId, senderName, senderRole, receiverId, conversationType, message]
+      [id, startupId || 'system', senderId, senderName, senderRole, receiverId, conversationType, message]
     );
 
     return mapMessageRow(rows[0]);

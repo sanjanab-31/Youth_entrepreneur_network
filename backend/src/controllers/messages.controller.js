@@ -1,4 +1,5 @@
 import * as messagesService from '../services/messages.service.js';
+import * as startupsService from '../services/startups.service.js';
 
 export async function getMessages(req, res) {
   try {
@@ -56,8 +57,19 @@ export async function deleteMessage(req, res) {
 
 export async function sendMessage(req, res) {
   try {
+    let startupId = req.body.startupId || req.body.startup_id;
+    
+    // If startupId is missing and it's a startup conversation, try to find it for the founder
+    if (!startupId && req.body.conversationType === 'startup') {
+      const startup = await startupsService.getStartupByFounderId(req.user.uid);
+      if (startup) {
+        startupId = startup.id;
+      }
+    }
+
     const message = await messagesService.sendMessage({
       ...req.body,
+      startupId,
       senderId: req.user.uid
     });
     res.status(201).json({ data: message });

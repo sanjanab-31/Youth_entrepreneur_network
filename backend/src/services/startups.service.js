@@ -19,6 +19,15 @@ export async function getStartupById(startupId) {
   }
 }
 
+export async function getStartupByFounderId(founderId) {
+  try {
+    const { rows } = await pool.query('SELECT * FROM startups WHERE founder_id = $1', [founderId]);
+    return rows[0] || null;
+  } catch (error) {
+    throw new Error(`Failed to fetch startup for founder ${founderId}: ${error.message}`);
+  }
+}
+
 export async function createStartup(payload = {}) {
   try {
     const id = payload.id || payload.startupId || randomUUID();
