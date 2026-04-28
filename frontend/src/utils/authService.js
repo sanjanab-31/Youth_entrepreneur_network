@@ -10,6 +10,7 @@ import {
     normalizeUserProfile,
     saveSystem
 } from './system';
+import api from '../../services/api';
 
 const nowIso = () => new Date().toISOString();
 
@@ -129,8 +130,24 @@ export const signupUser = async ({ auth, email, password, role, profileData }) =
             portal_data: newUser.portalData,
             profile_data: profileData
         });
+
+        // Also create incubator record if role is incubator
+        if (normalizedRole === 'incubator') {
+            await api.post('/v1/incubators', {
+                id: firebaseUser.uid,
+                name: portalData.incubatorName || name,
+                incubatorName: portalData.incubatorName || name,
+                location: portalData.location || '',
+                description: portalData.description || '',
+                website: portalData.website || '',
+                stagePreference: portalData.stagePreference ? [portalData.stagePreference] : [],
+                fundingSupport: Boolean(portalData.fundingSupport),
+                batchSize: portalData.batchSize || 20,
+                ownerUserId: firebaseUser.uid
+            });
+        }
     } catch (err) {
-        console.error('Failed to sync user to database:', err);
+        console.error('Failed to sync user or incubator to database:', err);
     }
 
     if (finalRole === 'founder') {

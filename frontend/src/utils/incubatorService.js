@@ -2,6 +2,7 @@ import {
     getSystem,
     normalizeStartup,
     normalizeUserProfile,
+    getMentorUsers,
     saveSystem
 } from './system';
 import {
@@ -23,6 +24,8 @@ import {
     deleteCohort
 } from './cohortsApi';
 import { fetchStartups } from './startupsApi';
+import api from '../../services/api';
+import { fetchUsers } from './usersApi';
 
 const nowIso = () => new Date().toISOString();
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -78,6 +81,15 @@ export const loadIncubatorState = async (user) => {
         incubatorRecord = null;
     }
 
+    let backendMentors = [];
+    try {
+        backendMentors = (await fetchUsers())
+            .map(normalizeUserProfile)
+            .filter((mentor) => mentor && mentor.role === 'mentor');
+    } catch {
+        backendMentors = [];
+    }
+
     // Fetch live startups and update system
     let allStartups = system.startups || [];
     try {
@@ -88,11 +100,16 @@ export const loadIncubatorState = async (user) => {
         console.error('Failed to fetch startups in loadIncubatorState:', err);
     }
 
-    const allMentors = Object.values(system.users || {}).filter((u) => u.role === 'mentor');
-    const mentorIds = Array.isArray(incubatorRecord?.mentorIds) ? incubatorRecord.mentorIds : [];
-    const mentors = mentorIds.length > 0
-        ? allMentors.filter((mentor) => mentorIds.includes(mentor.uid || mentor.id))
-        : allMentors;
+    const mentorById = new Map();
+    [...getMentorUsers(system), ...backendMentors].forEach((mentor) => {
+        const mentorId = mentor?.uid || mentor?.id;
+        if (mentorId && !mentorById.has(mentorId)) {
+            mentorById.set(mentorId, mentor);
+        }
+    });
+
+    const allMentors = Array.from(mentorById.values());
+    const mentors = allMentors;
 
     return {
         applications,
@@ -243,7 +260,25 @@ export const onboardIncubatorStartup = async (user, startupData) => {
 };
 
 export const onboardIncubatorMentor = async (user, mentorData) => {
-    const mentorId = mentorData?.uid || mentorData?.id || mentorData?.email || null;
+    const system = getSystem();
+    const backendUsers = await fetchUsers().catch(() => []);
+    const mentorEmail = (mentorData?.email || '').trim().toLowerCase();
+    const existingMentor = [
+        ...Object.values(system.users || {}),
+        ...backendUsers
+    ]
+        .map(normalizeUserProfile)
+        .find((mentor) => {
+            if (!mentor || mentor.role !== 'mentor') return false;
+
+            const mentorId = (mentor.uid || mentor.id || '').toString();
+            const mentorEmailValue = (mentor.email || '').toString().trim().toLowerCase();
+            return (mentorData?.uid && mentorId === String(mentorData.uid))
+                || (mentorData?.id && mentorId === String(mentorData.id))
+                || (mentorEmail && mentorEmailValue === mentorEmail);
+        });
+
+    const mentorId = existingMentor?.uid || existingMentor?.id || mentorData?.uid || mentorData?.id || mentorData?.email || null;
     const expertise = Array.isArray(mentorData.expertise)
         ? mentorData.expertise
         : (mentorData.expertise || mentorData.primarySkills || '').split(',').map((item) => item.trim()).filter(Boolean);
@@ -280,10 +315,30 @@ export const onboardIncubatorMentor = async (user, mentorData) => {
         createdAt: nowIso()
     });
 
-    mutateSystem((system) => {
+    mutateSystem((state) => {
         if (!mentorId) return;
-        system.users[mentorId] = mentor;
+        state.users[mentorId] = mentor;
     });
+
+    if (mentorId && !existingMentor) {
+        await api.post('/v1/users', {
+            id: mentorId,
+            uid: mentorId,
+            name: mentor.name,
+            email: mentor.email,
+            role: 'mentor',
+            portal_data: mentor.portalData,
+            profile_data: {
+                expertise: mentor.expertise,
+                sector: mentor.sector,
+                company: mentor.company,
+                linkedin: mentor.linkedin,
+                bio: mentor.bio,
+                availability: mentor.availability,
+                badge: mentor.badge
+            }
+        });
+    }
 
     if (mentorId) {
         await addMentorToIncubator(user.uid, mentorId);
