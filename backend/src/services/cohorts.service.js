@@ -26,6 +26,72 @@ const getStartupIdsForCohort = async (cohortId) => {
   return rows.map((row) => row.startup_id);
 };
 
+const ensureIncubatorExists = async (incubatorId) => {
+  const incubatorResult = await pool.query('SELECT id FROM incubators WHERE id = $1', [incubatorId]);
+  if (incubatorResult.rows[0]) {
+    return;
+  }
+
+  const userResult = await pool.query(
+    'SELECT id, name, role, portal_data FROM users WHERE id = $1',
+    [incubatorId]
+  );
+
+  const user = userResult.rows[0];
+  if (!user) {
+    const error = new Error('Invalid incubatorId. The referenced incubator does not exist.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const portalData = user.portal_data || {};
+  const incubatorName = portalData.incubatorName || user.name || `Incubator ${incubatorId.slice(0, 8)}`;
+  const stagePreference = portalData.stagePreference
+    ? Array.isArray(portalData.stagePreference)
+      ? portalData.stagePreference
+      : [portalData.stagePreference]
+    : [];
+  const fundingSupport = Boolean(portalData.fundingSupport ?? false);
+  const batchSize = Number(portalData.batchSize ?? 20);
+
+  await pool.query(
+    `
+      INSERT INTO incubators (
+        id,
+        name,
+        incubator_name,
+        location,
+        description,
+        website,
+        stage_preference,
+        funding_support,
+        batch_size,
+        verified,
+        success_stats_graduated,
+        success_stats_raised,
+        success_stats_active,
+        owner_user_id,
+        created_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE, 0, '$0', 0, $10, NOW(), NOW())
+      ON CONFLICT (id) DO NOTHING
+    `,
+    [
+      incubatorId,
+      incubatorName,
+      incubatorName,
+      portalData.location ?? null,
+      portalData.description ?? null,
+      portalData.website ?? null,
+      stagePreference,
+      fundingSupport,
+      Number.isFinite(batchSize) && batchSize > 0 ? batchSize : 20,
+      user.id
+    ]
+  );
+};
+
 export async function getAllCohorts() {
   try {
     const { rows } = await pool.query('SELECT * FROM cohorts ORDER BY created_at ASC');
@@ -50,15 +116,31 @@ export async function getCohortById(cohortId) {
   }
 }
 
-export async function createCohort(payload = {}) {
+export async function createCohort(payload = {}, authenticatedUserId = null) {
   try {
     const id = payload.id || randomUUID();
-    const incubatorId = payload.incubatorId ?? payload.incubator_id ?? null;
+    const incubatorId = payload.incubatorId ?? payload.incubator_id ?? authenticatedUserId ?? null;
     const name = payload.name || `Cohort ${id.slice(0, 8)}`;
-    const startDate = payload.startDate ?? payload.start_date ?? null;
-    const endDate = payload.endDate ?? payload.end_date ?? null;
+    const startDateRaw = payload.startDate ?? payload.start_date ?? null;
+    const endDateRaw = payload.endDate ?? payload.end_date ?? null;
+    const startDate = startDateRaw === '' ? null : startDateRaw;
+    const endDate = endDateRaw === '' ? null : endDateRaw;
     const maxCapacity = Number(payload.maxCapacity ?? payload.max_capacity ?? 20);
     const status = payload.status ?? 'upcoming';
+
+    if (!incubatorId) {
+      const error = new Error('incubatorId is required to create cohort');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!Number.isFinite(maxCapacity) || maxCapacity <= 0) {
+      const error = new Error('maxCapacity must be a positive number');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    await ensureIncubatorExists(incubatorId);
 
     const { rows } = await pool.query(
       `
@@ -81,6 +163,22 @@ export async function createCohort(payload = {}) {
 
     return mapCohortRow(rows[0], []);
   } catch (error) {
+    if (error.statusCode) {
+      throw error;
+    }
+
+    if (error.code === '23503') {
+      const dbError = new Error('Invalid incubatorId. The referenced incubator does not exist.');
+      dbError.statusCode = 400;
+      throw dbError;
+    }
+
+    if (error.code === '23502') {
+      const dbError = new Error('Missing required cohort fields.');
+      dbError.statusCode = 400;
+      throw dbError;
+    }
+
     throw new Error(`Failed to create cohort: ${error.message}`);
   }
 }

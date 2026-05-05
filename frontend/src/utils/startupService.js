@@ -126,6 +126,24 @@ export const loadStartupState = async (user) => {
         applications = [];
     }
 
+    if (startup && applications.length > 0) {
+        const acceptedApplication = applications.find((application) => application.status === 'accepted' && application.startupId === startup.startupId);
+        if (acceptedApplication) {
+            startup = {
+                ...startup,
+                incubatorAssigned: acceptedApplication.incubatorId || startup.incubatorAssigned || null,
+                cohortId: acceptedApplication.cohortId ?? startup.cohortId ?? null
+            };
+        }
+    }
+
+    if (startup) {
+        system.startups = (system.startups || []).map((existingStartup) =>
+            existingStartup.startupId === startup.startupId ? startup : existingStartup
+        );
+        saveSystem(system);
+    }
+
     return {
         startup,
         joinRequests,

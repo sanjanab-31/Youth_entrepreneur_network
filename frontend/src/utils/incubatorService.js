@@ -23,6 +23,11 @@ import {
     updateCohort,
     deleteCohort
 } from './cohortsApi';
+import {
+    assignIncubatorToStartup,
+    assignMentorToStartup,
+    updateStartup
+} from './startupsApi';
 import { fetchStartups } from './startupsApi';
 import api from '../../services/api';
 import { fetchUsers } from './usersApi';
@@ -111,6 +116,30 @@ export const loadIncubatorState = async (user) => {
     const allMentors = Array.from(mentorById.values());
     const mentors = allMentors;
 
+    if (applications.length > 0 && allStartups.length > 0) {
+        const acceptedAssignments = new Map();
+        applications
+            .filter((application) => application.status === 'accepted' && application.startupId)
+            .forEach((application) => {
+                acceptedAssignments.set(String(application.startupId), application);
+            });
+
+        if (acceptedAssignments.size > 0) {
+            allStartups = allStartups.map((startup) => {
+                const acceptedApplication = acceptedAssignments.get(String(startup.startupId));
+                if (!acceptedApplication) return startup;
+
+                return {
+                    ...startup,
+                    incubatorAssigned: acceptedApplication.incubatorId || startup.incubatorAssigned || user.uid,
+                    cohortId: acceptedApplication.cohortId ?? startup.cohortId ?? null
+                };
+            });
+            system.startups = allStartups;
+            saveSystem(system);
+        }
+    }
+
     return {
         applications,
         pipeline: (allStartups).filter((s) => s.incubatorAssigned === user.uid),
@@ -132,7 +161,15 @@ const mutateSystem = (mutationFn) => {
 };
 
 export const acceptIncubatorApplication = async (user, appId, cohortId) => {
-    await acceptApplication(appId);
+    const acceptedApplication = await acceptApplication(appId);
+
+    if (acceptedApplication?.startupId) {
+        await assignIncubatorToStartup(acceptedApplication.startupId, user.uid);
+
+        if (cohortId) {
+            await updateStartup(acceptedApplication.startupId, { cohortId });
+        }
+    }
 
     mutateSystem((system) => {
         const app = (system.applications || []).find((a) => a.id === appId || a.applicationId === appId);
@@ -172,6 +209,8 @@ export const rejectIncubatorApplication = async (appId) => {
 };
 
 export const assignMentorForIncubatorStartup = async (mentorId, startupId) => {
+    await assignMentorToStartup(startupId, mentorId);
+
     mutateSystem((system) => {
         const mentor = system.users?.[mentorId];
         const mentorName = mentor?.name || mentor?.email?.split('@')[0] || 'Mentor';
@@ -192,6 +231,8 @@ export const assignMentorForIncubatorStartup = async (mentorId, startupId) => {
 
 export const removeMentorForIncubatorStartup = async (mentorId, startupId, incubatorId = null) => {
     let shouldRemoveMentorLink = false;
+
+    await updateStartup(startupId, { mentorAssigned: null });
 
     mutateSystem((system) => {
         const mentor = system.users?.[mentorId];

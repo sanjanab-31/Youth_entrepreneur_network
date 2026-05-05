@@ -80,7 +80,7 @@ export async function sendMessage(req, res) {
 
 export async function markMessageAsRead(req, res) {
   try {
-    const message = await messagesService.markMessageAsRead(req.params.message_id);
+    const message = await messagesService.markMessageAsRead(req.params.message_id, req.user.uid);
     if (!message) {
       return res.status(404).json({ message: 'Message not found' });
     }

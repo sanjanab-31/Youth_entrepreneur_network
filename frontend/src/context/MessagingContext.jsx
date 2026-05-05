@@ -8,6 +8,8 @@ import {
     markMessageAsReadApi,
     sendApiMessage
 } from '../utils/messagingService';
+import { fetchStartups } from '../utils/startupsApi';
+import { getSystem, saveSystem } from '../utils/system';
 
 const MessagingContext = createContext();
 
@@ -36,6 +38,15 @@ export const MessagingProvider = ({ children }) => {
         setLoading(true);
         setError('');
         try {
+            try {
+                const liveStartups = await fetchStartups();
+                const system = getSystem();
+                system.startups = liveStartups;
+                saveSystem(system);
+            } catch {
+                // Keep existing cached startups if the refresh fails.
+            }
+
             const fetchedMessages = await fetchAllMessages();
             setMessages(fetchedMessages);
             setConversations(buildConversations(user, fetchedMessages));
@@ -98,13 +109,17 @@ export const MessagingProvider = ({ children }) => {
 
     const markAsRead = useCallback(async (conversation) => {
         if (!user || !conversation?.startupId) return;
+        const userId = String(user.uid || user.id || '');
 
         setMarkingRead(true);
         setConversationError('');
         try {
             const startupMessages = await fetchStartupConversationMessages(conversation.startupId);
             const scopedMessages = getMessagesForConversation(startupMessages, conversation);
-            const unread = scopedMessages.filter((message) => !message.read && message.senderId !== user?.uid);
+            const unread = scopedMessages.filter((message) => {
+                const readBy = Array.isArray(message.readBy) ? message.readBy.map(String) : [];
+                return String(message.senderId) !== userId && !readBy.includes(userId);
+            });
 
             if (unread.length > 0) {
                 await Promise.all(unread.map((message) => markMessageAsReadApi(message.id)));

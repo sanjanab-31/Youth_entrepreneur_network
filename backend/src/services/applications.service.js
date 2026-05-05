@@ -149,6 +149,16 @@ export async function deleteApplication(applicationId) {
 
 export async function acceptApplication(applicationId) {
   try {
+    const applicationResult = await pool.query(
+      'SELECT id, startup_id, incubator_id, cohort_id FROM applications WHERE id = $1',
+      [applicationId]
+    );
+    const application = applicationResult.rows[0];
+
+    if (!application) {
+      return null;
+    }
+
     const { rows } = await pool.query(
       `
         UPDATE applications
@@ -158,6 +168,28 @@ export async function acceptApplication(applicationId) {
       `,
       [applicationId, 'accepted']
     );
+
+    if (application.startup_id) {
+      const startupUpdateValues = [application.incubator_id ?? null];
+      const startupSetClauses = ['incubator_assigned = $2'];
+
+      if (application.cohort_id !== null && application.cohort_id !== undefined) {
+        startupSetClauses.push('cohort_id = $3');
+        startupUpdateValues.push(application.cohort_id);
+      }
+
+      startupSetClauses.push('updated_at = NOW()');
+
+      await pool.query(
+        `
+          UPDATE startups
+          SET ${startupSetClauses.join(', ')}
+          WHERE id = $1
+        `,
+        [application.startup_id, ...startupUpdateValues]
+      );
+    }
+
     return rows[0] || null;
   } catch (error) {
     throw new Error(`Failed to accept application with id ${applicationId}: ${error.message}`);

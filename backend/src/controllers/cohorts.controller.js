@@ -23,10 +23,10 @@ export async function getCohortById(req, res) {
 
 export async function createCohort(req, res) {
   try {
-    const cohort = await cohortsService.createCohort(req.body);
+    const cohort = await cohortsService.createCohort(req.body, req.user?.uid);
     res.status(201).json({ data: cohort });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message, error: error.message });
   }
 }
 
@@ -38,7 +38,7 @@ export async function updateCohort(req, res) {
     }
     return res.status(200).json({ data: cohort });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message, error: error.message });
   }
 }
 
@@ -50,7 +50,7 @@ export async function deleteCohort(req, res) {
     }
     return res.status(200).json({ data: cohort });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message, error: error.message });
   }
 }
 
@@ -62,7 +62,7 @@ export async function joinCohort(req, res) {
     }
     return res.status(200).json({ data: cohort });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message, error: error.message });
   }
 }
 
@@ -74,7 +74,7 @@ export async function leaveCohort(req, res) {
     }
     return res.status(200).json({ data: cohort });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message, error: error.message });
   }
 }
 

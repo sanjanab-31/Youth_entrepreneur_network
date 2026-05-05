@@ -15,10 +15,47 @@ const mapMessageRow = (row) => {
     conversationType: row.conversation_type,
     content: row.message,
     message: row.message,
+    readBy: Array.isArray(row.read_by)
+      ? row.read_by.filter(Boolean)
+      : Array.isArray(row.readBy)
+        ? row.readBy.filter(Boolean)
+        : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     read: Boolean(row.read)
   };
+};
+
+const hydrateReadState = async (rows = []) => {
+  if (!rows.length) {
+    return [];
+  }
+
+  const messageIds = rows.map((row) => row.id).filter(Boolean);
+  if (!messageIds.length) {
+    return rows.map(mapMessageRow);
+  }
+
+  const { rows: readRows } = await pool.query(
+    `
+      SELECT
+        message_id,
+        ARRAY_AGG(user_id ORDER BY read_at ASC) AS read_by
+      FROM message_reads
+      WHERE message_id = ANY($1::text[])
+      GROUP BY message_id
+    `,
+    [messageIds]
+  );
+
+  const readByMap = new Map(
+    readRows.map((row) => [row.message_id, Array.isArray(row.read_by) ? row.read_by : []])
+  );
+
+  return rows.map((row) => mapMessageRow({
+    ...row,
+    read_by: readByMap.get(row.id) || []
+  }));
 };
 
 const resolveReadUserId = (message, userId) => {
@@ -31,7 +68,7 @@ const resolveReadUserId = (message, userId) => {
 export async function getAllMessages() {
   try {
     const { rows } = await pool.query('SELECT * FROM messages ORDER BY created_at ASC');
-    return rows.map(mapMessageRow);
+    return hydrateReadState(rows);
   } catch (error) {
     throw new Error(`Failed to fetch messages: ${error.message}`);
   }
@@ -40,7 +77,7 @@ export async function getAllMessages() {
 export async function getMessageById(messageId) {
   try {
     const { rows } = await pool.query('SELECT * FROM messages WHERE id = $1', [messageId]);
-    return mapMessageRow(rows[0] || null);
+    return (await hydrateReadState(rows))[0] || null;
   } catch (error) {
     throw new Error(`Failed to fetch message with id ${messageId}: ${error.message}`);
   }
@@ -86,7 +123,7 @@ export async function createMessage(payload = {}) {
       [id, startupId || 'system', senderId, senderName, senderRole, receiverId, conversationType, message]
     );
 
-    return mapMessageRow(rows[0]);
+    return (await hydrateReadState(rows))[0] || null;
   } catch (error) {
     throw new Error(`Failed to create message: ${error.message}`);
   }
@@ -151,7 +188,7 @@ export async function updateMessage(messageId, payload = {}) {
       [messageId, ...values]
     );
 
-    return mapMessageRow(rows[0] || null);
+    return (await hydrateReadState(rows))[0] || null;
   } catch (error) {
     throw new Error(`Failed to update message with id ${messageId}: ${error.message}`);
   }
@@ -160,7 +197,7 @@ export async function updateMessage(messageId, payload = {}) {
 export async function deleteMessage(messageId) {
   try {
     const { rows } = await pool.query('DELETE FROM messages WHERE id = $1 RETURNING *', [messageId]);
-    return mapMessageRow(rows[0] || null);
+    return (await hydrateReadState(rows))[0] || null;
   } catch (error) {
     throw new Error(`Failed to delete message with id ${messageId}: ${error.message}`);
   }
@@ -193,7 +230,7 @@ export async function markMessageAsRead(messageId, userId = null) {
       [messageId, resolvedUserId]
     );
 
-    return mapMessageRow(message);
+    return (await hydrateReadState([message]))[0] || null;
   } catch (error) {
     throw new Error(`Failed to mark message as read for id ${messageId}: ${error.message}`);
   }
@@ -206,7 +243,7 @@ export async function getConversationsByStartup(startupId) {
       [startupId]
     );
 
-    return rows.map(mapMessageRow);
+    return hydrateReadState(rows);
   } catch (error) {
     throw new Error(`Failed to fetch conversations for startup ${startupId}: ${error.message}`);
   }
