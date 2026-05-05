@@ -3,13 +3,22 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 5432,
-});
+const useConnectionString = Boolean(process.env.DATABASE_URL);
+
+const pool = useConnectionString
+  ? new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_SSL === 'false'
+      ? undefined
+      : { rejectUnauthorized: false },
+  })
+  : new Pool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 5432,
+  });
 
 export const connectDB = async () => {
   try {
