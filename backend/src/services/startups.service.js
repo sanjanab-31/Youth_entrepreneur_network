@@ -66,14 +66,14 @@ export async function createStartup(payload = {}) {
         skill_gap, primary_skills, focus_areas,
           created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NOW(), NOW())
       RETURNING *
     `;
 
     const { rows } = await pool.query(query, [
       id, founderId, startupName, sector, stage, teamSize,
       oneLiner, solutionOverview, problemStatement, targetAudience,
-      marketInfo, growth, revenue, traction, fundingGoal, activeUsers,
+      marketInfo, growth, revenue, traction, fundingGoal, activeUsers, burnRate,
       demoLink, pitchDeckLink, website, location, commitment, equity,
       skillGap, primarySkills, focusAreas
     ]);
