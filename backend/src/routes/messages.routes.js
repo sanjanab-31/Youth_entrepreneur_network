@@ -12,14 +12,16 @@ import {
 
 const router = Router();
 
-router.get('/', getMessages);
-router.get('/:message_id', getMessageById);
-router.post('/', createMessage);
-router.put('/:message_id', updateMessage);
-router.delete('/:message_id', deleteMessage);
-
+// Specific routes must come BEFORE parameterized routes to avoid route conflicts
+router.get('/conversations/:startup_id', getConversationsByStartup);
 router.post('/send', sendMessage);
 router.post('/:message_id/read', markMessageAsRead);
-router.get('/conversations/:startup_id', getConversationsByStartup);
+
+// Generic routes with parameters
+router.get('/', getMessages);
+router.post('/', createMessage);
+router.get('/:message_id', getMessageById);
+router.put('/:message_id', updateMessage);
+router.delete('/:message_id', deleteMessage);
 
 export default router;

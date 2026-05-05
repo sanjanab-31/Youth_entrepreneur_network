@@ -89,7 +89,7 @@ export const MessagingProvider = ({ children }) => {
         } finally {
             setConversationLoading(false);
         }
-    }, []);
+    }, [user]);
 
     const getConversationMessages = (conversation) => {
         if (!conversation) return [];
