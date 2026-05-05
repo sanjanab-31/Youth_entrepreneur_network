@@ -222,6 +222,35 @@ flowchart LR
 
 The diagram shows the full path from user interaction to UI state, auth verification, role-aware routing, data persistence, and cloud deployment targets.
 
+## Deployment
+
+### Backend on Render
+
+1. Create a new Render Web Service from the `backend/` folder.
+2. Use `npm install` as the build command.
+3. Use `npm start` as the start command.
+4. Set these environment variables in Render:
+  - `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT`
+  - `FIREBASE_SERVICE_ACCOUNT_KEY` or the trio `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
+  - `FRONTEND_URL` or `FRONTEND_URLS` with your Vercel domain, for example `https://your-app.vercel.app`
+5. Ensure the Render PostgreSQL database is reachable from the service and the schema has been created from `backend/src/config/schema.sql`.
+6. After deployment, confirm `https://your-render-service.onrender.com/api/health` returns `{ status: "ok" }`.
+
+### Frontend on Vercel
+
+1. Create a new Vercel project from the `frontend/` folder.
+2. Set the build command to `npm run build` and the output directory to `dist`.
+3. Add this environment variable in Vercel:
+  - `VITE_API_BASE_URL=https://your-render-service.onrender.com/api`
+4. Keep the existing `frontend/vercel.json` rewrite so SPA routes continue to work.
+5. Add the Firebase client env vars from `frontend/.env.example`.
+
+### Local Development
+
+- Frontend: `npm run dev` in `frontend/`
+- Backend: `npm run dev` in `backend/`
+- Local frontend API base defaults to `http://localhost:5000/api`
+
 ### Frontend Architecture
 
 The frontend is built around:
