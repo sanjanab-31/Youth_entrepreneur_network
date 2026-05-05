@@ -23,8 +23,12 @@ export async function createUser(payload = {}) {
     `
       INSERT INTO users (id, name, email, role, portal_data, profile_data, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, NOW())
-      ON CONFLICT (id) DO UPDATE 
-      SET name = EXCLUDED.name, role = EXCLUDED.role, updated_at = NOW()
+      ON CONFLICT (email) DO UPDATE
+      SET 
+        id = EXCLUDED.id,
+        name = EXCLUDED.name,
+        role = EXCLUDED.role,
+        updated_at = NOW()
       RETURNING *
     `,
     [id, name, email, role, portalData, profileData]
