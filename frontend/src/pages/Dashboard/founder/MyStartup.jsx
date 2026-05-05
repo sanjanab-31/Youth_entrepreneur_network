@@ -228,8 +228,8 @@ const MyStartup = () => {
 
     if (!startup) return null;
 
-    const handleUpdate = (data, message = "Changes saved") => {
-        updateStartup(data);
+    const handleUpdate = async (data, message = "Changes saved") => {
+        await updateStartup(data);
         showToast(message);
     };
 
@@ -285,7 +285,7 @@ const MyStartup = () => {
                                 </button>
                             </div>
 
-                            <form className="space-y-6" onSubmit={(e) => {
+                            <form className="space-y-6" onSubmit={async (e) => {
                                 e.preventDefault();
                                 const formData = new FormData(e.target);
                                 const data = {
@@ -301,7 +301,7 @@ const MyStartup = () => {
                                     demoLink: formData.get('demoLink') || '',
                                     pitchDeckLink: formData.get('pitchDeckLink') || ''
                                 };
-                                handleUpdate(data, "Updated Successfully");
+                                await handleUpdate(data, "Updated Successfully");
                                 setIsEditModalOpen(false);
                             }}>
                                 <div>
@@ -451,8 +451,8 @@ const MyStartup = () => {
                                         className="w-full bg-white/5 border border-[#8B5CF6]/50 rounded-xl p-4 text-gray-300 focus:outline-none h-32"
                                     />
                                     <div className="flex gap-2 justify-end">
-                                        <button onClick={() => setEditingSection(null)} className="px-4 py-2 text-xs font-bold text-gray-500">Cancel</button>
-                                        <button onClick={() => handleInlineSave('problemStatement')} className="px-4 py-2 bg-[#8B5CF6] text-white text-xs font-bold rounded-lg shadow-lg">Save</button>
+                                        <button type="button" onClick={() => setEditingSection(null)} className="px-4 py-2 text-xs font-bold text-gray-500">Cancel</button>
+                                        <button type="button" onClick={() => handleInlineSave('problemStatement')} className="px-4 py-2 bg-[#8B5CF6] text-white text-xs font-bold rounded-lg shadow-lg">Save</button>
                                     </div>
                                 </div>
                             ) : (
@@ -491,8 +491,8 @@ const MyStartup = () => {
                                         className="w-full bg-white/5 border border-[#8B5CF6]/50 rounded-xl p-4 text-gray-300 focus:outline-none h-32"
                                     />
                                     <div className="flex gap-2 justify-end">
-                                        <button onClick={() => setEditingSection(null)} className="px-4 py-2 text-xs font-bold text-gray-500">Cancel</button>
-                                        <button onClick={() => handleInlineSave('solutionOverview')} className="px-4 py-2 bg-[#8B5CF6] text-white text-xs font-bold rounded-lg shadow-lg">Save</button>
+                                        <button type="button" onClick={() => setEditingSection(null)} className="px-4 py-2 text-xs font-bold text-gray-500">Cancel</button>
+                                        <button type="button" onClick={() => handleInlineSave('solutionOverview')} className="px-4 py-2 bg-[#8B5CF6] text-white text-xs font-bold rounded-lg shadow-lg">Save</button>
                                     </div>
                                 </div>
                             ) : (

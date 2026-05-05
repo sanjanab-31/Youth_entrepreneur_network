@@ -60,7 +60,6 @@ export const loadStartupState = async (user) => {
     const system = getSystem();
     try {
         allStartupsData = await fetchStartups();
-        console.log('Fetched startups from DB:', allStartupsData.length);
         
         system.startups = allStartupsData;
         saveSystem(system);
@@ -76,7 +75,6 @@ export const loadStartupState = async (user) => {
         });
 
         if (dbStartup) {
-            console.log('Found matching startup in DB:', dbStartup);
             startup = hydrateStartupMetrics(dbStartup);
         }
     } catch (err) {

@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS startups (
     traction_history JSONB NOT NULL DEFAULT '[]'::jsonb,
     funding_goal TEXT,
     active_users INTEGER NOT NULL DEFAULT 0 CHECK (active_users >= 0),
+    burn_rate INTEGER NOT NULL DEFAULT 0,
     demo_link TEXT,
     pitch_deck_link TEXT,
     website TEXT,

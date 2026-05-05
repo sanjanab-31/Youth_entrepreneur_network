@@ -36,24 +36,46 @@ export async function createStartup(payload = {}) {
     const sector = payload.sector || 'General';
     const stage = payload.stage || 'Idea';
     const teamSize = parseInt(payload.team_size || payload.teamSize || 1, 10);
+    const oneLiner = payload.one_liner || payload.oneLiner || '';
+    const solutionOverview = payload.solution_overview || payload.solutionOverview || '';
     const problemStatement = payload.problem_statement || payload.problemStatement || '';
     const targetAudience = Array.isArray(payload.target_audience) ? payload.target_audience : (payload.targetAudience || []);
+    const marketInfo = payload.market_info || payload.marketInfo || '';
+    const growth = payload.growth || '';
+    const revenue = payload.revenue || '';
+    const traction = payload.traction || '';
+    const fundingGoal = payload.funding_goal || payload.fundingGoal || '';
+    const activeUsers = parseInt(payload.active_users || payload.activeUsers || 0, 10);
+    const burnRate = parseInt(payload.burn_rate || payload.burnRate || 0, 10);
+    const demoLink = payload.demo_link || payload.demoLink || '';
+    const pitchDeckLink = payload.pitch_deck_link || payload.pitchDeckLink || '';
+    const website = payload.website || '';
+    const location = payload.location || '';
+    const commitment = payload.commitment || '';
+    const equity = payload.equity || '';
+    const skillGap = payload.skill_gap || payload.skillGap || payload.lookingFor || '';
     const primarySkills = Array.isArray(payload.primary_skills) ? payload.primary_skills : (payload.primarySkills || []);
     const focusAreas = Array.isArray(payload.focus_areas) ? payload.focus_areas : (payload.focusAreas || []);
 
     const query = `
       INSERT INTO startups (
-        id, founder_id, startup_name, sector, stage, team_size, 
-        problem_statement, target_audience, primary_skills, focus_areas,
+        id, founder_id, startup_name, sector, stage, team_size,
+        one_liner, solution_overview, problem_statement, target_audience,
+        market_info, growth, revenue, traction, funding_goal, active_users, burn_rate,
+        demo_link, pitch_deck_link, website, location, commitment, equity,
+        skill_gap, primary_skills, focus_areas
         created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, NOW(), NOW())
       RETURNING *
     `;
 
     const { rows } = await pool.query(query, [
       id, founderId, startupName, sector, stage, teamSize,
-      problemStatement, targetAudience, primarySkills, focusAreas
+      oneLiner, solutionOverview, problemStatement, targetAudience,
+      marketInfo, growth, revenue, traction, fundingGoal, activeUsers,
+      demoLink, pitchDeckLink, website, location, commitment, equity,
+      skillGap, primarySkills, focusAreas
     ]);
 
     return rows[0];
@@ -71,8 +93,12 @@ export async function updateStartup(startupId, payload = {}) {
     let paramIndex = 2;
 
     const fields = [
-      'startup_name', 'sector', 'stage', 'status', 'mentor_assigned', 
-      'incubator_assigned', 'cohort_id', 'execution_score', 'profile_completion'
+      'startup_name', 'sector', 'stage', 'status', 'mentor_assigned',
+      'incubator_assigned', 'cohort_id', 'execution_score', 'profile_completion',
+      'one_liner', 'solution_overview', 'problem_statement', 'target_audience',
+      'market_info', 'growth', 'revenue', 'traction', 'funding_goal', 'active_users', 'burn_rate',
+      'demo_link', 'pitch_deck_link', 'website', 'location', 'commitment', 'equity',
+      'skill_gap', 'primary_skills', 'team_size', 'focus_areas'
     ];
 
     fields.forEach(field => {

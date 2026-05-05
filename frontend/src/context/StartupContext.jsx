@@ -79,9 +79,8 @@ export const StartupProvider = ({ children }) => {
 
     useEffect(() => {
         const handleStorage = (event) => {
-            // Only sync if the storage event was triggered by another window
-            // and it's our system key
-            if (!event || event.key === 'vanguard_system') {
+            // Only sync when the vanguard_system key is changed in another window
+            if (event?.key === 'vanguard_system') {
                 void syncData();
             }
         };

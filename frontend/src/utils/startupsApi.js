@@ -19,6 +19,7 @@ const normalizeStartup = (s = {}) => ({
     tractionHistory: Array.isArray(s.traction_history) ? s.traction_history : (s.tractionHistory || []),
     fundingGoal: s.funding_goal || s.fundingGoal || '',
     activeUsers: Number(s.active_users || s.activeUsers || 0),
+    burnRate: Number(s.burn_rate || s.burnRate || 0),
     demoLink: s.demo_link || s.demoLink || '',
     pitchDeckLink: s.pitch_deck_link || s.pitchDeckLink || '',
     website: s.website || '',
