@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
-import { connectDB } from './config/db.js';
+import { readFile } from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import pool, { connectDB } from './config/db.js';
 import { authenticateFirebaseToken } from './middlewares/auth.middleware.js';
 import usersRoutes from './routes/users.routes.js';
 import startupsRoutes from './routes/startups.routes.js';
@@ -13,6 +16,9 @@ import messagesRoutes from './routes/messages.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const schemaPath = path.join(__dirname, 'config', 'schema.sql');
 const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:5173')
   .split(',')
   .map((origin) => origin.trim())
@@ -46,10 +52,32 @@ app.use('/api/v1/incubators', incubatorsRoutes);
 app.use('/api/v1/cohorts', cohortsRoutes);
 app.use('/api/v1/messages', authenticateFirebaseToken, messagesRoutes);
 
+const initializeSchema = async () => {
+  const schemaSql = await readFile(schemaPath, 'utf8');
+
+  const statements = schemaSql
+    .split(';')
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+
+  for (const statement of statements) {
+    await pool.query(statement);
+  }
+
+  console.log('Database schema verified successfully');
+};
+
 const startServer = async () => {
   const isDbConnected = await connectDB();
 
   if (!isDbConnected) {
+    process.exit(1);
+  }
+
+  try {
+    await initializeSchema();
+  } catch (error) {
+    console.error('Database schema initialization failed:', error.message);
     process.exit(1);
   }
 
