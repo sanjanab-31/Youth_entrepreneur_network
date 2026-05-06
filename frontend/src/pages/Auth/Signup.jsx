@@ -380,8 +380,7 @@ const Signup = () => {
             case 1:
                 return (
                     <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
-                        <h3 className="text-xl font-semibold text-white mb-4">Organization Info</h3>
-                        <input name="incubatorName" placeholder="Incubator Name" className="steps-input" onChange={handleInputChange} required />
+                        <h3 className="text-xl font-semibold text-white mb-4">Account Access</h3>
                         <input name="email" type="email" placeholder="Official Email" className="steps-input" onChange={handleInputChange} required />
                         <input name="password" type="password" placeholder="Password" className="steps-input" onChange={handleInputChange} required />
                         <div className="grid grid-cols-2 gap-4">
@@ -407,7 +406,6 @@ const Signup = () => {
                                 <option value="no">No</option>
                             </select>
                         </div>
-                        <input name="cohortSize" type="number" placeholder="Cohort Size" className="steps-input" onChange={handleInputChange} required />
                     </div>
                 );
             case 3:
