@@ -26,7 +26,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useStartup } from '../../../context/StartupContext';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getMentorUsers, getSystem } from '../../../utils/system';
+import { getMentorUsers, getSystem, saveSystem } from '../../../utils/system';
+import { fetchUsers } from '../../../utils/usersApi';
 
 const normalizeSectorLabel = (value) => {
     const normalized = (value || '').toString().trim().toLowerCase();
@@ -132,12 +133,27 @@ const Mentors = () => {
 
     // --- Initialization ---
     useEffect(() => {
-        const refreshData = () => {
+        const refreshData = async () => {
             setLoading(true);
             try {
-                // Fetch mentors from global system
+                // Prefer live backend users in production, then persist them to the local system cache.
                 const system = getSystem();
-                const allUsers = system.users || {};
+                let allUsers = system.users || {};
+
+                try {
+                    const fetchedUsers = await fetchUsers();
+                    if (Array.isArray(fetchedUsers) && fetchedUsers.length > 0) {
+                        allUsers = Object.fromEntries(
+                            fetchedUsers
+                                .map((user) => [user.uid || user.id, user])
+                                .filter(([uid]) => Boolean(uid))
+                        );
+                        system.users = allUsers;
+                        saveSystem(system);
+                    }
+                } catch (error) {
+                    console.warn('Failed to load live users, falling back to local cache', error);
+                }
 
                 const toArray = (value) => {
                     if (Array.isArray(value)) return value.filter(Boolean);
@@ -215,8 +231,8 @@ const Mentors = () => {
             }
         };
 
-        queueMicrotask(refreshData);
-        const handleStorage = () => refreshData();
+        queueMicrotask(() => void refreshData());
+        const handleStorage = () => void refreshData();
         window.addEventListener('storage', handleStorage);
         return () => window.removeEventListener('storage', handleStorage);
     }, []);
